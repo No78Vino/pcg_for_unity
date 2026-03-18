@@ -45,7 +45,9 @@ namespace PCGToolkit.Graph
         {
             // TODO: 使用 JsonUtility 或自定义反序列化
             Debug.Log("PCGGraphSerializer: FromJson (TODO)");
-            return JsonUtility.FromJson<PCGGraphData>(json);
+            var data = ScriptableObject.CreateInstance<PCGGraphData>();
+            JsonUtility.FromJsonOverwrite(json, data);
+            return data;
         }
     }
 }

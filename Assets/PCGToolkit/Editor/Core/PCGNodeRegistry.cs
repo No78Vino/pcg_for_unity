@@ -28,6 +28,7 @@ namespace PCGToolkit.Core
         /// </summary>
         public static IPCGNode GetNode(string name)
         {
+            EnsureInitialized();
             _registeredNodes.TryGetValue(name, out var node);
             return node;
         }

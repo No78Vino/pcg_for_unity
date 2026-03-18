@@ -5,6 +5,17 @@ using UnityEngine;
 namespace PCGToolkit.Graph
 {
     /// <summary>
+    /// 可序列化的节点参数键值对
+    /// </summary>
+    [Serializable]
+    public class PCGSerializedParameter
+    {
+        public string Key;
+        public string ValueJson;
+        public string ValueType;
+    }
+
+    /// <summary>
     /// 节点图中单个节点的序列化数据
     /// </summary>
     [Serializable]
@@ -13,7 +24,41 @@ namespace PCGToolkit.Graph
         public string NodeId;
         public string NodeType;
         public Vector2 Position;
-        public Dictionary<string, object> Parameters = new Dictionary<string, object>();
+        public List<PCGSerializedParameter> Parameters = new List<PCGSerializedParameter>();
+
+        /// <summary>
+        /// 设置参数值（运行时使用）
+        /// </summary>
+        public void SetParameter(string key, object value)
+        {
+            var param = Parameters.Find(p => p.Key == key);
+            if (param == null)
+            {
+                param = new PCGSerializedParameter { Key = key };
+                Parameters.Add(param);
+            }
+            param.ValueType = value != null ? value.GetType().FullName : "null";
+            param.ValueJson = value != null ? JsonUtility.ToJson(new JsonWrapper { Value = value.ToString() }) : "";
+        }
+
+        /// <summary>
+        /// 获取参数值（运行时使用）
+        /// </summary>
+        public string GetParameter(string key)
+        {
+            var param = Parameters.Find(p => p.Key == key);
+            if (param == null) return null;
+            return param.ValueJson;
+        }
+    }
+
+    /// <summary>
+    /// JSON 序列化辅助包装
+    /// </summary>
+    [Serializable]
+    internal class JsonWrapper
+    {
+        public string Value;
     }
 
     /// <summary>

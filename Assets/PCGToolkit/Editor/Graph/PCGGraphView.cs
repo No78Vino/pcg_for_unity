@@ -9,10 +9,6 @@ using PCGToolkit.Core;
   
 namespace PCGToolkit.Graph  
 {  
-    /// <summary>  
-    /// PCG 节点图的 GraphView 实现  
-    /// 负责节点的可视化、连线、缩放平移等交互  
-    /// </summary>  
     public class PCGGraphView : GraphView  
     {  
         private PCGGraphData graphData;  
@@ -27,18 +23,13 @@ namespace PCGToolkit.Graph
             this.AddManipulator(new SelectionDragger());  
             this.AddManipulator(new RectangleSelector());  
   
-            // 添加网格背景  
             var grid = new GridBackground();  
             Insert(0, grid);  
             grid.StretchToParentSize();  
   
-            // 注册 graphViewChanged 回调处理连线和删除  
             graphViewChanged += OnGraphViewChanged;  
         }  
   
-        /// <summary>  
-        /// 初始化搜索窗口和 nodeCreationRequest  
-        /// </summary>  
         public void Initialize(PCGGraphEditorWindow editorWindow)  
         {  
             _editorWindow = editorWindow;  
@@ -52,19 +43,72 @@ namespace PCGToolkit.Graph
             };  
         }  
   
+        // ---- 执行调试辅助方法 ----  
+  
         /// <summary>  
-        /// 从 PCGGraphData 加载节点图  
+        /// 根据 NodeId 查找对应的 PCGNodeVisual  
         /// </summary>  
+        public PCGNodeVisual FindNodeVisual(string nodeId)  
+        {  
+            PCGNodeVisual found = null;  
+            nodes.ForEach(node =>  
+            {  
+                if (found != null) return;  
+                if (node is PCGNodeVisual visual && visual.NodeId == nodeId)  
+                    found = visual;  
+            });  
+            return found;  
+        }  
+  
+        /// <summary>  
+        /// 清除所有节点的高亮状态  
+        /// </summary>  
+        public void ClearAllHighlights()  
+        {  
+            nodes.ForEach(node =>  
+            {  
+                if (node is PCGNodeVisual visual)  
+                {  
+                    visual.SetHighlight(false);  
+                    visual.SetErrorState(false);  
+                }  
+            });  
+        }  
+  
+        /// <summary>  
+        /// 清除所有节点的执行时长显示  
+        /// </summary>  
+        public void ClearAllExecutionTimes()  
+        {  
+            nodes.ForEach(node =>  
+            {  
+                if (node is PCGNodeVisual visual)  
+                    visual.ClearExecutionTime();  
+            });  
+        }  
+  
+        /// <summary>  
+        /// 获取当前选中的第一个 PCGNodeVisual（用于 Run To Selected）  
+        /// </summary>  
+        public PCGNodeVisual GetSelectedNodeVisual()  
+        {  
+            foreach (var selectable in selection)  
+            {  
+                if (selectable is PCGNodeVisual visual)  
+                    return visual;  
+            }  
+            return null;  
+        }  
+  
+        // ---- 原有方法 ----  
+  
         public void LoadGraph(PCGGraphData data)  
         {  
             graphData = data;  
-  
-            // 清空当前视图  
             DeleteElements(graphElements.ToList());  
   
             if (data == null) return;  
   
-            // 重建节点  
             var nodeVisualMap = new Dictionary<string, PCGNodeVisual>();  
             foreach (var nodeData in data.Nodes)  
             {  
@@ -81,7 +125,6 @@ namespace PCGToolkit.Graph
                 nodeVisualMap[nodeData.NodeId] = visual;  
             }  
   
-            // 重建连线  
             foreach (var edgeData in data.Edges)  
             {  
                 if (!nodeVisualMap.TryGetValue(edgeData.OutputNodeId, out var outputVisual)) continue;  
@@ -96,14 +139,10 @@ namespace PCGToolkit.Graph
             }  
         }  
   
-        /// <summary>  
-        /// 将当前视图状态保存为 PCGGraphData  
-        /// </summary>  
         public PCGGraphData SaveToGraphData()  
         {  
             var data = ScriptableObject.CreateInstance<PCGGraphData>();  
   
-            // 遍历所有节点  
             nodes.ForEach(node =>  
             {  
                 if (node is PCGNodeVisual visual)  
@@ -118,7 +157,6 @@ namespace PCGToolkit.Graph
                 }  
             });  
   
-            // 遍历所有边  
             edges.ForEach(edge =>  
             {  
                 if (edge.output?.node is PCGNodeVisual outputVisual &&  
@@ -138,9 +176,6 @@ namespace PCGToolkit.Graph
             return data;  
         }  
   
-        /// <summary>  
-        /// 创建节点的可视化表示并添加到视图  
-        /// </summary>  
         public PCGNodeVisual CreateNodeVisual(IPCGNode node, Vector2 position)  
         {  
             var visual = new PCGNodeVisual();  
@@ -149,9 +184,6 @@ namespace PCGToolkit.Graph
             return visual;  
         }  
   
-        /// <summary>  
-        /// 获取兼容的端口列表（用于连线时的类型检查）  
-        /// </summary>  
         public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapter)  
         {  
             var compatiblePorts = new List<Port>();  
@@ -170,26 +202,16 @@ namespace PCGToolkit.Graph
             return compatiblePorts;  
         }  
   
-        /// <summary>  
-        /// 右键菜单  
-        /// </summary>  
         public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)  
         {  
-            // 按类别添加所有已注册节点的创建菜单项  
             var categories = new[]  
             {  
-                PCGNodeCategory.Create,  
-                PCGNodeCategory.Attribute,  
-                PCGNodeCategory.Transform,  
-                PCGNodeCategory.Utility,  
-                PCGNodeCategory.Geometry,  
-                PCGNodeCategory.UV,  
-                PCGNodeCategory.Distribute,  
-                PCGNodeCategory.Curve,  
-                PCGNodeCategory.Deform,  
-                PCGNodeCategory.Topology,  
-                PCGNodeCategory.Procedural,  
-                PCGNodeCategory.Output,  
+                PCGNodeCategory.Create, PCGNodeCategory.Attribute,  
+                PCGNodeCategory.Transform, PCGNodeCategory.Utility,  
+                PCGNodeCategory.Geometry, PCGNodeCategory.UV,  
+                PCGNodeCategory.Distribute, PCGNodeCategory.Curve,  
+                PCGNodeCategory.Deform, PCGNodeCategory.Topology,  
+                PCGNodeCategory.Procedural, PCGNodeCategory.Output,  
             };  
   
             foreach (var category in categories)  
@@ -212,25 +234,16 @@ namespace PCGToolkit.Graph
             base.BuildContextualMenu(evt);  
         }  
   
-        /// <summary>  
-        /// 处理 GraphView 变更（连线创建、元素删除等）  
-        /// </summary>  
         private GraphViewChange OnGraphViewChanged(GraphViewChange change)  
         {  
             if (change.edgesToCreate != null)  
             {  
-                foreach (var edge in change.edgesToCreate)  
-                {  
-                    // 连线创建时可在此做额外验证或数据同步  
-                }  
+                foreach (var edge in change.edgesToCreate) { }  
             }  
   
             if (change.elementsToRemove != null)  
             {  
-                foreach (var element in change.elementsToRemove)  
-                {  
-                    // 处理节点删除和边删除的数据同步  
-                }  
+                foreach (var element in change.elementsToRemove) { }  
             }  
   
             return change;  

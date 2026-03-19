@@ -544,5 +544,15 @@ namespace PCGToolkit.Graph
             }  
             return port.portName; // fallback，不应该走到这里  
         }
+        
+        // PCGNodeVisual.cs 中添加  
+        public string FindPortSchemaName(Port port)  
+        {  
+            foreach (var kvp in inputPorts)  
+                if (kvp.Value == port) return kvp.Key;  
+            foreach (var kvp in outputPorts)  
+                if (kvp.Value == port) return kvp.Key;  
+            return null;  
+        }
     }  
 }

@@ -204,16 +204,16 @@ namespace PCGToolkit.Graph
                 if (edge.output?.node is PCGNodeVisual outputVisual &&  
                     edge.input?.node is PCGNodeVisual inputVisual)  
                 {  
-                    var edgeData = new PCGEdgeData    
-                    {    
-                        OutputNodeId = outputVisual.NodeId,    
-                        OutputPortName = outputVisual.GetSchemaNameForPort(edge.output),    
-                        InputNodeId = inputVisual.NodeId,    
-                        InputPortName = inputVisual.GetSchemaNameForPort(edge.input)    
+                    var edgeData = new PCGEdgeData  
+                    {  
+                        OutputNodeId = outputVisual.NodeId,  
+                        OutputPortName = outputVisual.FindPortSchemaName(edge.output),  // 改这里  
+                        InputNodeId = inputVisual.NodeId,  
+                        InputPortName = inputVisual.FindPortSchemaName(edge.input)      // 改这里  
                     };  
                     data.Edges.Add(edgeData);  
                 }  
-            });  
+            });
   
             return data;  
         }  

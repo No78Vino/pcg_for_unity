@@ -68,7 +68,7 @@ namespace PCGToolkit.Nodes.Distribute
                 scaleAttr = target.PointAttribs.GetAttribute("pscale");
 
             // 对每个目标点复制源几何体
-            foreach (int primIdx in target.Primitives)
+            foreach (var primIdx in target.Primitives)
             {
                 // 跳过
             }

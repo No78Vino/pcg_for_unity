@@ -62,6 +62,10 @@ namespace PCGToolkit.Core
 
         /// <summary>float/int 类型的最大值（用于 UI 滑条）</summary>
         public float Max = float.MaxValue;
+        
+        // 迭代四：Enum/Dropdown 支持
+        /// <summary>枚举选项（非 null 时渲染为下拉框）</summary>
+        public string[] EnumOptions;
 
         public PCGParamSchema(string name, PCGPortDirection direction, PCGPortType portType,
             string displayName = null, string description = null, object defaultValue = null,

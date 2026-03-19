@@ -1,10 +1,10 @@
 using System.Collections.Generic;  
+using UnityEditor;
 using UnityEditor.Experimental.GraphView;  
 using UnityEditor.UIElements;  
 using UnityEngine;  
 using UnityEngine.UIElements;  
-using PCGToolkit.Core;  
-using UnityEditor.UIElements;
+using PCGToolkit.Core;
 
 namespace PCGToolkit.Graph  
 {  
@@ -23,7 +23,10 @@ namespace PCGToolkit.Graph
         // ---- 内联默认值编辑相关 ----  
         private Dictionary<string, VisualElement> _portWidgets = new Dictionary<string, VisualElement>();  
         private Dictionary<string, object> _portDefaultValues = new Dictionary<string, object>();  
-        private Dictionary<string, PCGParamSchema> _inputSchemas = new Dictionary<string, PCGParamSchema>();  
+        private Dictionary<string, PCGParamSchema> _inputSchemas = new Dictionary<string, PCGParamSchema>();
+        
+        // 迭代三：节点点击事件（用于预览）
+        public event System.Action<string> OnNodeDoubleClicked;
   
 
         public void Initialize(IPCGNode pcgNode, Vector2 position)  
@@ -42,7 +45,23 @@ namespace PCGToolkit.Graph
             CreateHighlightBorder();  
   
             RefreshExpandedState();  
-            RefreshPorts();  
+            RefreshPorts();
+            
+            // 迭代三：注册双击事件（用于预览）
+            RegisterCallback<ClickEvent>(OnDoubleClick);
+        }
+        
+        // 迭代三：双击处理
+        private int _clickCount = 0;
+        private float _lastClickTime = 0f;
+        
+        private void OnDoubleClick(ClickEvent evt)
+        {
+            // 检测双击
+            if (evt.clickCount >= 2)
+            {
+                OnNodeDoubleClicked?.Invoke(NodeId);
+            }
         }  
   
         public void SetNodeId(string id) { NodeId = id; }  
@@ -231,7 +250,10 @@ namespace PCGToolkit.Graph
                     portCapacity, GetSystemType(schema.PortType));  
   
                 port.portName = schema.DisplayName;  
-                port.portColor = GetPortColor(schema.PortType);  
+                port.portColor = GetPortColor(schema.PortType);
+                
+                // 迭代二：添加端口 Tooltip
+                port.tooltip = schema.Description;
   
                 inputPorts[schema.Name] = port;  
                 _inputSchemas[schema.Name] = schema;  
@@ -264,60 +286,193 @@ namespace PCGToolkit.Graph
         {  
             VisualElement widget = null;  
   
+            // 迭代四：Enum/Dropdown 支持
+            if (schema.EnumOptions != null && schema.EnumOptions.Length > 0)
+            {
+                var defaultIndex = 0;
+                var defaultVal = schema.DefaultValue;
+                
+                if (defaultVal is int idx && idx >= 0 && idx < schema.EnumOptions.Length)
+                {
+                    defaultIndex = idx;
+                }
+                else if (defaultVal is string str)
+                {
+                    for (int i = 0; i < schema.EnumOptions.Length; i++)
+                    {
+                        if (schema.EnumOptions[i] == str)
+                        {
+                            defaultIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
+                _portDefaultValues[schema.Name] = schema.EnumOptions[defaultIndex];
+                
+                var popup = new PopupField<string>(schema.EnumOptions.ToList(), defaultIndex)
+                {
+                    style =
+                    {
+                        width = 80,
+                        marginLeft = 4,
+                        fontSize = 10,
+                    }
+                };
+                
+                popup.RegisterValueChangedCallback(evt =>
+                {
+                    _portDefaultValues[schema.Name] = evt.newValue;
+                });
+                
+                return popup;
+            }
+  
             switch (schema.PortType)  
             {  
                 case PCGPortType.Float:  
                 {  
                     var defaultVal = schema.DefaultValue is float f ? f : 0f;  
-                    _portDefaultValues[schema.Name] = defaultVal;  
-  
-                    var field = new FloatField()  
-                    {  
-                        value = defaultVal,  
-                        style =  
+                    _portDefaultValues[schema.Name] = defaultVal;
+                    
+                    // 迭代二：当 Min/Max 有定义时使用 Slider
+                    if (schema.Min != float.MinValue && schema.Max != float.MaxValue)
+                    {
+                        var slider = new Slider(schema.Min, schema.Max)
+                        {
+                            value = defaultVal,
+                            style =
+                            {
+                                width = 80,
+                                marginLeft = 4,
+                            }
+                        };
+                        
+                        var label = new Label(defaultVal.ToString("F2"))
+                        {
+                            style =
+                            {
+                                fontSize = 9,
+                                width = 40,
+                                unityTextAlign = TextAnchor.MiddleRight,
+                            }
+                        };
+                        
+                        slider.RegisterValueChangedCallback(evt =>
+                        {
+                            var val = evt.newValue;
+                            _portDefaultValues[schema.Name] = val;
+                            label.text = val.ToString("F2");
+                        });
+                        
+                        var container = new VisualElement
+                        {
+                            style =
+                            {
+                                flexDirection = FlexDirection.Row,
+                                marginLeft = 4,
+                            }
+                        };
+                        container.Add(slider);
+                        container.Add(label);
+                        widget = container;
+                    }
+                    else
+                    {
+                        var field = new FloatField()  
                         {  
-                            width = 60,  
-                            marginLeft = 4,  
-                            fontSize = 10,  
-                        }  
-                    };  
-                    field.RegisterValueChangedCallback(evt =>  
-                    {  
-                        var val = evt.newValue;  
-                        // 应用 Min/Max 约束  
-                        if (schema.Min != float.MinValue && val < schema.Min) val = schema.Min;  
-                        if (schema.Max != float.MaxValue && val > schema.Max) val = schema.Max;  
-                        if (val != evt.newValue) field.SetValueWithoutNotify(val);  
-                        _portDefaultValues[schema.Name] = val;  
-                    });  
-                    widget = field;  
+                            value = defaultVal,  
+                            style =  
+                            {  
+                                width = 60,  
+                                marginLeft = 4,  
+                                fontSize = 10,  
+                            }  
+                        };  
+                        field.RegisterValueChangedCallback(evt =>  
+                        {  
+                            var val = evt.newValue;  
+                            // 应用 Min/Max 约束  
+                            if (schema.Min != float.MinValue && val < schema.Min) val = schema.Min;  
+                            if (schema.Max != float.MaxValue && val > schema.Max) val = schema.Max;  
+                            if (val != evt.newValue) field.SetValueWithoutNotify(val);  
+                            _portDefaultValues[schema.Name] = val;  
+                        });  
+                        widget = field;
+                    }
                     break;  
                 }  
   
                 case PCGPortType.Int:  
                 {  
                     var defaultVal = schema.DefaultValue is int i ? i : 0;  
-                    _portDefaultValues[schema.Name] = defaultVal;  
-  
-                    var field = new IntegerField()  
-                    {  
-                        value = defaultVal,  
-                        style =  
+                    _portDefaultValues[schema.Name] = defaultVal;
+                    
+                    // 迭代二：当 Min/Max 有定义时使用 Slider（整数）
+                    if (schema.Min != float.MinValue && schema.Max != float.MaxValue)
+                    {
+                        var slider = new Slider(schema.Min, schema.Max)
+                        {
+                            value = defaultVal,
+                            style =
+                            {
+                                width = 80,
+                                marginLeft = 4,
+                            }
+                        };
+                        
+                        var label = new Label(defaultVal.ToString())
+                        {
+                            style =
+                            {
+                                fontSize = 9,
+                                width = 30,
+                                unityTextAlign = TextAnchor.MiddleRight,
+                            }
+                        };
+                        
+                        slider.RegisterValueChangedCallback(evt =>
+                        {
+                            var val = Mathf.RoundToInt(evt.newValue);
+                            slider.SetValueWithoutNotify(val);
+                            _portDefaultValues[schema.Name] = val;
+                            label.text = val.ToString();
+                        });
+                        
+                        var container = new VisualElement
+                        {
+                            style =
+                            {
+                                flexDirection = FlexDirection.Row,
+                                marginLeft = 4,
+                            }
+                        };
+                        container.Add(slider);
+                        container.Add(label);
+                        widget = container;
+                    }
+                    else
+                    {
+                        var field = new IntegerField()  
                         {  
-                            width = 60,  
-                            marginLeft = 4,  
-                            fontSize = 10,  
-                        }  
-                    };  
-                    field.RegisterValueChangedCallback(evt =>  
-                    {  
-                        var val = evt.newValue;  
-                        if (schema.Min != float.MinValue && val < (int)schema.Min) val = (int)schema.Min;  
-                        if (schema.Max != float.MaxValue && val > (int)schema.Max) val = (int)schema.Max;  
-                        if (val != evt.newValue) field.SetValueWithoutNotify(val);  
-                        _portDefaultValues[schema.Name] = val;  
-                    });  
-                    widget = field;  
+                            value = defaultVal,  
+                            style =  
+                            {  
+                                width = 60,  
+                                marginLeft = 4,  
+                                fontSize = 10,  
+                            }  
+                        };  
+                        field.RegisterValueChangedCallback(evt =>  
+                        {  
+                            var val = evt.newValue;  
+                            if (schema.Min != float.MinValue && val < (int)schema.Min) val = (int)schema.Min;  
+                            if (schema.Max != float.MaxValue && val > (int)schema.Max) val = (int)schema.Max;  
+                            if (val != evt.newValue) field.SetValueWithoutNotify(val);  
+                            _portDefaultValues[schema.Name] = val;  
+                        });  
+                        widget = field;
+                    }
                     break;  
                 }  
   
@@ -370,18 +525,26 @@ namespace PCGToolkit.Graph
                     var defaultVal = schema.DefaultValue is Vector3 v ? v : Vector3.zero;  
                     _portDefaultValues[schema.Name] = defaultVal;  
   
+                    // 迭代四：改为垂直排列，增大宽度
                     var container = new VisualElement()  
                     {  
                         style =  
                         {  
-                            flexDirection = FlexDirection.Row,  
-                            marginLeft = 4,  
+                            flexDirection = FlexDirection.Column,  
+                            marginLeft = 4,
+                            marginTop = 2,
+                            marginBottom = 2,
                         }  
                     };  
   
-                    var fieldX = new FloatField("X") { value = defaultVal.x, style = { width = 45, fontSize = 9 } };  
-                    var fieldY = new FloatField("Y") { value = defaultVal.y, style = { width = 45, fontSize = 9 } };  
-                    var fieldZ = new FloatField("Z") { value = defaultVal.z, style = { width = 45, fontSize = 9 } };  
+                    var fieldX = new FloatField("X") { value = defaultVal.x, style = { width = 70, fontSize = 9 } };
+                    var fieldY = new FloatField("Y") { value = defaultVal.y, style = { width = 70, fontSize = 9 } };
+                    var fieldZ = new FloatField("Z") { value = defaultVal.z, style = { width = 70, fontSize = 9 } };
+                    
+                    // 设置标签样式
+                    fieldX.labelElement.style.minWidth = 12;
+                    fieldY.labelElement.style.minWidth = 12;
+                    fieldZ.labelElement.style.minWidth = 12;
   
                     System.Action updateVector = () =>  
                     {  
@@ -475,7 +638,10 @@ namespace PCGToolkit.Graph
                     Port.Capacity.Multi, GetSystemType(schema.PortType));  
   
                 port.portName = schema.DisplayName;  
-                port.portColor = GetPortColor(schema.PortType);  
+                port.portColor = GetPortColor(schema.PortType);
+                
+                // 迭代二：添加端口 Tooltip
+                port.tooltip = schema.Description;  
   
                 outputPorts[schema.Name] = port;  
                 outputContainer.Add(port);  

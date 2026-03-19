@@ -96,6 +96,16 @@ namespace PCGToolkit.Graph
                 return outputs;
             return null;
         }
+        
+        // 迭代三：获取节点完整执行结果（用于预览）
+        private Dictionary<string, NodeExecutionResult> _nodeResults = new Dictionary<string, NodeExecutionResult>();
+        
+        public NodeExecutionResult GetNodeResult(string nodeId)
+        {
+            if (_nodeResults.TryGetValue(nodeId, out var result))
+                return result;
+            return null;
+        }
 
         /// <summary>  
         /// 执行整个图  
@@ -208,6 +218,7 @@ namespace PCGToolkit.Graph
                     if (!result.Success)
                     {
                         Debug.LogError($"[PCGAsyncExecutor] Node {nodeData.NodeType} failed: {result.ErrorMessage}");
+                        _nodeResults[nodeData.NodeId] = result; // 迭代三：保存失败结果
                         OnNodeCompleted?.Invoke(result);
                         Stop();
                         return;
@@ -226,6 +237,7 @@ namespace PCGToolkit.Graph
                         Outputs = GetNodeOutput(nodeData.NodeId),
                         Success = true,
                     };
+                    _nodeResults[nodeData.NodeId] = completedResult; // 迭代三：保存成功结果
                     OnNodeCompleted?.Invoke(completedResult);
 
                     // 检查是否需要在此节点暂停  

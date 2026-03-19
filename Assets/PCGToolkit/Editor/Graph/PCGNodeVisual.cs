@@ -286,6 +286,48 @@ namespace PCGToolkit.Graph
         {  
             VisualElement widget = null;  
   
+            // 迭代四：Enum/Dropdown 支持
+            if (schema.EnumOptions != null && schema.EnumOptions.Length > 0)
+            {
+                var defaultIndex = 0;
+                var defaultVal = schema.DefaultValue;
+                
+                if (defaultVal is int idx && idx >= 0 && idx < schema.EnumOptions.Length)
+                {
+                    defaultIndex = idx;
+                }
+                else if (defaultVal is string str)
+                {
+                    for (int i = 0; i < schema.EnumOptions.Length; i++)
+                    {
+                        if (schema.EnumOptions[i] == str)
+                        {
+                            defaultIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
+                _portDefaultValues[schema.Name] = schema.EnumOptions[defaultIndex];
+                
+                var popup = new PopupField<string>(schema.EnumOptions.ToList(), defaultIndex)
+                {
+                    style =
+                    {
+                        width = 80,
+                        marginLeft = 4,
+                        fontSize = 10,
+                    }
+                };
+                
+                popup.RegisterValueChangedCallback(evt =>
+                {
+                    _portDefaultValues[schema.Name] = evt.newValue;
+                });
+                
+                return popup;
+            }
+  
             switch (schema.PortType)  
             {  
                 case PCGPortType.Float:  
@@ -483,18 +525,26 @@ namespace PCGToolkit.Graph
                     var defaultVal = schema.DefaultValue is Vector3 v ? v : Vector3.zero;  
                     _portDefaultValues[schema.Name] = defaultVal;  
   
+                    // 迭代四：改为垂直排列，增大宽度
                     var container = new VisualElement()  
                     {  
                         style =  
                         {  
-                            flexDirection = FlexDirection.Row,  
-                            marginLeft = 4,  
+                            flexDirection = FlexDirection.Column,  
+                            marginLeft = 4,
+                            marginTop = 2,
+                            marginBottom = 2,
                         }  
                     };  
   
-                    var fieldX = new FloatField("X") { value = defaultVal.x, style = { width = 45, fontSize = 9 } };  
-                    var fieldY = new FloatField("Y") { value = defaultVal.y, style = { width = 45, fontSize = 9 } };  
-                    var fieldZ = new FloatField("Z") { value = defaultVal.z, style = { width = 45, fontSize = 9 } };  
+                    var fieldX = new FloatField("X") { value = defaultVal.x, style = { width = 70, fontSize = 9 } };
+                    var fieldY = new FloatField("Y") { value = defaultVal.y, style = { width = 70, fontSize = 9 } };
+                    var fieldZ = new FloatField("Z") { value = defaultVal.z, style = { width = 70, fontSize = 9 } };
+                    
+                    // 设置标签样式
+                    fieldX.labelElement.style.minWidth = 12;
+                    fieldY.labelElement.style.minWidth = 12;
+                    fieldZ.labelElement.style.minWidth = 12;
   
                     System.Action updateVector = () =>  
                     {  

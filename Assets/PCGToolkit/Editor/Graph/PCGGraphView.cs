@@ -106,6 +106,10 @@ namespace PCGToolkit.Graph
                     screenMousePosition = evt.mousePosition
                 });
             });
+            
+            // 迭代四：添加 Sticky Note
+            evt.menu.AppendAction("Add Sticky Note", _ => AddStickyNote(evt.mousePosition));
+            
             evt.menu.AppendSeparator();
             evt.menu.AppendAction("Frame All", _ => FrameAll());
             
@@ -113,10 +117,53 @@ namespace PCGToolkit.Graph
             if (selection.OfType<PCGNodeVisual>().Any())
             {
                 evt.menu.AppendSeparator();
+                evt.menu.AppendAction("Group Selection", _ => GroupSelection());
                 evt.menu.AppendAction("Duplicate", _ => DuplicateSelection());
                 evt.menu.AppendAction("Disconnect All", _ => DisconnectSelection());
                 evt.menu.AppendAction("Delete", _ => DeleteSelection());
             }
+        }
+        
+        // ---- 迭代四：节点分组与注释 ----
+        
+        private void GroupSelection()
+        {
+            var selectedNodes = selection.OfType<PCGNodeVisual>().ToList();
+            if (selectedNodes.Count == 0) return;
+            
+            // 计算包围盒
+            var minPos = new Vector2(float.MaxValue, float.MaxValue);
+            var maxPos = new Vector2(float.MinValue, float.MinValue);
+            
+            foreach (var node in selectedNodes)
+            {
+                var pos = node.GetPosition();
+                minPos = Vector2.Min(minPos, pos.position);
+                maxPos = Vector2.Max(maxPos, pos.position + pos.size);
+            }
+            
+            // 创建 Group
+            var group = new Group("New Group", new Rect(minPos - new Vector2(20, 40), maxPos - minPos + new Vector2(40, 60)));
+            
+            foreach (var node in selectedNodes)
+            {
+                group.AddElement(node);
+            }
+            
+            AddElement(group);
+            OnGraphChanged?.Invoke();
+        }
+        
+        private void AddStickyNote(Vector2 position)
+        {
+            var note = new StickyNote("New Note")
+            {
+                title = "Note",
+                contents = "Write your note here..."
+            };
+            note.SetPosition(new Rect(position, new Vector2(200, 100)));
+            AddElement(note);
+            OnGraphChanged?.Invoke();
         }
         
         // ---- 迭代二：节点复制/粘贴 ----

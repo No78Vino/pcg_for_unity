@@ -72,6 +72,34 @@ namespace PCGToolkit.Graph
         public string InputNodeId;
         public string InputPortName;
     }
+    
+    // 迭代四：节点分组数据
+    /// <summary>
+    /// 节点分组数据
+    /// </summary>
+    [Serializable]
+    public class PCGGroupData
+    {
+        public string GroupId;
+        public string Title;
+        public List<string> NodeIds = new List<string>();
+        public Vector2 Position;
+        public Vector2 Size;
+    }
+    
+    // 迭代四：注释数据
+    /// <summary>
+    /// 注释便签数据
+    /// </summary>
+    [Serializable]
+    public class PCGStickyNoteData
+    {
+        public string NoteId;
+        public string Title;
+        public string Content;
+        public Vector2 Position;
+        public Vector2 Size;
+    }
 
     /// <summary>
     /// 节点图的完整序列化数据（ScriptableObject）
@@ -82,6 +110,10 @@ namespace PCGToolkit.Graph
         public string GraphName = "New Graph";
         public List<PCGNodeData> Nodes = new List<PCGNodeData>();
         public List<PCGEdgeData> Edges = new List<PCGEdgeData>();
+        
+        // 迭代四：分组和注释
+        public List<PCGGroupData> Groups = new List<PCGGroupData>();
+        public List<PCGStickyNoteData> StickyNotes = new List<PCGStickyNoteData>();
 
         /// <summary>
         /// 添加节点数据

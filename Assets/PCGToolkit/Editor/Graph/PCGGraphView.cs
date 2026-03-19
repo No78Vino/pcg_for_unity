@@ -17,6 +17,11 @@ namespace PCGToolkit.Graph
         
         // 迭代一：脏状态事件
         public event Action OnGraphChanged;
+        
+        // 迭代二：端口拖拽过滤
+        private Port _dragStartPort;
+        private PCGPortType? _filterPortType;
+        private Direction? _filterDirection;
 
         public PCGGraphView()
         {
@@ -39,6 +44,11 @@ namespace PCGToolkit.Graph
             var miniMap = new MiniMap { anchored = true };
             miniMap.SetPosition(new Rect(10, 30, 200, 140));
             Add(miniMap);
+            
+            // 迭代二：设置复制/粘贴回调
+            serializeGraphElements = SerializeGraphElements;
+            unserializeAndPaste = UnserializeAndPaste;
+            canPasteSerializedData = CanPasteSerializedData;
         }
 
         public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapter)
@@ -69,8 +79,211 @@ namespace PCGToolkit.Graph
 
             nodeCreationRequest = ctx =>
             {
+                // 迭代二：传递端口过滤信息
+                _searchWindow.SetPortFilter(_filterPortType, _filterDirection);
                 SearchWindow.Open(new SearchWindowContext(ctx.screenMousePosition), _searchWindow);
+                
+                // 清除过滤
+                _filterPortType = null;
+                _filterDirection = null;
             };
+        }
+        
+        // ---- 迭代二：右键上下文菜单 ----
+        
+        public override void BuildContextualMenu(ContextualMenuPopulateEvent evt)
+        {
+            base.BuildContextualMenu(evt);
+            
+            // 画布右键
+            evt.menu.AppendAction("Create Node", _ => 
+            {
+                nodeCreationRequest?.Invoke(new NodeCreationContext()
+                {
+                    screenMousePosition = evt.mousePosition
+                });
+            });
+            evt.menu.AppendSeparator();
+            evt.menu.AppendAction("Frame All", _ => FrameAll());
+            
+            // 节点右键（当选中节点时）
+            if (selection.OfType<PCGNodeVisual>().Any())
+            {
+                evt.menu.AppendSeparator();
+                evt.menu.AppendAction("Duplicate", _ => DuplicateSelection());
+                evt.menu.AppendAction("Disconnect All", _ => DisconnectSelection());
+                evt.menu.AppendAction("Delete", _ => DeleteSelection());
+            }
+        }
+        
+        // ---- 迭代二：节点复制/粘贴 ----
+        
+        private string SerializeGraphElements(IEnumerable<GraphElement> elements)
+        {
+            var nodeList = new List<PCGNodeData>();
+            var edgeList = new List<PCGEdgeData>();
+            
+            var nodeVisuals = elements.OfType<PCGNodeVisual>().ToList();
+            foreach (var visual in nodeVisuals)
+            {
+                var nodeData = new PCGNodeData
+                {
+                    NodeId = visual.NodeId,
+                    NodeType = visual.PCGNode.Name,
+                    Position = visual.GetPosition().position
+                };
+                
+                var defaults = visual.GetPortDefaultValues();
+                foreach (var kvp in defaults)
+                {
+                    if (!visual.IsPortConnected(kvp.Key))
+                    {
+                        nodeData.Parameters.Add(SerializeParamValue(kvp.Key, kvp.Value));
+                    }
+                }
+                
+                nodeList.Add(nodeData);
+            }
+            
+            // 序列化内部连线
+            edges.ForEach(edge =>
+            {
+                if (edge.output?.node is PCGNodeVisual outputVisual &&
+                    edge.input?.node is PCGNodeVisual inputVisual)
+                {
+                    // 只序列化选中的节点之间的连线
+                    if (nodeVisuals.Contains(outputVisual) && nodeVisuals.Contains(inputVisual))
+                    {
+                        edgeList.Add(new PCGEdgeData
+                        {
+                            OutputNodeId = outputVisual.NodeId,
+                            OutputPortName = outputVisual.FindPortSchemaName(edge.output),
+                            InputNodeId = inputVisual.NodeId,
+                            InputPortName = inputVisual.FindPortSchemaName(edge.input)
+                        });
+                    }
+                }
+            });
+            
+            var copyData = new PCGCopyData { Nodes = nodeList, Edges = edgeList };
+            return JsonUtility.ToJson(copyData);
+        }
+        
+        private void UnserializeAndPaste(string operationName, string data)
+        {
+            if (string.IsNullOrEmpty(data)) return;
+            
+            try
+            {
+                var copyData = JsonUtility.FromJson<PCGCopyData>(data);
+                if (copyData == null || copyData.Nodes.Count == 0) return;
+                
+                // 记录旧ID到新ID的映射
+                var idMap = new Dictionary<string, string>();
+                var nodeVisualMap = new Dictionary<string, PCGNodeVisual>();
+                
+                // 创建新节点（偏移位置）
+                foreach (var nodeData in copyData.Nodes)
+                {
+                    var nodeTemplate = PCGNodeRegistry.GetNode(nodeData.NodeType);
+                    if (nodeTemplate == null) continue;
+                    
+                    var newNode = (IPCGNode)Activator.CreateInstance(nodeTemplate.GetType());
+                    var offsetPosition = nodeData.Position + new Vector2(30, 30);
+                    var visual = CreateNodeVisual(newNode, offsetPosition);
+                    
+                    string newId = System.Guid.NewGuid().ToString();
+                    idMap[nodeData.NodeId] = newId;
+                    visual.SetNodeId(newId);
+                    
+                    // 恢复端口默认值
+                    if (nodeData.Parameters != null && nodeData.Parameters.Count > 0)
+                    {
+                        var defaults = new Dictionary<string, object>();
+                        foreach (var param in nodeData.Parameters)
+                        {
+                            defaults[param.Key] = DeserializeParamValue(param);
+                        }
+                        visual.SetPortDefaultValues(defaults);
+                    }
+                    
+                    nodeVisualMap[newId] = visual;
+                }
+                
+                // 重建内部连线
+                foreach (var edgeData in copyData.Edges)
+                {
+                    if (!idMap.TryGetValue(edgeData.OutputNodeId, out var newOutputId)) continue;
+                    if (!idMap.TryGetValue(edgeData.InputNodeId, out var newInputId)) continue;
+                    
+                    if (!nodeVisualMap.TryGetValue(newOutputId, out var outputVisual)) continue;
+                    if (!nodeVisualMap.TryGetValue(newInputId, out var inputVisual)) continue;
+                    
+                    var outputPort = outputVisual.GetOutputPort(edgeData.OutputPortName);
+                    var inputPort = inputVisual.GetInputPort(edgeData.InputPortName);
+                    if (outputPort == null || inputPort == null) continue;
+                    
+                    var edge = outputPort.ConnectTo(inputPort);
+                    AddElement(edge);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"PCGGraphView: Failed to paste nodes: {e.Message}");
+            }
+        }
+        
+        private bool CanPasteSerializedData(string data)
+        {
+            if (string.IsNullOrEmpty(data)) return false;
+            try
+            {
+                var copyData = JsonUtility.FromJson<PCGCopyData>(data);
+                return copyData != null && copyData.Nodes.Count > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        
+        // ---- 迭代二：辅助方法 ----
+        
+        private void DuplicateSelection()
+        {
+            var selected = selection.OfType<PCGNodeVisual>().ToList();
+            if (selected.Count == 0) return;
+            
+            var data = SerializeGraphElements(selected);
+            UnserializeAndPaste("Duplicate", data);
+        }
+        
+        private void DisconnectSelection()
+        {
+            var selected = selection.OfType<PCGNodeVisual>().ToList();
+            if (selected.Count == 0) return;
+            
+            var edgesToRemove = new List<Edge>();
+            edges.ForEach(edge =>
+            {
+                if (edge.output?.node is PCGNodeVisual outputVisual &&
+                    edge.input?.node is PCGNodeVisual inputVisual)
+                {
+                    if (selected.Contains(outputVisual) || selected.Contains(inputVisual))
+                    {
+                        edgesToRemove.Add(edge);
+                    }
+                }
+            });
+            
+            DeleteElements(edgesToRemove);
+        }
+        
+        // 迭代二：设置端口过滤（由外部调用）
+        public void SetPortFilterForCreation(PCGPortType portType, Direction direction)
+        {
+            _filterPortType = portType;
+            _filterDirection = direction;
         }
         
         // ---- 迭代一：键盘快捷键 ----
@@ -236,9 +449,9 @@ namespace PCGToolkit.Graph
                     var edgeData = new PCGEdgeData  
                     {  
                         OutputNodeId = outputVisual.NodeId,  
-                        OutputPortName = outputVisual.FindPortSchemaName(edge.output),  // 改这里  
+                        OutputPortName = outputVisual.FindPortSchemaName(edge.output),  
                         InputNodeId = inputVisual.NodeId,  
-                        InputPortName = inputVisual.FindPortSchemaName(edge.input)      // 改这里  
+                        InputPortName = inputVisual.FindPortSchemaName(edge.input)  
                     };  
                     data.Edges.Add(edgeData);  
                 }  
@@ -247,10 +460,7 @@ namespace PCGToolkit.Graph
             return data;  
         }  
 
-        // ---- 序列化辅助 ----  
-// ---- 以下方法添加到 PCGGraphView 类中 ----  
-
-// ---- 序列化辅助方法 ----  
+        // ---- 序列化辅助方法 ----  
 
         private PCGSerializedParameter SerializeParamValue(string key, object value)
         {
@@ -368,7 +578,6 @@ namespace PCGToolkit.Graph
                 {  
                     if (edge.input?.node is PCGNodeVisual inputVisual)  
                     {  
-                        // 通过 portName 反查 schema name  
                         var portName = FindSchemaName(inputVisual, edge.input);  
                         if (portName != null)  
                             inputVisual.OnPortConnectionChanged(portName, true);  
@@ -388,7 +597,6 @@ namespace PCGToolkit.Graph
                             var portName = FindSchemaName(inputVisual, removedEdge.input);  
                             if (portName != null)  
                             {  
-                                // 检查该端口是否还有其他连线  
                                 bool stillConnected = false;  
                                 edges.ForEach(e =>  
                                 {  
@@ -406,9 +614,6 @@ namespace PCGToolkit.Graph
             return change;  
         }  
         
-        /// <summary>  
-        /// 通过 Port 实例反查 PCGParamSchema 的 Name（因为 port.portName 是 DisplayName）  
-        /// </summary>  
         private string FindSchemaName(PCGNodeVisual visual, Port port)  
         {  
             if (visual.PCGNode.Inputs == null) return null;  
@@ -420,5 +625,13 @@ namespace PCGToolkit.Graph
             }  
             return null;  
         }
+    }
+    
+    // 迭代二：复制粘贴数据结构
+    [Serializable]
+    public class PCGCopyData
+    {
+        public List<PCGNodeData> Nodes = new List<PCGNodeData>();
+        public List<PCGEdgeData> Edges = new List<PCGEdgeData>();
     }
 }

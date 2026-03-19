@@ -272,55 +272,146 @@ namespace PCGToolkit.Graph
                 case PCGPortType.Float:  
                 {  
                     var defaultVal = schema.DefaultValue is float f ? f : 0f;  
-                    _portDefaultValues[schema.Name] = defaultVal;  
-  
-                    var field = new FloatField()  
-                    {  
-                        value = defaultVal,  
-                        style =  
+                    _portDefaultValues[schema.Name] = defaultVal;
+                    
+                    // 迭代二：当 Min/Max 有定义时使用 Slider
+                    if (schema.Min != float.MinValue && schema.Max != float.MaxValue)
+                    {
+                        var slider = new Slider(schema.Min, schema.Max)
+                        {
+                            value = defaultVal,
+                            style =
+                            {
+                                width = 80,
+                                marginLeft = 4,
+                            }
+                        };
+                        
+                        var label = new Label(defaultVal.ToString("F2"))
+                        {
+                            style =
+                            {
+                                fontSize = 9,
+                                width = 40,
+                                unityTextAlign = TextAnchor.MiddleRight,
+                            }
+                        };
+                        
+                        slider.RegisterValueChangedCallback(evt =>
+                        {
+                            var val = evt.newValue;
+                            _portDefaultValues[schema.Name] = val;
+                            label.text = val.ToString("F2");
+                        });
+                        
+                        var container = new VisualElement
+                        {
+                            style =
+                            {
+                                flexDirection = FlexDirection.Row,
+                                marginLeft = 4,
+                            }
+                        };
+                        container.Add(slider);
+                        container.Add(label);
+                        widget = container;
+                    }
+                    else
+                    {
+                        var field = new FloatField()  
                         {  
-                            width = 60,  
-                            marginLeft = 4,  
-                            fontSize = 10,  
-                        }  
-                    };  
-                    field.RegisterValueChangedCallback(evt =>  
-                    {  
-                        var val = evt.newValue;  
-                        // 应用 Min/Max 约束  
-                        if (schema.Min != float.MinValue && val < schema.Min) val = schema.Min;  
-                        if (schema.Max != float.MaxValue && val > schema.Max) val = schema.Max;  
-                        if (val != evt.newValue) field.SetValueWithoutNotify(val);  
-                        _portDefaultValues[schema.Name] = val;  
-                    });  
-                    widget = field;  
+                            value = defaultVal,  
+                            style =  
+                            {  
+                                width = 60,  
+                                marginLeft = 4,  
+                                fontSize = 10,  
+                            }  
+                        };  
+                        field.RegisterValueChangedCallback(evt =>  
+                        {  
+                            var val = evt.newValue;  
+                            // 应用 Min/Max 约束  
+                            if (schema.Min != float.MinValue && val < schema.Min) val = schema.Min;  
+                            if (schema.Max != float.MaxValue && val > schema.Max) val = schema.Max;  
+                            if (val != evt.newValue) field.SetValueWithoutNotify(val);  
+                            _portDefaultValues[schema.Name] = val;  
+                        });  
+                        widget = field;
+                    }
                     break;  
                 }  
   
                 case PCGPortType.Int:  
                 {  
                     var defaultVal = schema.DefaultValue is int i ? i : 0;  
-                    _portDefaultValues[schema.Name] = defaultVal;  
-  
-                    var field = new IntegerField()  
-                    {  
-                        value = defaultVal,  
-                        style =  
+                    _portDefaultValues[schema.Name] = defaultVal;
+                    
+                    // 迭代二：当 Min/Max 有定义时使用 Slider（整数）
+                    if (schema.Min != float.MinValue && schema.Max != float.MaxValue)
+                    {
+                        var slider = new Slider(schema.Min, schema.Max)
+                        {
+                            value = defaultVal,
+                            style =
+                            {
+                                width = 80,
+                                marginLeft = 4,
+                            }
+                        };
+                        
+                        var label = new Label(defaultVal.ToString())
+                        {
+                            style =
+                            {
+                                fontSize = 9,
+                                width = 30,
+                                unityTextAlign = TextAnchor.MiddleRight,
+                            }
+                        };
+                        
+                        slider.RegisterValueChangedCallback(evt =>
+                        {
+                            var val = Mathf.RoundToInt(evt.newValue);
+                            slider.SetValueWithoutNotify(val);
+                            _portDefaultValues[schema.Name] = val;
+                            label.text = val.ToString();
+                        });
+                        
+                        var container = new VisualElement
+                        {
+                            style =
+                            {
+                                flexDirection = FlexDirection.Row,
+                                marginLeft = 4,
+                            }
+                        };
+                        container.Add(slider);
+                        container.Add(label);
+                        widget = container;
+                    }
+                    else
+                    {
+                        var field = new IntegerField()  
                         {  
-                            width = 60,  
-                            marginLeft = 4,  
-                            fontSize = 10,  
-                        }  
-                    };  
-                    field.RegisterValueChangedCallback(evt =>  
-                    {  
-                        var val = evt.newValue;  
-                        if (schema.Min != float.MinValue && val < (int)schema.Min) val = (int)schema.Min;  
-                        if (schema.Max != float.MaxValue && val > (int)schema.Max) val = (int)schema.Max;  
-                        if (val != evt.newValue) field.SetValueWithoutNotify(val);  
-                        _portDefaultValues[schema.Name] = val;  
-                    });  
-                    widget = field;  
+                            value = defaultVal,  
+                            style =  
+                            {  
+                                width = 60,  
+                                marginLeft = 4,  
+                                fontSize = 10,  
+                            }  
+                        };  
+                        field.RegisterValueChangedCallback(evt =>  
+                        {  
+                            var val = evt.newValue;  
+                            if (schema.Min != float.MinValue && val < (int)schema.Min) val = (int)schema.Min;  
+                            if (schema.Max != float.MaxValue && val > (int)schema.Max) val = (int)schema.Max;  
+                            if (val != evt.newValue) field.SetValueWithoutNotify(val);  
+                            _portDefaultValues[schema.Name] = val;  
+                        });  
+                        widget = field;
+                    }
                     break;  
                 }  
   

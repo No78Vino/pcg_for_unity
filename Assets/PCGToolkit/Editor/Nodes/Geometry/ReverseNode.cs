@@ -33,14 +33,36 @@ namespace PCGToolkit.Nodes.Geometry
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Reverse: 翻转面法线 (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
             string group = GetParamString(parameters, "group", "");
 
-            ctx.Log($"Reverse: group={group}");
+            // 确定要翻转的面
+            HashSet<int> primsToReverse = new HashSet<int>();
+            if (!string.IsNullOrEmpty(group) && geo.PrimGroups.TryGetValue(group, out var groupPrims))
+            {
+                primsToReverse = groupPrims;
+            }
+            else
+            {
+                // 全部翻转
+                for (int i = 0; i < geo.Primitives.Count; i++)
+                    primsToReverse.Add(i);
+            }
 
-            // TODO: 反转 Primitives 中的顶点索引顺序
+            // 反转面的顶点顺序
+            foreach (int primIdx in primsToReverse)
+            {
+                if (primIdx < 0 || primIdx >= geo.Primitives.Count) continue;
+                
+                var prim = geo.Primitives[primIdx];
+                var reversed = new int[prim.Length];
+                for (int i = 0; i < prim.Length; i++)
+                {
+                    reversed[i] = prim[prim.Length - 1 - i];
+                }
+                geo.Primitives[primIdx] = reversed;
+            }
+
             return SingleOutput("geometry", geo);
         }
     }

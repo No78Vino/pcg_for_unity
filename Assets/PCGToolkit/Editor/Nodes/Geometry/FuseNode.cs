@@ -35,14 +35,62 @@ namespace PCGToolkit.Nodes.Geometry
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Fuse: 合并重叠顶点 (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
             float distance = GetParamFloat(parameters, "distance", 0.001f);
+            float distSqr = distance * distance;
 
-            ctx.Log($"Fuse: distance={distance}");
+            if (geo.Points.Count == 0)
+                return SingleOutput("geometry", geo);
 
-            // TODO: 找出距离 < threshold 的顶点对，合并为一个，更新 Primitives 索引
+            // 简化的合并算法：O(n²) 遍历
+            // 对于大规模数据应使用空间加速结构（如 KD-Tree）
+            int[] remap = new int[geo.Points.Count];
+            for (int i = 0; i < remap.Length; i++) remap[i] = i;
+
+            List<Vector3> newPoints = new List<Vector3>();
+            Dictionary<int, int> oldToNew = new Dictionary<int, int>();
+
+            for (int i = 0; i < geo.Points.Count; i++)
+            {
+                if (remap[i] != i) continue; // 已被合并
+
+                int newIdx = newPoints.Count;
+                newPoints.Add(geo.Points[i]);
+                oldToNew[i] = newIdx;
+
+                // 查找后续点中可合并的
+                for (int j = i + 1; j < geo.Points.Count; j++)
+                {
+                    if (remap[j] != j) continue;
+
+                    float sqrDist = (geo.Points[i] - geo.Points[j]).sqrMagnitude;
+                    if (sqrDist <= distSqr)
+                    {
+                        remap[j] = i; // j 合并到 i
+                        oldToNew[j] = newIdx;
+                    }
+                }
+            }
+
+            // 更新面索引
+            for (int p = 0; p < geo.Primitives.Count; p++)
+            {
+                var prim = geo.Primitives[p];
+                for (int i = 0; i < prim.Length; i++)
+                {
+                    prim[i] = oldToNew[prim[i]];
+                }
+            }
+
+            // 更新边索引
+            for (int e = 0; e < geo.Edges.Count; e++)
+            {
+                var edge = geo.Edges[e];
+                edge[0] = oldToNew[edge[0]];
+                edge[1] = oldToNew[edge[1]];
+            }
+
+            geo.Points = newPoints;
             return SingleOutput("geometry", geo);
         }
     }

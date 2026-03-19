@@ -16,6 +16,7 @@ namespace PCGToolkit.Nodes.Geometry
 
     /// <summary>
     /// 布尔运算（对标 Houdini Boolean SOP）
+    /// 注意：完整实现需要 geometry3Sharp，这里提供基础框架
     /// </summary>
     public class BooleanNode : PCGNodeBase
     {
@@ -45,17 +46,52 @@ namespace PCGToolkit.Nodes.Geometry
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Boolean: 布尔运算 (TODO)");
-
             var geoA = GetInputGeometry(inputGeometries, "inputA");
             var geoB = GetInputGeometry(inputGeometries, "inputB");
             string operation = GetParamString(parameters, "operation", "union");
 
-            ctx.Log($"Boolean: operation={operation}, A.points={geoA.Points.Count}, B.points={geoB.Points.Count}");
+            if (geoA.Points.Count == 0)
+            {
+                ctx.LogWarning("Boolean: Input A 为空");
+                return SingleOutput("geometry", geoB.Clone());
+            }
+            if (geoB.Points.Count == 0)
+            {
+                ctx.LogWarning("Boolean: Input B 为空");
+                return SingleOutput("geometry", operation == "subtract" ? geoA.Clone() : new PCGGeometry());
+            }
 
-            // TODO: 实现 3D 布尔运算（使用 geometry3Sharp 或自实现 CSG）
-            var geo = new PCGGeometry();
-            return SingleOutput("geometry", geo);
+            // 完整的布尔运算需要 geometry3Sharp 的 DMesh3 和 MeshBoolean
+            // 这里提供简化的合并实现作为占位
+            ctx.LogWarning("Boolean: 完整布尔运算需要 geometry3Sharp 集成，当前返回简化结果");
+
+            if (operation == "union")
+            {
+                // 简化：直接合并两个几何体
+                var result = geoA.Clone();
+                int offset = result.Points.Count;
+                result.Points.AddRange(geoB.Points);
+                foreach (var prim in geoB.Primitives)
+                {
+                    var newPrim = new int[prim.Length];
+                    for (int i = 0; i < prim.Length; i++)
+                        newPrim[i] = prim[i] + offset;
+                    result.Primitives.Add(newPrim);
+                }
+                return SingleOutput("geometry", result);
+            }
+            else if (operation == "subtract")
+            {
+                // 简化：返回 A（未真正计算差集）
+                ctx.Log("Boolean: Subtract 操作需要完整 CSG 实现");
+                return SingleOutput("geometry", geoA.Clone());
+            }
+            else // intersect
+            {
+                // 简化：返回空几何体
+                ctx.Log("Boolean: Intersect 操作需要完整 CSG 实现");
+                return SingleOutput("geometry", new PCGGeometry());
+            }
         }
     }
 }

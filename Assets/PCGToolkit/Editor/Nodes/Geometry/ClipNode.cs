@@ -37,17 +37,72 @@ namespace PCGToolkit.Nodes.Geometry
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Clip: 平面裁剪 (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
             Vector3 origin = GetParamVector3(parameters, "origin", Vector3.zero);
-            Vector3 normal = GetParamVector3(parameters, "normal", Vector3.up);
+            Vector3 normal = GetParamVector3(parameters, "normal", Vector3.up).normalized;
             bool keepAbove = GetParamBool(parameters, "keepAbove", true);
 
-            ctx.Log($"Clip: origin={origin}, normal={normal}, keepAbove={keepAbove}");
+            if (geo.Points.Count == 0)
+            {
+                return SingleOutput("geometry", geo);
+            }
 
-            // TODO: 用平面方程 dot(P - origin, normal) 判断每个顶点的侧面
-            // 裁剪穿过平面的面并生成新的切面边
+            // 计算每个顶点到平面的有符号距离
+            // dist > 0: 在法线方向一侧
+            // dist < 0: 在法线反方向一侧
+            // dist = 0: 在平面上
+            float[] distances = new float[geo.Points.Count];
+            for (int i = 0; i < geo.Points.Count; i++)
+            {
+                distances[i] = Vector3.Dot(geo.Points[i] - origin, normal);
+            }
+
+            // 过滤面：保留所有顶点都在正确一侧的面
+            var newPrims = new List<int[]>();
+            var usedPoints = new HashSet<int>();
+
+            foreach (var prim in geo.Primitives)
+            {
+                bool keepPrim = true;
+                foreach (int idx in prim)
+                {
+                    bool isAbove = distances[idx] >= 0;
+                    if (isAbove != keepAbove)
+                    {
+                        keepPrim = false;
+                        break;
+                    }
+                }
+
+                if (keepPrim)
+                {
+                    newPrims.Add((int[])prim.Clone());
+                    foreach (int idx in prim)
+                        usedPoints.Add(idx);
+                }
+            }
+
+            // 构建顶点映射
+            var indexMap = new Dictionary<int, int>();
+            var newPoints = new List<Vector3>();
+            foreach (int idx in usedPoints)
+            {
+                indexMap[idx] = newPoints.Count;
+                newPoints.Add(geo.Points[idx]);
+            }
+
+            // 更新面索引
+            for (int i = 0; i < newPrims.Count; i++)
+            {
+                for (int j = 0; j < newPrims[i].Length; j++)
+                {
+                    newPrims[i][j] = indexMap[newPrims[i][j]];
+                }
+            }
+
+            geo.Points = newPoints;
+            geo.Primitives = newPrims;
+
             return SingleOutput("geometry", geo);
         }
     }

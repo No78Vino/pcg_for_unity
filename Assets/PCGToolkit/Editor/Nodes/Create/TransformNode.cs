@@ -41,17 +41,32 @@ namespace PCGToolkit.Nodes.Create
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Transform: 变换几何体 (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
             Vector3 translate = GetParamVector3(parameters, "translate", Vector3.zero);
             Vector3 rotate = GetParamVector3(parameters, "rotate", Vector3.zero);
             Vector3 scale = GetParamVector3(parameters, "scale", Vector3.one);
             float uniformScale = GetParamFloat(parameters, "uniformScale", 1.0f);
+            Vector3 pivot = GetParamVector3(parameters, "pivot", Vector3.zero);
 
-            ctx.Log($"Transform: translate={translate}, rotate={rotate}, scale={scale}, uniformScale={uniformScale}");
+            // 构建变换矩阵：pivot -> scale -> rotate -> translate
+            Quaternion rotation = Quaternion.Euler(rotate);
+            Vector3 finalScale = scale * uniformScale;
 
-            // TODO: 对所有 Points 应用 TRS 矩阵变换
+            // 对每个顶点应用变换
+            for (int i = 0; i < geo.Points.Count; i++)
+            {
+                Vector3 p = geo.Points[i];
+                // 相对于枢轴点
+                p -= pivot;
+                // 缩放
+                p = Vector3.Scale(p, finalScale);
+                // 旋转
+                p = rotation * p;
+                // 平移
+                p += pivot + translate;
+                geo.Points[i] = p;
+            }
+
             return SingleOutput("geometry", geo);
         }
     }

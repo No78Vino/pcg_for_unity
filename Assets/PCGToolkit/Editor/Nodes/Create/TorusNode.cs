@@ -39,17 +39,51 @@ namespace PCGToolkit.Nodes.Create
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Torus: 生成环面 (TODO)");
-
             float radiusMajor = GetParamFloat(parameters, "radiusMajor", 1.0f);
             float radiusMinor = GetParamFloat(parameters, "radiusMinor", 0.25f);
-            int rows = GetParamInt(parameters, "rows", 16);
-            int columns = GetParamInt(parameters, "columns", 32);
-
-            ctx.Log($"Torus: radiusMajor={radiusMajor}, radiusMinor={radiusMinor}, rows={rows}, columns={columns}");
+            int rows = Mathf.Max(3, GetParamInt(parameters, "rows", 16));
+            int columns = Mathf.Max(3, GetParamInt(parameters, "columns", 32));
+            Vector3 center = GetParamVector3(parameters, "center", Vector3.zero);
 
             var geo = new PCGGeometry();
-            // TODO: 生成环面顶点和四边形面
+
+            // 生成顶点
+            for (int col = 0; col < columns; col++)
+            {
+                float theta = 2f * Mathf.PI * col / columns;
+                float cosT = Mathf.Cos(theta);
+                float sinT = Mathf.Sin(theta);
+
+                for (int row = 0; row < rows; row++)
+                {
+                    float phi = 2f * Mathf.PI * row / rows;
+                    float cosP = Mathf.Cos(phi);
+                    float sinP = Mathf.Sin(phi);
+
+                    float r = radiusMajor + radiusMinor * cosP;
+                    geo.Points.Add(center + new Vector3(
+                        r * cosT,
+                        radiusMinor * sinP,
+                        r * sinT
+                    ));
+                }
+            }
+
+            // 生成四边形面
+            for (int col = 0; col < columns; col++)
+            {
+                int nextCol = (col + 1) % columns;
+                for (int row = 0; row < rows; row++)
+                {
+                    int nextRow = (row + 1) % rows;
+                    int v0 = col * rows + row;
+                    int v1 = col * rows + nextRow;
+                    int v2 = nextCol * rows + nextRow;
+                    int v3 = nextCol * rows + row;
+                    geo.Primitives.Add(new int[] { v0, v1, v2, v3 });
+                }
+            }
+
             return SingleOutput("geometry", geo);
         }
     }

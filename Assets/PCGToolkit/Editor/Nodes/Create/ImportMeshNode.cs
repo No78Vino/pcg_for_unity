@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using PCGToolkit.Core;
 using UnityEngine;
+using UnityEditor;
 
 namespace PCGToolkit.Nodes.Create
 {
@@ -31,14 +32,26 @@ namespace PCGToolkit.Nodes.Create
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("ImportMesh: 导入 Mesh 资产 (TODO)");
-
             string assetPath = GetParamString(parameters, "assetPath", "");
-            ctx.Log($"ImportMesh: path={assetPath}");
 
-            // TODO: 使用 AssetDatabase.LoadAssetAtPath 加载 Mesh
-            // 然后调用 PCGGeometryToMesh.FromMesh 转换
-            var geo = new PCGGeometry();
+            if (string.IsNullOrEmpty(assetPath))
+            {
+                ctx.LogWarning("ImportMesh: assetPath 为空");
+                return SingleOutput("geometry", new PCGGeometry());
+            }
+
+            // 尝试加载 Mesh
+            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(assetPath);
+            if (mesh == null)
+            {
+                ctx.LogWarning($"ImportMesh: 无法加载 Mesh 资产: {assetPath}");
+                return SingleOutput("geometry", new PCGGeometry());
+            }
+
+            // 转换为 PCGGeometry
+            var geo = PCGGeometryToMesh.FromMesh(mesh);
+            ctx.Log($"ImportMesh: 已导入 {geo.Points.Count} 个顶点, {geo.Primitives.Count} 个面");
+
             return SingleOutput("geometry", geo);
         }
     }

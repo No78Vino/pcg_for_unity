@@ -37,17 +37,70 @@ namespace PCGToolkit.Nodes.Create
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Sphere: 生成球体 (TODO)");
-
             float radius = GetParamFloat(parameters, "radius", 0.5f);
-            int rows = GetParamInt(parameters, "rows", 16);
-            int columns = GetParamInt(parameters, "columns", 32);
+            int rows = Mathf.Max(2, GetParamInt(parameters, "rows", 16));
+            int columns = Mathf.Max(3, GetParamInt(parameters, "columns", 32));
             Vector3 center = GetParamVector3(parameters, "center", Vector3.zero);
 
-            ctx.Log($"Sphere: radius={radius}, rows={rows}, columns={columns}, center={center}");
-
             var geo = new PCGGeometry();
-            // TODO: 生成球体顶点和面
+
+            // 生成 UV 球体顶点
+            // 顶部极点
+            geo.Points.Add(center + Vector3.up * radius);
+            // 中间环带顶点
+            for (int row = 1; row < rows; row++)
+            {
+                float phi = Mathf.PI * row / rows; // 0 ~ PI
+                float y = Mathf.Cos(phi);
+                float ringRadius = Mathf.Sin(phi);
+
+                for (int col = 0; col < columns; col++)
+                {
+                    float theta = 2f * Mathf.PI * col / columns;
+                    float x = ringRadius * Mathf.Cos(theta);
+                    float z = ringRadius * Mathf.Sin(theta);
+                    geo.Points.Add(center + new Vector3(x, y, z) * radius);
+                }
+            }
+            // 底部极点
+            geo.Points.Add(center + Vector3.down * radius);
+
+            // 生成面
+            // 顶部帽（三角形扇）
+            int topPole = 0;
+            for (int col = 0; col < columns; col++)
+            {
+                int nextCol = (col + 1) % columns;
+                geo.Primitives.Add(new int[] { topPole, 1 + col, 1 + nextCol });
+            }
+
+            // 中间环带（四边形）
+            for (int row = 0; row < rows - 2; row++)
+            {
+                int rowStart = 1 + row * columns;
+                int nextRowStart = 1 + (row + 1) * columns;
+                for (int col = 0; col < columns; col++)
+                {
+                    int nextCol = (col + 1) % columns;
+                    geo.Primitives.Add(new int[]
+                    {
+                        rowStart + col,
+                        rowStart + nextCol,
+                        nextRowStart + nextCol,
+                        nextRowStart + col
+                    });
+                }
+            }
+
+            // 底部帽（三角形扇）
+            int bottomPole = geo.Points.Count - 1;
+            int lastRingStart = 1 + (rows - 2) * columns;
+            for (int col = 0; col < columns; col++)
+            {
+                int nextCol = (col + 1) % columns;
+                geo.Primitives.Add(new int[] { bottomPole, lastRingStart + nextCol, lastRingStart + col });
+            }
+
             return SingleOutput("geometry", geo);
         }
     }

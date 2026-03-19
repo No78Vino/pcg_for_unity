@@ -39,17 +39,43 @@ namespace PCGToolkit.Nodes.Create
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Grid: 生成平面网格 (TODO)");
-
             float sizeX = GetParamFloat(parameters, "sizeX", 10f);
             float sizeY = GetParamFloat(parameters, "sizeY", 10f);
-            int rows = GetParamInt(parameters, "rows", 10);
-            int columns = GetParamInt(parameters, "columns", 10);
-
-            ctx.Log($"Grid: size=({sizeX}, {sizeY}), rows={rows}, columns={columns}");
+            int rows = Mathf.Max(1, GetParamInt(parameters, "rows", 10));
+            int columns = Mathf.Max(1, GetParamInt(parameters, "columns", 10));
+            Vector3 center = GetParamVector3(parameters, "center", Vector3.zero);
 
             var geo = new PCGGeometry();
-            // TODO: 生成网格顶点和四边形面
+
+            float halfX = sizeX * 0.5f;
+            float halfY = sizeY * 0.5f;
+            float stepX = sizeX / columns;
+            float stepY = sizeY / rows;
+
+            // 生成顶点（在 XZ 平面上，Y=0）
+            for (int row = 0; row <= rows; row++)
+            {
+                for (int col = 0; col <= columns; col++)
+                {
+                    float x = -halfX + col * stepX;
+                    float z = -halfY + row * stepY;
+                    geo.Points.Add(center + new Vector3(x, 0, z));
+                }
+            }
+
+            // 生成四边形面
+            for (int row = 0; row < rows; row++)
+            {
+                for (int col = 0; col < columns; col++)
+                {
+                    int v0 = row * (columns + 1) + col;
+                    int v1 = v0 + 1;
+                    int v2 = v0 + columns + 2;
+                    int v3 = v0 + columns + 1;
+                    geo.Primitives.Add(new int[] { v0, v1, v2, v3 });
+                }
+            }
+
             return SingleOutput("geometry", geo);
         }
     }

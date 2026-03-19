@@ -37,17 +37,26 @@ namespace PCGToolkit.Nodes.Create
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Line: 生成线段 (TODO)");
-
             Vector3 origin = GetParamVector3(parameters, "origin", Vector3.zero);
-            Vector3 direction = GetParamVector3(parameters, "direction", Vector3.up);
+            Vector3 direction = GetParamVector3(parameters, "direction", Vector3.up).normalized;
             float length = GetParamFloat(parameters, "length", 1.0f);
-            int points = GetParamInt(parameters, "points", 2);
-
-            ctx.Log($"Line: origin={origin}, direction={direction}, length={length}, points={points}");
+            int pointCount = Mathf.Max(2, GetParamInt(parameters, "points", 2));
 
             var geo = new PCGGeometry();
-            // TODO: 生成线段顶点
+
+            // 生成沿线段的顶点
+            for (int i = 0; i < pointCount; i++)
+            {
+                float t = (float)i / (pointCount - 1);
+                geo.Points.Add(origin + direction * (length * t));
+            }
+
+            // 生成边（线段没有面，只有边）
+            for (int i = 0; i < pointCount - 1; i++)
+            {
+                geo.Edges.Add(new int[] { i, i + 1 });
+            }
+
             return SingleOutput("geometry", geo);
         }
     }

@@ -43,16 +43,66 @@ namespace PCGToolkit.Nodes.Attribute
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("AttributeCreate: 创建属性 (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
             string attrName = GetParamString(parameters, "name", "Cd");
             string attrClass = GetParamString(parameters, "class", "point");
             string attrType = GetParamString(parameters, "type", "float");
+            float defaultFloat = GetParamFloat(parameters, "defaultFloat", 0f);
+            Vector3 defaultVector3 = GetParamVector3(parameters, "defaultVector3", Vector3.zero);
+            string defaultString = GetParamString(parameters, "defaultString", "");
 
-            ctx.Log($"AttributeCreate: name={attrName}, class={attrClass}, type={attrType}");
+            // 确定属性类型
+            AttribType type = attrType.ToLower() switch
+            {
+                "float" => AttribType.Float,
+                "int" => AttribType.Int,
+                "vector3" => AttribType.Vector3,
+                "vector4" => AttribType.Vector4,
+                "color" => AttribType.Color,
+                "string" => AttribType.String,
+                _ => AttribType.Float
+            };
 
-            // TODO: 在指定层级创建属性，并为所有元素填入默认值
+            // 确定默认值
+            object defaultValue = type switch
+            {
+                AttribType.Float => defaultFloat,
+                AttribType.Int => (int)defaultFloat,
+                AttribType.Vector3 => defaultVector3,
+                AttribType.Vector4 => new Vector4(defaultVector3.x, defaultVector3.y, defaultVector3.z, 1f),
+                AttribType.Color => Color.white,
+                AttribType.String => defaultString,
+                _ => defaultFloat
+            };
+
+            // 获取目标属性存储
+            AttributeStore store = attrClass.ToLower() switch
+            {
+                "point" => geo.PointAttribs,
+                "vertex" => geo.VertexAttribs,
+                "primitive" => geo.PrimAttribs,
+                "detail" => geo.DetailAttribs,
+                _ => geo.PointAttribs
+            };
+
+            // 创建属性
+            var attr = store.CreateAttribute(attrName, type, defaultValue);
+
+            // 确定元素数量并填充默认值
+            int elementCount = attrClass.ToLower() switch
+            {
+                "point" => geo.Points.Count,
+                "vertex" => geo.Points.Count * 3, // 简化假设
+                "primitive" => geo.Primitives.Count,
+                "detail" => 1,
+                _ => geo.Points.Count
+            };
+
+            for (int i = 0; i < elementCount; i++)
+            {
+                attr.Values.Add(defaultValue);
+            }
+
             return SingleOutput("geometry", geo);
         }
     }

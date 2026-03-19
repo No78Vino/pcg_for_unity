@@ -43,17 +43,100 @@ namespace PCGToolkit.Nodes.Attribute
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("AttributeSet: 设置属性 (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
             string attrName = GetParamString(parameters, "name", "Cd");
             string attrClass = GetParamString(parameters, "class", "point");
             string expression = GetParamString(parameters, "expression", "");
+            string group = GetParamString(parameters, "group", "");
+            float valueFloat = GetParamFloat(parameters, "valueFloat", 0f);
+            Vector3 valueVector3 = GetParamVector3(parameters, "valueVector3", Vector3.zero);
 
-            ctx.Log($"AttributeSet: name={attrName}, class={attrClass}, expression={expression}");
+            // 获取目标属性存储
+            AttributeStore store = attrClass.ToLower() switch
+            {
+                "point" => geo.PointAttribs,
+                "vertex" => geo.VertexAttribs,
+                "primitive" => geo.PrimAttribs,
+                "detail" => geo.DetailAttribs,
+                _ => geo.PointAttribs
+            };
 
-            // TODO: 解析表达式并设置属性值
+            var attr = store.GetAttribute(attrName);
+            if (attr == null)
+            {
+                ctx.LogWarning($"AttributeSet: 属性 {attrName} 不存在");
+                return SingleOutput("geometry", geo);
+            }
+
+            // 确定要修改的索引集合
+            HashSet<int> indices = null;
+            if (!string.IsNullOrEmpty(group))
+            {
+                if (attrClass == "point" && geo.PointGroups.TryGetValue(group, out var pointGroup))
+                    indices = pointGroup;
+                else if (attrClass == "primitive" && geo.PrimGroups.TryGetValue(group, out var primGroup))
+                    indices = primGroup;
+            }
+
+            int elementCount = attrClass.ToLower() switch
+            {
+                "point" => geo.Points.Count,
+                "primitive" => geo.Primitives.Count,
+                "detail" => 1,
+                _ => attr.Values.Count
+            };
+
+            // 设置属性值
+            for (int i = 0; i < elementCount && i < attr.Values.Count; i++)
+            {
+                if (indices != null && !indices.Contains(i))
+                    continue;
+
+                if (!string.IsNullOrEmpty(expression))
+                {
+                    // 简单表达式求值
+                    attr.Values[i] = EvaluateExpression(geo, expression, i, attrClass, attr.Type);
+                }
+                else
+                {
+                    // 使用常量值
+                    if (attr.Type == AttribType.Float || attr.Type == AttribType.Int)
+                        attr.Values[i] = valueFloat;
+                    else if (attr.Type == AttribType.Vector3 || attr.Type == AttribType.Vector4 || attr.Type == AttribType.Color)
+                        attr.Values[i] = valueVector3;
+                }
+            }
+
             return SingleOutput("geometry", geo);
+        }
+
+        private object EvaluateExpression(PCGGeometry geo, string expression, int index, string attrClass, AttribType type)
+        {
+            // 简单表达式：@P.y, @ptnum, rand(@ptnum)
+            expression = expression.Trim();
+
+            if (expression == "@ptnum")
+                return (float)index;
+
+            if (expression.StartsWith("@P."))
+            {
+                char axis = expression[3];
+                if (attrClass == "point")
+                {
+                    Vector3 p = geo.Points[index];
+                    return axis == 'x' ? p.x : axis == 'y' ? p.y : p.z;
+                }
+            }
+
+            if (expression.StartsWith("rand("))
+            {
+                // 简单随机
+                float seed = index * 0.618033988749895f;
+                return (seed - Mathf.Floor(seed));
+            }
+
+            // 默认返回 0
+            return type == AttribType.Vector3 ? Vector3.zero : 0f;
         }
     }
 }

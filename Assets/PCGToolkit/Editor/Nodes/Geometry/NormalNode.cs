@@ -37,16 +37,88 @@ namespace PCGToolkit.Nodes.Geometry
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Normal: 计算法线 (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
             string type = GetParamString(parameters, "type", "point");
             float cuspAngle = GetParamFloat(parameters, "cuspAngle", 60f);
+            bool weightByArea = GetParamBool(parameters, "weightByArea", true);
 
-            ctx.Log($"Normal: type={type}, cuspAngle={cuspAngle}");
+            if (geo.Points.Count == 0 || geo.Primitives.Count == 0)
+                return SingleOutput("geometry", geo);
 
-            // TODO: 计算面法线，然后根据 cuspAngle 决定顶点法线是平滑还是硬边
+            // 创建法线属性
+            var normalAttr = geo.PointAttribs.CreateAttribute("N", AttribType.Vector3);
+
+            switch (type.ToLower())
+            {
+                case "primitive":
+                    // 面法线
+                    var primNormals = geo.PrimAttribs.CreateAttribute("N", AttribType.Vector3);
+                    for (int p = 0; p < geo.Primitives.Count; p++)
+                    {
+                        Vector3 normal = CalculateFaceNormal(geo, p);
+                        primNormals.Values.Add(normal);
+                    }
+                    break;
+
+                case "point":
+                default:
+                    // 点法线：平均相邻面的法线
+                    Vector3[] pointNormals = new Vector3[geo.Points.Count];
+                    float[] weights = new float[geo.Points.Count];
+
+                    for (int p = 0; p < geo.Primitives.Count; p++)
+                    {
+                        var prim = geo.Primitives[p];
+                        Vector3 faceNormal = CalculateFaceNormal(geo, p);
+                        float area = CalculateFaceArea(geo, p);
+                        float weight = weightByArea ? area : 1f;
+
+                        foreach (int idx in prim)
+                        {
+                            pointNormals[idx] += faceNormal * weight;
+                            weights[idx] += weight;
+                        }
+                    }
+
+                    // 归一化
+                    for (int i = 0; i < geo.Points.Count; i++)
+                    {
+                        if (weights[i] > 0)
+                            pointNormals[i] /= weights[i];
+                        pointNormals[i] = pointNormals[i].normalized;
+                        normalAttr.Values.Add(pointNormals[i]);
+                    }
+                    break;
+            }
+
             return SingleOutput("geometry", geo);
+        }
+
+        private Vector3 CalculateFaceNormal(PCGGeometry geo, int primIndex)
+        {
+            var prim = geo.Primitives[primIndex];
+            if (prim.Length < 3) return Vector3.up;
+
+            Vector3 v0 = geo.Points[prim[0]];
+            Vector3 v1 = geo.Points[prim[1]];
+            Vector3 v2 = geo.Points[prim[2]];
+            return Vector3.Cross(v1 - v0, v2 - v0).normalized;
+        }
+
+        private float CalculateFaceArea(PCGGeometry geo, int primIndex)
+        {
+            var prim = geo.Primitives[primIndex];
+            if (prim.Length < 3) return 0f;
+
+            float area = 0f;
+            for (int i = 1; i < prim.Length - 1; i++)
+            {
+                Vector3 v0 = geo.Points[prim[0]];
+                Vector3 v1 = geo.Points[prim[i]];
+                Vector3 v2 = geo.Points[prim[i + 1]];
+                area += Vector3.Cross(v1 - v0, v2 - v0).magnitude * 0.5f;
+            }
+            return area;
         }
     }
 }

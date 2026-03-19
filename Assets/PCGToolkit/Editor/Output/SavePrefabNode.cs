@@ -1,6 +1,8 @@
 using System.Collections.Generic;
-using PCGToolkit.Core;
+using System.IO;
+using UnityEditor;
 using UnityEngine;
+using PCGToolkit.Core;
 
 namespace PCGToolkit.Nodes.Output
 {
@@ -39,15 +41,72 @@ namespace PCGToolkit.Nodes.Output
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("SavePrefab: 保存 Prefab (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input");
+
+            if (geo == null || geo.Points.Count == 0)
+            {
+                ctx.LogWarning("SavePrefab: 输入几何体为空，跳过保存");
+                return SingleOutput("geometry", geo);
+            }
+
             string assetPath = GetParamString(parameters, "assetPath", "Assets/PCGOutput/output.prefab");
+            string materialPath = GetParamString(parameters, "material", "");
             bool generateCollider = GetParamBool(parameters, "generateCollider", false);
+            bool isStatic = GetParamBool(parameters, "isStatic", true);
 
-            ctx.Log($"SavePrefab: path={assetPath}, collider={generateCollider}");
+            // 确保目录存在
+            string directory = Path.GetDirectoryName(assetPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
 
-            // TODO: PCGGeometryToMesh.Convert → 创建 GameObject → PrefabUtility.SaveAsPrefabAsset
+            // 转换为 Mesh
+            var mesh = PCGGeometryToMesh.Convert(geo);
+            mesh.name = Path.GetFileNameWithoutExtension(assetPath) + "_Mesh";
+
+            // 保存 Mesh 资产
+            string meshPath = Path.ChangeExtension(assetPath, ".asset");
+            AssetDatabase.CreateAsset(mesh, meshPath);
+
+            // 创建 GameObject
+            var go = new GameObject(Path.GetFileNameWithoutExtension(assetPath));
+            go.isStatic = isStatic;
+
+            var meshFilter = go.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = mesh;
+
+            var renderer = go.AddComponent<MeshRenderer>();
+
+            // 应用材质
+            if (!string.IsNullOrEmpty(materialPath))
+            {
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+                if (mat != null)
+                    renderer.sharedMaterial = mat;
+                else
+                    ctx.LogWarning($"SavePrefab: 无法加载材质 {materialPath}");
+            }
+            else
+            {
+                renderer.sharedMaterial = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Diffuse.mat");
+            }
+
+            // 添加碰撞体
+            if (generateCollider)
+            {
+                var collider = go.AddComponent<MeshCollider>();
+                collider.sharedMesh = mesh;
+            }
+
+            // 保存为 Prefab
+            PrefabUtility.SaveAsPrefabAsset(go, assetPath);
+            Object.DestroyImmediate(go);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            ctx.Log($"SavePrefab: 已保存到 {assetPath}");
             return SingleOutput("geometry", geo);
         }
     }

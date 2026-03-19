@@ -129,7 +129,7 @@ namespace PCGToolkit.Nodes.Geometry
         {
             // Catmull-Clark 细分的简化实现
             // 完整实现需要考虑折痕、边界等特殊情况
-            ctx.LogWarning("Subdivide: Catmull-Clark 细分使用简化实现");
+            Debug.LogWarning("Subdivide: Catmull-Clark 细分使用简化实现");
 
             // 第一次迭代使用 linear，后续可改进
             return SubdivideLinear(geo);

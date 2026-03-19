@@ -529,5 +529,20 @@ namespace PCGToolkit.Graph
             return port;  
         }  
         
+        /// <summary>  
+        /// 通过 Port 实例反查 schema.Name（因为 port.portName 是 DisplayName，不能直接用于执行器）  
+        /// </summary>  
+        public string GetSchemaNameForPort(Port port)  
+        {  
+            foreach (var kvp in inputPorts)  
+            {  
+                if (kvp.Value == port) return kvp.Key;  
+            }  
+            foreach (var kvp in outputPorts)  
+            {  
+                if (kvp.Value == port) return kvp.Key;  
+            }  
+            return port.portName; // fallback，不应该走到这里  
+        }
     }  
 }

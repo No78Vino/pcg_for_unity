@@ -33,7 +33,8 @@ namespace PCGToolkit.Nodes.Create
         {
             var result = new PCGGeometry();
             int pointOffset = 0;
-
+            int primOffset = 0;    // <-- 新增：追踪已累积的面数
+            
             foreach (var kvp in inputGeometries)
             {
                 var geo = kvp.Value;
@@ -61,8 +62,8 @@ namespace PCGToolkit.Nodes.Create
                 }
 
                 // 合并属性（简化处理，按索引追加）
-                MergeAttributes(result.PointAttribs, geo.PointAttribs, vertexCount);
-                MergeAttributes(result.PrimAttribs, geo.PrimAttribs, geo.Primitives.Count);
+                MergeAttributes(result.PointAttribs, geo.PointAttribs, vertexCount, pointOffset);  
+                MergeAttributes(result.PrimAttribs, geo.PrimAttribs, geo.Primitives.Count, primOffset);  
 
                 // 合并分组
                 foreach (var group in geo.PointGroups)
@@ -82,27 +83,27 @@ namespace PCGToolkit.Nodes.Create
                 }
 
                 pointOffset += vertexCount;
+                primOffset += geo.Primitives.Count;  // <-- 新增：累加当前几何体的面数  
             }
 
             return SingleOutput("geometry", result);
         }
 
-        private void MergeAttributes(AttributeStore dest, AttributeStore src, int elementCount)
-        {
-            foreach (var attr in src.GetAllAttributes())
-            {
-                var destAttr = dest.GetAttribute(attr.Name);
-                if (destAttr == null)
-                {
-                    destAttr = dest.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
-                }
-                // 填充默认值以对齐之前的元素
-                while (destAttr.Values.Count < dest.Points.Count - elementCount)
-                {
-                    destAttr.Values.Add(destAttr.DefaultValue);
-                }
-                destAttr.Values.AddRange(attr.Values);
-            }
+        private void MergeAttributes(AttributeStore dest, AttributeStore src, int elementCount, int existingCount)  
+        {  
+            foreach (var attr in src.GetAllAttributes())  
+            {  
+                var destAttr = dest.GetAttribute(attr.Name);  
+                if (destAttr == null)  
+                {  
+                    destAttr = dest.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);  
+                }  
+                while (destAttr.Values.Count < existingCount)  
+                {  
+                    destAttr.Values.Add(destAttr.DefaultValue);  
+                }  
+                destAttr.Values.AddRange(attr.Values);  
+            }  
         }
     }
 }

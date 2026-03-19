@@ -41,14 +41,47 @@ namespace PCGToolkit.Nodes.UV
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("UVTransform: UV 变换 (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
+            Vector3 translate = GetParamVector3(parameters, "translate", Vector3.zero);
             float rotate = GetParamFloat(parameters, "rotate", 0f);
+            Vector3 scale = GetParamVector3(parameters, "scale", Vector3.one);
+            Vector3 pivot = GetParamVector3(parameters, "pivot", new Vector3(0.5f, 0.5f, 0f));
 
-            ctx.Log($"UVTransform: rotate={rotate}");
+            var uvAttr = geo.PointAttribs.GetAttribute("uv");
+            if (uvAttr == null)
+            {
+                ctx.LogWarning("UVTransform: 几何体没有 UV 属性");
+                return SingleOutput("geometry", geo);
+            }
 
-            // TODO: 对 UV 属性执行 2D 变换
+            // 构建变换矩阵
+            float cos = Mathf.Cos(rotate * Mathf.Deg2Rad);
+            float sin = Mathf.Sin(rotate * Mathf.Deg2Rad);
+
+            // 对每个 UV 执行变换
+            for (int i = 0; i < uvAttr.Values.Count; i++)
+            {
+                Vector3 uv = (Vector3)uvAttr.Values[i];
+                
+                // 相对于枢轴点
+                float u = uv.x - pivot.x;
+                float v = uv.y - pivot.y;
+
+                // 缩放
+                u *= scale.x;
+                v *= scale.y;
+
+                // 旋转
+                float newU = u * cos - v * sin;
+                float newV = u * sin + v * cos;
+
+                // 平移并恢复枢轴
+                newU += pivot.x + translate.x;
+                newV += pivot.y + translate.y;
+
+                uvAttr.Values[i] = new Vector3(newU, newV, 0f);
+            }
+
             return SingleOutput("geometry", geo);
         }
     }

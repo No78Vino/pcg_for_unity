@@ -387,6 +387,7 @@ namespace PCGToolkit.Graph
             // 清除之前的执行状态  
             graphView.ClearAllHighlights();  
             graphView.ClearAllExecutionTimes();  
+            _errorPanel.ClearErrors();
             _totalTimeLabel.text = "Total: --";
             _progressBar.value = 0;
   
@@ -412,7 +413,8 @@ namespace PCGToolkit.Graph
   
             // 清除之前的执行状态  
             graphView.ClearAllHighlights();  
-            graphView.ClearAllExecutionTimes();  
+            graphView.ClearAllExecutionTimes(); 
+            _errorPanel.ClearErrors();
             _totalTimeLabel.text = "Total: --";
             _progressBar.value = 0;
   

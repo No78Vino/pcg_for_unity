@@ -19,9 +19,9 @@ namespace PCGToolkit.Graph
             // 迭代四修复：添加配置参数，让端口配置能够被持久化
             new PCGParamSchema("portName", PCGPortDirection.Input, PCGPortType.String,
                 "Port Name", "端口名称", "input"),
-            new PCGParamSchema("portType", PCGPortDirection.Input, PCGPortType.Int,
-                "Port Type", "端口类型 (0=Geometry, 1=Float, 2=Int, 3=Bool, 4=String, 5=Vector3, 6=Color)", 0,
-                Min = 0, Max = 6),
+            new PCGParamSchema("portType", PCGPortDirection.Input, PCGPortType.Int,  
+                    "Port Type", "端口类型 (0=Geometry, 1=Float, 2=Int, 3=Bool, 4=String, 5=Vector3, 6=Color)", 0)  
+                { Min = 0, Max = 6 },
         };
 
         public override PCGParamSchema[] Outputs => new PCGParamSchema[0]; // 动态生成

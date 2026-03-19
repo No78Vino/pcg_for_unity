@@ -52,7 +52,7 @@ namespace PCGToolkit.Graph
             var inputs = new List<PCGParamSchema>();
             foreach (var nodeData in subGraphData.Nodes)
             {
-                if (nodeData.NodeType == "SubGraphOutput")
+                if (nodeData.NodeType == "SubGraphInput")
                 {
                     // 从参数中读取端口配置
                     string portName = "output";
@@ -100,7 +100,7 @@ namespace PCGToolkit.Graph
             var outputs = new List<PCGParamSchema>();
             foreach (var nodeData in subGraphData.Nodes)
             {
-                if (nodeData.NodeType == "SubGraphInput")
+                if (nodeData.NodeType == "SubGraphOutput")
                 {
                     string portName = "input";
                     int portTypeInt = 0;

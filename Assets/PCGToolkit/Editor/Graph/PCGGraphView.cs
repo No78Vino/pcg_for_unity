@@ -495,7 +495,8 @@ namespace PCGToolkit.Graph
             // 迭代四修复：加载 Groups
             foreach (var groupData in data.Groups)
             {
-                var group = new Group(groupData.Title, new Rect(groupData.Position, groupData.Size));
+                var group = new Group { title = groupData.Title };  
+                group.SetPosition(new Rect(groupData.Position, groupData.Size));
                 
                 foreach (var nodeId in groupData.NodeIds)
                 {
@@ -511,11 +512,9 @@ namespace PCGToolkit.Graph
             // 迭代四修复：加载 StickyNotes
             foreach (var noteData in data.StickyNotes)
             {
-                var note = new StickyNote(noteData.NoteId)
-                {
-                    title = noteData.Title,
-                    contents = noteData.Content
-                };
+                var note = new StickyNote();  
+                note.title = noteData.Title;  
+                note.contents = noteData.Content;
                 note.SetPosition(new Rect(noteData.Position, noteData.Size));
                 AddElement(note);
             }

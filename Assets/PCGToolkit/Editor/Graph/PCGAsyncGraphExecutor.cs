@@ -160,6 +160,7 @@ namespace PCGToolkit.Graph
             _graphData = graphData;
             _context = new PCGContext();
             _nodeOutputs = new Dictionary<string, Dictionary<string, PCGGeometry>>();
+            _nodeResults.Clear();
             _currentNodeIndex = 0;
             _currentPhase = NodeExecutionPhase.Highlight;
 

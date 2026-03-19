@@ -49,7 +49,7 @@ namespace PCGToolkit.Core
         {
             var logEntry = $"[Node:{CurrentNodeId}] {message}";
             Logs.Add(logEntry);
-            Debug.Log(logEntry);
+            UnityEngine.Debug.Log(logEntry);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace PCGToolkit.Core
         {
             var logEntry = $"[Node:{CurrentNodeId}] WARNING: {message}";
             Logs.Add(logEntry);
-            Debug.LogWarning(logEntry);
+            UnityEngine.Debug.LogWarning(logEntry);
         }
 
         /// <summary>
@@ -71,7 +71,7 @@ namespace PCGToolkit.Core
             Logs.Add(logEntry);
             HasError = true;
             ErrorMessage = message;
-            Debug.LogError(logEntry);
+            UnityEngine.Debug.LogError(logEntry);
         }
 
         /// <summary>

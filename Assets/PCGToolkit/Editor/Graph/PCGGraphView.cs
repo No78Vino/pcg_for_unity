@@ -30,6 +30,25 @@ namespace PCGToolkit.Graph
             graphViewChanged += OnGraphViewChanged;
         }
 
+        public override List<Port> GetCompatiblePorts(Port startPort, NodeAdapter nodeAdapter)
+        {
+            var compatiblePorts = new List<Port>();
+            ports.ForEach(port =>
+            {
+                // 不能连接自身节点
+                if (port.node == startPort.node) return;
+                // 方向必须相反
+                if (port.direction == startPort.direction) return;
+                // 类型必须兼容：相同类型，或其中一方是 Any (object)
+                if (port.portType != startPort.portType &&
+                    port.portType != typeof(object) &&
+                    startPort.portType != typeof(object))
+                    return;
+                compatiblePorts.Add(port);
+            });
+            return compatiblePorts;
+        }
+
         public void Initialize(PCGGraphEditorWindow editorWindow)
         {
             _editorWindow = editorWindow;

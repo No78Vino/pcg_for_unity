@@ -194,13 +194,26 @@ namespace PCGToolkit.Graph
                 }  
             }  
   
-            // 收集参数  
-            var parameters = new Dictionary<string, object>();  
-            foreach (var param in nodeData.Parameters)  
-            {  
-                parameters[param.Key] = param.ValueJson;  
-            }  
-  
+            // 收集参数（反序列化为正确类型）
+            var parameters = new Dictionary<string, object>();
+            foreach (var param in nodeData.Parameters)
+            {
+                parameters[param.Key] = PCGParamHelper.DeserializeParamValue(param);
+            }
+
+            // 从上游 Const 节点的 GlobalVariables 中获取值
+            foreach (var edge in graphData.Edges)
+            {
+                if (edge.InputNodeId == nodeData.NodeId)
+                {
+                    var upstreamKey = $"{edge.OutputNodeId}.{edge.OutputPortName}";
+                    if (context.GlobalVariables.TryGetValue(upstreamKey, out var val))
+                    {
+                        parameters[edge.InputPortName] = val;
+                    }
+                }
+            }
+
             // 执行节点  
             context.CurrentNodeId = nodeData.NodeId;  
             try  

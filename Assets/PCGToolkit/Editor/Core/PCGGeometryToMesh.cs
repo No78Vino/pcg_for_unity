@@ -14,8 +14,7 @@ namespace PCGToolkit.Core
         /// </summary>
         public static Mesh Convert(PCGGeometry geometry)
         {
-            // TODO: 实现完整的 PCGGeometry → Mesh 转换
-            Debug.Log("[PCGGeometryToMesh] Convert: TODO - 将 PCGGeometry 转换为 Unity Mesh");
+            Debug.Log($"[PCGGeometryToMesh] Converting PCGGeometry to Mesh (Points: {geometry?.Points.Count ?? 0}, Prims: {geometry?.Primitives.Count ?? 0})");
 
             var mesh = new Mesh();
             mesh.name = "PCGMesh";

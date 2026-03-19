@@ -37,18 +37,51 @@ namespace PCGToolkit.Nodes.Create
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            // TODO: 实现 Box 几何体生成
-            ctx.Log("Box: 生成立方体 (TODO)");
-
             float sizeX = GetParamFloat(parameters, "sizeX", 1.0f);
             float sizeY = GetParamFloat(parameters, "sizeY", 1.0f);
             float sizeZ = GetParamFloat(parameters, "sizeZ", 1.0f);
             Vector3 center = GetParamVector3(parameters, "center", Vector3.zero);
 
-            ctx.Log($"Box: size=({sizeX}, {sizeY}, {sizeZ}), center={center}");
-
             var geo = new PCGGeometry();
-            // TODO: 生成 8 个顶点 + 6 个四边形面
+
+            // 计算半尺寸
+            float hx = sizeX * 0.5f;
+            float hy = sizeY * 0.5f;
+            float hz = sizeZ * 0.5f;
+
+            // 生成 8 个顶点（以 center 为中心）
+            // 顶点布局：
+            //      7-------6
+            //     /|      /|
+            //    / |     / |
+            //   4-------5  |
+            //   |  3----|--2
+            //   | /     | /
+            //   |/      |/
+            //   0-------1
+            geo.Points = new List<Vector3>
+            {
+                center + new Vector3(-hx, -hy, -hz), // 0
+                center + new Vector3( hx, -hy, -hz), // 1
+                center + new Vector3( hx, -hy,  hz), // 2
+                center + new Vector3(-hx, -hy,  hz), // 3
+                center + new Vector3(-hx,  hy, -hz), // 4
+                center + new Vector3( hx,  hy, -hz), // 5
+                center + new Vector3( hx,  hy,  hz), // 6
+                center + new Vector3(-hx,  hy,  hz), // 7
+            };
+
+            // 生成 6 个四边形面（顺时针 winding，法线朝外）
+            geo.Primitives = new List<int[]>
+            {
+                new[] { 0, 1, 2, 3 }, // 底面 (Y-)
+                new[] { 4, 7, 6, 5 }, // 顶面 (Y+)
+                new[] { 0, 4, 5, 1 }, // 前面 (Z-)
+                new[] { 1, 5, 6, 2 }, // 右面 (X+)
+                new[] { 2, 6, 7, 3 }, // 后面 (Z+)
+                new[] { 3, 7, 4, 0 }, // 左面 (X-)
+            };
+
             return SingleOutput("geometry", geo);
         }
     }

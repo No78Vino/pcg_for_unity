@@ -34,31 +34,36 @@ namespace PCGToolkit.Graph
             var window = GetWindow<PCGGraphEditorWindow>();  
             window.titleContent = new GUIContent("PCG Node Editor");  
             window.minSize = new Vector2(800, 600);  
-        }  
-  
-        private void OnEnable()  
-        {  
-            ConstructGraphView();  
-            GenerateToolbar();  
+        }
+
+        private void OnEnable()
+        {
+            ConstructGraphView();
+            GenerateToolbar();
             InitializeExecutor();
-            
+
             // 迭代一：注册 Undo/Redo 回调
             Undo.undoRedoPerformed += OnUndoRedo;
-        }  
-  
-        private void OnDisable()  
-        {  
+
+            rootVisualElement.RegisterCallback<KeyDownEvent>(OnGlobalKeyDown);
+        }
+
+        private void OnDisable()
+        {
             // 停止执行  
-            if (_asyncExecutor != null && _asyncExecutor.State != ExecutionState.Idle)  
-                _asyncExecutor.Stop();  
-  
+            if (_asyncExecutor != null && _asyncExecutor.State != ExecutionState.Idle)
+                _asyncExecutor.Stop();
+
             if (graphView != null && _mainContainer != null)
                 _mainContainer.Remove(graphView);
-            
+
             // 迭代一：注销 Undo/Redo 回调
             Undo.undoRedoPerformed -= OnUndoRedo;
-        }  
-  
+            
+            // 注销全局键盘事件回调
+            rootVisualElement.UnregisterCallback<KeyDownEvent>(OnGlobalKeyDown);
+        }
+
         private void ConstructGraphView()  
         {  
             // 迭代三：创建主容器（GraphView + ErrorPanel）
@@ -296,17 +301,6 @@ namespace PCGToolkit.Graph
         }
         
         // ---- 迭代一：键盘快捷键 ----
-        private void OnEnable()
-        {
-            // 注册全局键盘事件回调
-            rootVisualElement.RegisterCallback<KeyDownEvent>(OnGlobalKeyDown);
-        }
-        
-        private void OnDisable()
-        {
-            // 注销全局键盘事件回调
-            rootVisualElement.UnregisterCallback<KeyDownEvent>(OnGlobalKeyDown);
-        }
         
         private void OnGlobalKeyDown(KeyDownEvent evt)
         {

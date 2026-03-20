@@ -48,9 +48,71 @@ namespace PCGToolkit.Core
             }
             mesh.triangles = triangles.ToArray();
 
-            // TODO: 从 PointAttribs 中提取 Normal / UV / Color 等属性映射到 Mesh
-            mesh.RecalculateNormals();
+            // 从 PointAttribs 提取属性映射到 Mesh
+            bool hasCustomNormals = false;
+
+            // Normal ("N")
+            var normalAttr = geometry.PointAttribs.GetAttribute("N");
+            if (normalAttr != null && normalAttr.Values.Count == geometry.Points.Count)
+            {
+                var normals = new Vector3[geometry.Points.Count];
+                for (int i = 0; i < geometry.Points.Count; i++)
+                {
+                    normals[i] = normalAttr.Values[i] is Vector3 n ? n : Vector3.up;
+                }
+                mesh.normals = normals;
+                hasCustomNormals = true;
+            }
+
+            // UV ("uv")
+            var uvAttr = geometry.PointAttribs.GetAttribute("uv");
+            if (uvAttr != null && uvAttr.Values.Count == geometry.Points.Count)
+            {
+                var uvs = new Vector2[geometry.Points.Count];
+                for (int i = 0; i < geometry.Points.Count; i++)
+                {
+                    var val = uvAttr.Values[i];
+                    if (val is Vector2 uv2) uvs[i] = uv2;
+                    else if (val is Vector3 uv3) uvs[i] = new Vector2(uv3.x, uv3.y);
+                    else uvs[i] = Vector2.zero;
+                }
+                mesh.uv = uvs;
+            }
+
+            // Color ("Cd")
+            var colorAttr = geometry.PointAttribs.GetAttribute("Cd");
+            if (colorAttr != null && colorAttr.Values.Count == geometry.Points.Count)
+            {
+                var colors = new Color[geometry.Points.Count];
+                for (int i = 0; i < geometry.Points.Count; i++)
+                {
+                    var val = colorAttr.Values[i];
+                    if (val is Color c) colors[i] = c;
+                    else if (val is Vector3 v) colors[i] = new Color(v.x, v.y, v.z, 1f);
+                    else colors[i] = Color.white;
+                }
+                mesh.colors = colors;
+            }
+
+            // Alpha ("Alpha") — 如果有单独的 Alpha 属性，合并到 Color
+            var alphaAttr = geometry.PointAttribs.GetAttribute("Alpha");
+            if (alphaAttr != null && alphaAttr.Values.Count == geometry.Points.Count && mesh.colors != null)
+            {
+                var colors = mesh.colors;
+                for (int i = 0; i < geometry.Points.Count; i++)
+                {
+                    if (alphaAttr.Values[i] is float a)
+                        colors[i].a = a;
+                }
+                mesh.colors = colors;
+            }
+
+            // 如果没有自定义法线，自动计算
+            if (!hasCustomNormals)
+                mesh.RecalculateNormals();
+
             mesh.RecalculateBounds();
+            mesh.RecalculateTangents();
 
             return mesh;
         }
@@ -83,6 +145,22 @@ namespace PCGToolkit.Core
                 var normalAttr = geo.PointAttribs.CreateAttribute("N", AttribType.Vector3);
                 foreach (var n in mesh.normals)
                     normalAttr.Values.Add(n);
+            }
+
+            // 映射 UV
+            if (mesh.uv != null && mesh.uv.Length > 0)
+            {
+                var uvAttr = geo.PointAttribs.CreateAttribute("uv", AttribType.Vector2);
+                foreach (var uv in mesh.uv)
+                    uvAttr.Values.Add(uv);
+            }
+
+            // 映射 Color
+            if (mesh.colors != null && mesh.colors.Length > 0)
+            {
+                var colorAttr = geo.PointAttribs.CreateAttribute("Cd", AttribType.Color);
+                foreach (var c in mesh.colors)
+                    colorAttr.Values.Add(c);
             }
 
             return geo;

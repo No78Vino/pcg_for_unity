@@ -69,6 +69,53 @@ namespace PCGToolkit.Nodes.Deform
                 UnityEngine.Random.value * 1000f
             );
 
+            // 预计算顶点法线
+            Vector3[] vertexNormals = new Vector3[geo.Points.Count];
+
+            // 优先从 PointAttribs 读取 "N"
+            var normalAttr = geo.PointAttribs.GetAttribute("N");
+            if (normalAttr != null && normalAttr.Values.Count == geo.Points.Count)
+            {
+                for (int i = 0; i < geo.Points.Count; i++)
+                {
+                    vertexNormals[i] = (normalAttr.Values[i] is Vector3 n) ? n : Vector3.up;
+                }
+            }
+            else if (geo.Primitives.Count > 0)
+            {
+                // 从相邻面计算顶点法线（面积加权平均）
+                for (int i = 0; i < geo.Points.Count; i++)
+                    vertexNormals[i] = Vector3.zero;
+
+                foreach (var prim in geo.Primitives)
+                {
+                    if (prim.Length < 3) continue;
+                    Vector3 v0 = geo.Points[prim[0]];
+                    Vector3 v1 = geo.Points[prim[1]];
+                    Vector3 v2 = geo.Points[prim[2]];
+                    Vector3 faceNormal = Vector3.Cross(v1 - v0, v2 - v0); // 未归一化 = 面积加权
+                    
+                    foreach (int idx in prim)
+                    {
+                        vertexNormals[idx] += faceNormal;
+                    }
+                }
+
+                for (int i = 0; i < geo.Points.Count; i++)
+                {
+                    if (vertexNormals[i].sqrMagnitude > 0.0001f)
+                        vertexNormals[i] = vertexNormals[i].normalized;
+                    else
+                        vertexNormals[i] = Vector3.up;
+                }
+            }
+            else
+            {
+                // 无面数据，默认 Y 轴
+                for (int i = 0; i < geo.Points.Count; i++)
+                    vertexNormals[i] = Vector3.up;
+            }
+
             // 对每个点应用噪声位移
             for (int i = 0; i < geo.Points.Count; i++)
             {
@@ -110,18 +157,8 @@ namespace PCGToolkit.Nodes.Deform
                 noiseValue /= maxAmplitude;
                 noiseValue = noiseValue * 2f - 1f; // 映射到 -1 ~ 1
 
-                // 计算法线方向（如果没有面，用 Y 轴）
-                Vector3 normal = Vector3.up;
-                if (geo.Primitives.Count > 0)
-                {
-                    // 简单估算：用点到中心的反方向
-                    normal = p.normalized;
-                    if (normal.sqrMagnitude < 0.001f)
-                        normal = Vector3.up;
-                }
-
                 // 沿法线方向偏移
-                geo.Points[i] = p + normal * noiseValue * height;
+                geo.Points[i] = p + vertexNormals[i] * noiseValue * height;
             }
 
             ctx.Log($"Mountain: height={height}, frequency={frequency}, octaves={octaves}, noiseType={noiseType}");

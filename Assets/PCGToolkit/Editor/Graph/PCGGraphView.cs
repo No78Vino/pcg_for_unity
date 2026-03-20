@@ -126,12 +126,17 @@ namespace PCGToolkit.Graph
             // 迭代四修复：转换屏幕坐标为GraphView本地坐标
             var localMousePosition = contentViewContainer.WorldToLocal(evt.mousePosition);
             
+            // 在事件处理时立即捕获屏幕坐标
+            var screenMousePos = _editorWindow != null 
+                ? _editorWindow.position.position + evt.mousePosition 
+                : evt.mousePosition;
+            
             // 画布右键
             evt.menu.AppendAction("Create Node", _ => 
             {
                 nodeCreationRequest?.Invoke(new NodeCreationContext()
                 {
-                    screenMousePosition = evt.mousePosition
+                    screenMousePosition = screenMousePos
                 });
             });
             
@@ -170,8 +175,9 @@ namespace PCGToolkit.Graph
                 maxPos = Vector2.Max(maxPos, pos.position + pos.size);
             }
             
-            // 创建 Group
+            // 创建 Group（分配唯一 GUID）
             var group = new Group { title = "New Group" };
+            group.userData = System.Guid.NewGuid().ToString();
             group.SetPosition(new Rect(minPos - new Vector2(20, 40), maxPos - minPos + new Vector2(40, 60)));
             
             foreach (var node in selectedNodes)
@@ -188,6 +194,7 @@ namespace PCGToolkit.Graph
             var note = new StickyNote();
             note.title = "Note";
             note.contents = "Write your note here...";
+            note.userData = System.Guid.NewGuid().ToString();
             note.SetPosition(new Rect(position, new Vector2(200, 100)));
             AddElement(note);
             OnGraphChanged?.Invoke();
@@ -279,7 +286,7 @@ namespace PCGToolkit.Graph
                         var defaults = new Dictionary<string, object>();
                         foreach (var param in nodeData.Parameters)
                         {
-                            defaults[param.Key] = DeserializeParamValue(param);
+                            defaults[param.Key] = PCGParamHelper.DeserializeParamValue(param);
                         }
                         visual.SetPortDefaultValues(defaults);
                     }
@@ -367,6 +374,10 @@ namespace PCGToolkit.Graph
         
         private void OnKeyDown(KeyDownEvent evt)
         {
+            // 如果焦点在文本输入控件中，不拦截快捷键
+            if (IsTargetInTextInput(evt))
+                return;
+
             // F: Frame All
             if (evt.keyCode == KeyCode.F)
             {
@@ -379,6 +390,15 @@ namespace PCGToolkit.Graph
                 DeleteSelection();
                 evt.StopPropagation();
             }
+        }
+
+        private bool IsTargetInTextInput(EventBase evt)
+        {
+            if (evt.target is not VisualElement target) return false;
+            return target is TextField || target is FloatField || target is IntegerField ||
+                   target.GetFirstAncestorOfType<TextField>() != null ||
+                   target.GetFirstAncestorOfType<FloatField>() != null ||
+                   target.GetFirstAncestorOfType<IntegerField>() != null;
         }
 
         // ---- 执行调试辅助方法 ----  
@@ -468,7 +488,7 @@ namespace PCGToolkit.Graph
                     var defaults = new Dictionary<string, object>();  
                     foreach (var param in nodeData.Parameters)  
                     {  
-                        defaults[param.Key] = DeserializeParamValue(param);  
+                        defaults[param.Key] = PCGParamHelper.DeserializeParamValue(param);  
                     }  
                     visual.SetPortDefaultValues(defaults);  
                 }  
@@ -495,7 +515,8 @@ namespace PCGToolkit.Graph
             // 迭代四修复：加载 Groups
             foreach (var groupData in data.Groups)
             {
-                var group = new Group { title = groupData.Title };  
+                var group = new Group { title = groupData.Title };
+                group.userData = groupData.GroupId; // 恢复 GUID
                 group.SetPosition(new Rect(groupData.Position, groupData.Size));
                 
                 foreach (var nodeId in groupData.NodeIds)
@@ -512,9 +533,10 @@ namespace PCGToolkit.Graph
             // 迭代四修复：加载 StickyNotes
             foreach (var noteData in data.StickyNotes)
             {
-                var note = new StickyNote();  
-                note.title = noteData.Title;  
+                var note = new StickyNote();
+                note.title = noteData.Title;
                 note.contents = noteData.Content;
+                note.userData = noteData.NoteId; // 恢复 GUID
                 note.SetPosition(new Rect(noteData.Position, noteData.Size));
                 AddElement(note);
             }
@@ -572,7 +594,7 @@ namespace PCGToolkit.Graph
                 {
                     var groupData = new PCGGroupData
                     {
-                        GroupId = group.title,
+                        GroupId = group.userData as string ?? System.Guid.NewGuid().ToString(),
                         Title = group.title,
                         Position = group.GetPosition().position,
                         Size = group.GetPosition().size
@@ -593,7 +615,7 @@ namespace PCGToolkit.Graph
                 {
                     var noteData = new PCGStickyNoteData
                     {
-                        NoteId = note.title,
+                        NoteId = note.userData as string ?? System.Guid.NewGuid().ToString(),
                         Title = note.title,
                         Content = note.contents,
                         Position = note.GetPosition().position,
@@ -656,60 +678,6 @@ namespace PCGToolkit.Graph
             }
 
             return param;
-        }
-
-        private object DeserializeParamValue(PCGSerializedParameter param)
-        {
-            try
-            {
-                switch (param.ValueType)
-                {
-                    case "float":
-                        return float.Parse(param.ValueJson, System.Globalization.CultureInfo.InvariantCulture);
-                    case "int":
-                        return int.Parse(param.ValueJson);
-                    case "bool":
-                        return bool.Parse(param.ValueJson);
-                    case "string":
-                        return param.ValueJson;
-                    case "Vector3":
-                    {
-                        var parts = param.ValueJson.Split(',');
-                        if (parts.Length == 3)
-                        {
-                            return new Vector3(
-                                float.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture));
-                        }
-
-                        return Vector3.zero;
-                    }
-                    case "Color":
-                    {
-                        var parts = param.ValueJson.Split(',');
-                        if (parts.Length == 4)
-                        {
-                            return new Color(
-                                float.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture));
-                        }
-
-                        return Color.white;
-                    }
-                    case "null":
-                        return null;
-                    default:
-                        return param.ValueJson;
-                }
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogWarning($"PCGGraphView: Failed to deserialize param '{param.Key}': {e.Message}");
-                return param.ValueJson;
-            }
         }
         
         private GraphViewChange OnGraphViewChanged(GraphViewChange change)  

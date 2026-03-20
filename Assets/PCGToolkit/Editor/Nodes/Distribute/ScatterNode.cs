@@ -175,28 +175,70 @@ namespace PCGToolkit.Nodes.Distribute
 
         private List<Vector3> RelaxPoints(List<Vector3> points, int iterations)
         {
-            // 简单的 Lloyd 松弛
+            if (points.Count < 2) return points;
+
+            // 自适应距离阈值：基于点的平均间距
+            Bounds bounds = new Bounds(points[0], Vector3.zero);
+            foreach (var p in points) bounds.Encapsulate(p);
+            float volume = bounds.size.x * bounds.size.y * bounds.size.z;
+            // 估算平均间距
+            float avgSpacing = Mathf.Pow(volume / Mathf.Max(1, points.Count), 1f / 3f);
+            float cellSize = Mathf.Max(avgSpacing * 2f, 0.01f);
+            float repelRadius = cellSize * 0.5f;
+
             for (int iter = 0; iter < iterations; iter++)
             {
+                // 构建空间哈希网格
+                var grid = new Dictionary<(int, int, int), List<int>>();
+                for (int i = 0; i < points.Count; i++)
+                {
+                    var cell = GetCell(points[i], cellSize);
+                    if (!grid.ContainsKey(cell)) grid[cell] = new List<int>();
+                    grid[cell].Add(i);
+                }
+
+                var newPoints = new List<Vector3>(points);
+
                 for (int i = 0; i < points.Count; i++)
                 {
                     Vector3 avg = points[i];
                     int neighborCount = 1;
+                    var cell = GetCell(points[i], cellSize);
 
-                    // 找最近的几个点并平均
-                    for (int j = 0; j < points.Count; j++)
+                    // 只检查相邻 27 个格子
+                    for (int dx = -1; dx <= 1; dx++)
+                    for (int dy = -1; dy <= 1; dy++)
+                    for (int dz = -1; dz <= 1; dz++)
                     {
-                        if (i != j && Vector3.Distance(points[i], points[j]) < 0.5f)
+                        var neighborCell = (cell.Item1 + dx, cell.Item2 + dy, cell.Item3 + dz);
+                        if (!grid.TryGetValue(neighborCell, out var bucket)) continue;
+
+                        foreach (int j in bucket)
                         {
-                            avg += points[j];
-                            neighborCount++;
+                            if (i == j) continue;
+                            if (Vector3.Distance(points[i], points[j]) < repelRadius)
+                            {
+                                avg += points[j];
+                                neighborCount++;
+                            }
                         }
                     }
 
-                    points[i] = avg / neighborCount;
+                    newPoints[i] = avg / neighborCount;
                 }
+
+                points = newPoints;
             }
             return points;
+        }
+
+        private static (int, int, int) GetCell(Vector3 pos, float cellSize)
+        {
+            return (
+                Mathf.FloorToInt(pos.x / cellSize),
+                Mathf.FloorToInt(pos.y / cellSize),
+                Mathf.FloorToInt(pos.z / cellSize)
+            );
         }
     }
 }

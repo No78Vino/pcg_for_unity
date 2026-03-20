@@ -44,7 +44,11 @@ namespace PCGToolkit.Core
                     triangles.Add(prim[2]);
                     triangles.Add(prim[3]);
                 }
-                // TODO: 处理 N 边形（需要三角化，使用 LibTessDotNet）
+                else if (prim.Length > 4)
+                {
+                    // N-gon: 耳切法三角化
+                    TriangulateNgon(geometry.Points, prim, triangles);
+                }
             }
             mesh.triangles = triangles.ToArray();
 
@@ -164,6 +168,103 @@ namespace PCGToolkit.Core
             }
 
             return geo;
+        }
+
+        /// <summary>
+        /// 耳切法三角化 N-gon
+        /// </summary>
+        private static void TriangulateNgon(List<Vector3> allPoints, int[] prim, List<int> triangles)
+        {
+            if (prim.Length < 3) return;
+
+            // 计算多边形法线（用于判断凸凹）
+            Vector3 normal = Vector3.zero;
+            for (int i = 0; i < prim.Length; i++)
+            {
+                Vector3 curr = allPoints[prim[i]];
+                Vector3 next = allPoints[prim[(i + 1) % prim.Length]];
+                normal.x += (curr.y - next.y) * (curr.z + next.z);
+                normal.y += (curr.z - next.z) * (curr.x + next.x);
+                normal.z += (curr.x - next.x) * (curr.y + next.y);
+            }
+            if (normal.sqrMagnitude > 0.0001f) normal.Normalize();
+            else normal = Vector3.up;
+
+            var indices = new List<int>(prim);
+
+            int safety = indices.Count * indices.Count; // 防止无限循环
+            while (indices.Count > 3 && safety-- > 0)
+            {
+                bool earFound = false;
+                for (int i = 0; i < indices.Count; i++)
+                {
+                    int prev = (i - 1 + indices.Count) % indices.Count;
+                    int next = (i + 1) % indices.Count;
+
+                    Vector3 a = allPoints[indices[prev]];
+                    Vector3 b = allPoints[indices[i]];
+                    Vector3 c = allPoints[indices[next]];
+
+                    // 检查是否为凸角
+                    Vector3 cross = Vector3.Cross(b - a, c - b);
+                    if (Vector3.Dot(cross, normal) < 0) continue;
+
+                    // 检查是否有其他点在三角形内
+                    bool isEar = true;
+                    for (int j = 0; j < indices.Count; j++)
+                    {
+                        if (j == prev || j == i || j == next) continue;
+                        if (PointInTriangle(allPoints[indices[j]], a, b, c))
+                        {
+                            isEar = false;
+                            break;
+                        }
+                    }
+
+                    if (isEar)
+                    {
+                        triangles.Add(indices[prev]);
+                        triangles.Add(indices[i]);
+                        triangles.Add(indices[next]);
+                        indices.RemoveAt(i);
+                        earFound = true;
+                        break;
+                    }
+                }
+
+                if (!earFound)
+                {
+                    // Fallback: 扇形三角化
+                    for (int i = 1; i < indices.Count - 1; i++)
+                    {
+                        triangles.Add(indices[0]);
+                        triangles.Add(indices[i]);
+                        triangles.Add(indices[i + 1]);
+                    }
+                    break;
+                }
+            }
+
+            if (indices.Count == 3)
+            {
+                triangles.Add(indices[0]);
+                triangles.Add(indices[1]);
+                triangles.Add(indices[2]);
+            }
+        }
+
+        private static bool PointInTriangle(Vector3 p, Vector3 a, Vector3 b, Vector3 c)
+        {
+            Vector3 v0 = c - a, v1 = b - a, v2 = p - a;
+            float dot00 = Vector3.Dot(v0, v0);
+            float dot01 = Vector3.Dot(v0, v1);
+            float dot02 = Vector3.Dot(v0, v2);
+            float dot11 = Vector3.Dot(v1, v1);
+            float dot12 = Vector3.Dot(v1, v2);
+            float inv = 1f / (dot00 * dot11 - dot01 * dot01);
+            float u = (dot11 * dot02 - dot01 * dot12) * inv;
+            float v = (dot00 * dot12 - dot01 * dot02) * inv;
+            return u >= 0 && v >= 0 && u + v <= 1;
         }
     }
 }

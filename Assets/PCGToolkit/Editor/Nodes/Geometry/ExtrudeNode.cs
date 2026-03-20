@@ -79,22 +79,21 @@ namespace PCGToolkit.Nodes.Geometry
                 var prim = geo.Primitives[primIdx];
                 if (prim.Length < 3) continue;
 
-                // 计算面法线
                 Vector3 normal = CalculateFaceNormal(geo.Points, prim);
 
-                // 计算面中心
                 Vector3 center = Vector3.zero;
                 foreach (int idx in prim) center += geo.Points[idx];
                 center /= prim.Length;
 
-                // 为每个分段创建侧面
+                // 记录当前面的顶点在 result.Points 中的起始偏移
+                int baseOffset = result.Points.Count;
+
                 for (int d = 0; d <= divisions; d++)
                 {
                     float t = (float)d / divisions;
                     float offset = distance * t;
                     float insetAmount = inset * t;
 
-                    // 创建当前层的顶点
                     int[] layerVertices = new int[prim.Length];
                     for (int i = 0; i < prim.Length; i++)
                     {
@@ -106,7 +105,6 @@ namespace PCGToolkit.Nodes.Geometry
                         result.Points.Add(newPos);
                         layerVertices[i] = newIdx;
 
-                        // 记录映射
                         if (!extrudedVertices.ContainsKey(prim[i]))
                             extrudedVertices[prim[i]] = new List<int>();
                         extrudedVertices[prim[i]].Add(newIdx);
@@ -118,13 +116,9 @@ namespace PCGToolkit.Nodes.Geometry
                         for (int i = 0; i < prim.Length; i++)
                         {
                             int next = (i + 1) % prim.Length;
-                            int prevLayer = d - 1;
-                            int prevIdx = prevLayer * prim.Length + result.Points.Count - (divisions + 1) * prim.Length + i;
-                            int prevNextIdx = prevLayer * prim.Length + result.Points.Count - (divisions + 1) * prim.Length + next;
-                            
-                            // 重新计算前一层的索引
-                            prevIdx = (d - 1) * prim.Length + i;
-                            prevNextIdx = (d - 1) * prim.Length + next;
+                            // 前一层的顶点索引 = baseOffset + (d-1)*prim.Length + i
+                            int prevIdx = baseOffset + (d - 1) * prim.Length + i;
+                            int prevNextIdx = baseOffset + (d - 1) * prim.Length + next;
                             
                             result.Primitives.Add(new int[] { prevIdx, prevNextIdx, layerVertices[next], layerVertices[i] });
                         }
@@ -134,11 +128,11 @@ namespace PCGToolkit.Nodes.Geometry
                 // 输出顶面
                 if (outputFront)
                 {
-                    int lastLayerStart = divisions * prim.Length;
+                    int lastLayerStart = baseOffset + divisions * prim.Length;
                     int[] frontPrim = new int[prim.Length];
                     for (int i = 0; i < prim.Length; i++)
                     {
-                        frontPrim[i] = lastLayerStart + (prim.Length - 1 - i); // 反向以保持正确朝向
+                        frontPrim[i] = lastLayerStart + (prim.Length - 1 - i);
                     }
                     result.Primitives.Add(frontPrim);
                 }

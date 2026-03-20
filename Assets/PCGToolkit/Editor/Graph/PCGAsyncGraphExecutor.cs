@@ -310,7 +310,7 @@ namespace PCGToolkit.Graph
             var parameters = new Dictionary<string, object>();
             foreach (var param in nodeData.Parameters)
             {
-                parameters[param.Key] = DeserializeParamValue(param);
+                parameters[param.Key] = PCGParamHelper.DeserializeParamValue(param);
             }
 
             // 收集参数：从上游 Const 节点的 GlobalVariables 中获取值  
@@ -359,65 +359,6 @@ namespace PCGToolkit.Graph
             }
 
             return result;
-        }
-
-        /// <summary>  
-        /// 反序列化参数值（与 PCGGraphView 中的逻辑一致）  
-        /// </summary>  
-        private object DeserializeParamValue(PCGSerializedParameter param)
-        {
-            try
-            {
-                switch (param.ValueType)
-                {
-                    case "float":
-                        return float.Parse(param.ValueJson,
-                            System.Globalization.CultureInfo.InvariantCulture);
-                    case "int":
-                        return int.Parse(param.ValueJson);
-                    case "bool":
-                        return bool.Parse(param.ValueJson);
-                    case "string":
-                        return param.ValueJson;
-                    case "Vector3":
-                    {
-                        var parts = param.ValueJson.Split(',');
-                        if (parts.Length == 3)
-                        {
-                            return new Vector3(
-                                float.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture));
-                        }
-
-                        return Vector3.zero;
-                    }
-                    case "Color":
-                    {
-                        var parts = param.ValueJson.Split(',');
-                        if (parts.Length == 4)
-                        {
-                            return new Color(
-                                float.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture),
-                                float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture));
-                        }
-
-                        return Color.white;
-                    }
-                    case "null":
-                    case null:
-                    case "":
-                        return param.ValueJson; // fallback: 返回原始字符串  
-                    default:
-                        return param.ValueJson;
-                }
-            }
-            catch
-            {
-                return param.ValueJson;
-            }
         }
 
         /// <summary>  

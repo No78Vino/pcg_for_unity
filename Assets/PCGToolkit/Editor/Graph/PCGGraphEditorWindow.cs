@@ -295,7 +295,21 @@ namespace PCGToolkit.Graph
                     fontSize = 12,  
                 }  
             };  
-            toolbar.Add(_totalTimeLabel);  
+            toolbar.Add(_totalTimeLabel);
+            
+            // 版本信息标签
+            var versionLabel = new Label($"v{PCGToolkit.Core.PCGToolkitVersion.Version}")
+            {
+                style =
+                {
+                    unityTextAlign = TextAnchor.MiddleRight,
+                    color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)),
+                    marginRight = 8,
+                    fontSize = 10,
+                }
+            };
+            versionLabel.tooltip = $"PCG Toolkit {PCGToolkit.Core.PCGToolkitVersion.FullVersion}\nBuild: {PCGToolkit.Core.PCGToolkitVersion.BuildDate}";
+            toolbar.Add(versionLabel);
   
             rootVisualElement.Add(toolbar);  
         }
@@ -348,7 +362,8 @@ namespace PCGToolkit.Graph
                 ? "New Graph" 
                 : System.IO.Path.GetFileNameWithoutExtension(_currentAssetPath);
             string dirtyMark = _isDirty ? "*" : "";
-            titleContent = new GUIContent($"PCG Node Editor - {graphName}{dirtyMark}");
+            titleContent = new GUIContent(
+                $"PCG Node Editor v{PCGToolkit.Core.PCGToolkitVersion.Version} - {graphName}{dirtyMark}");
         }
         
         // ---- 迭代一：Undo/Redo 支持 ----

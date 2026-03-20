@@ -58,8 +58,27 @@ namespace PCGToolkit.Core
         /// </summary>
         public void BuildEdges()
         {
-            // TODO: 从 Primitives 提取所有唯一边
-            Debug.Log("[PCGGeometry] BuildEdges: TODO");
+            Edges.Clear();
+            var edgeSet = new HashSet<long>(); // 用 long 编码无序边对
+
+            foreach (var prim in Primitives)
+            {
+                for (int i = 0; i < prim.Length; i++)
+                {
+                    int a = prim[i];
+                    int b = prim[(i + 1) % prim.Length];
+
+                    // 无序边：确保 min 在前
+                    int minIdx = Mathf.Min(a, b);
+                    int maxIdx = Mathf.Max(a, b);
+                    long edgeKey = ((long)minIdx << 32) | (long)(uint)maxIdx;
+
+                    if (edgeSet.Add(edgeKey))
+                    {
+                        Edges.Add(new int[] { minIdx, maxIdx });
+                    }
+                }
+            }
         }
 
         /// <summary>

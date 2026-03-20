@@ -17,6 +17,15 @@ namespace PCGToolkit.Graph
         
         // 迭代一：脏状态事件
         public event Action OnGraphChanged;
+
+        // 新增：选中节点变化事件
+        public event Action<PCGNodeVisual> OnSelectionNodeChanged;
+
+        // 新增：供 Inspector 调用的脏状态通知
+        public void NotifyGraphChanged()
+        {
+            OnGraphChanged?.Invoke();
+        }
         
         // 迭代三：节点点击事件（用于预览）
         public event Action<string> OnNodeClicked;

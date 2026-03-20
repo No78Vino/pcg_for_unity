@@ -13,7 +13,11 @@ namespace PCGToolkit.Graph
         // ---- 迭代一：文件状态管理 ----  
         private string _currentAssetPath;   // 当前文件路径，null 表示新建未保存  
         private bool _isDirty;              // 脏状态标记
-  
+
+        // ---- Inspector 集成 ----
+        private PCGNodeInspectorWindow _inspectorWindow;
+        private PCGNodeVisual _lastSelectedNode; // 用于轮询检测选中变化
+
         // ---- 执行调试相关 ----  
         private PCGAsyncGraphExecutor _asyncExecutor;  
         private PCGNodePreviewWindow _previewWindow;  
@@ -46,6 +50,19 @@ namespace PCGToolkit.Graph
             Undo.undoRedoPerformed += OnUndoRedo;
 
             rootVisualElement.RegisterCallback<KeyDownEvent>(OnGlobalKeyDown);
+        }
+
+        private void Update()
+        {
+            // 轮询检测选中节点变化（GraphView 没有原生的 OnSelectionChanged）
+            if (graphView == null) return;
+            var currentSelected = graphView.GetSelectedNodeVisual();
+            if (currentSelected != _lastSelectedNode)
+            {
+                _lastSelectedNode = currentSelected;
+                if (_inspectorWindow != null)
+                    _inspectorWindow.InspectNode(currentSelected);
+            }
         }
 
         private void OnDisable()
@@ -154,15 +171,21 @@ namespace PCGToolkit.Graph
                     visual.SetHighlight(true);  
             };  
   
-            // 节点执行完成事件  
-            _asyncExecutor.OnNodeCompleted += result =>  
-            {  
-                var visual = graphView.FindNodeVisual(result.NodeId);  
-                if (visual != null)  
-                {  
-                    visual.SetHighlight(false);  
-                    visual.ShowExecutionTime(result.ElapsedMs);  
-  
+            // 节点执行完成事件
+            _asyncExecutor.OnNodeCompleted += result =>
+            {
+                var visual = graphView.FindNodeVisual(result.NodeId);
+                if (visual != null)
+                {
+                    visual.SetHighlight(false);
+                    visual.ShowExecutionTime(result.ElapsedMs);
+
+                    // 更新 Inspector 的执行结果信息
+                    if (_inspectorWindow != null && visual == _lastSelectedNode)
+                    {
+                        _inspectorWindow.UpdateExecutionInfo(result.ElapsedMs, result.OutputGeometry);
+                    }
+
                     if (!result.Success)
                     {
                         visual.SetErrorState(true);
@@ -170,8 +193,8 @@ namespace PCGToolkit.Graph
                         _errorPanel.AddError(result.NodeId, result.NodeType, result.ErrorMessage ?? "Execution failed");
                         _errorPanel.style.display = DisplayStyle.Flex;
                     }
-                }  
-  
+                }
+
                 // 更新总时长和进度条
                 UpdateTotalTimeLabel();
                 UpdateProgressBar();
@@ -278,7 +301,15 @@ namespace PCGToolkit.Graph
             _progressBar.style.width = 100;
             _progressBar.style.height = 16;
             toolbar.Add(_progressBar);
-  
+
+            // Inspector 按钮
+            var inspectorButton = new Button(ToggleInspectorWindow)
+            {
+                text = "Inspector",
+                tooltip = "Open the Node Inspector panel"
+            };
+            toolbar.Add(inspectorButton);
+
             // ---- 弹性空间 ----  
             var spacer = new VisualElement();  
             spacer.style.flexGrow = 1;  
@@ -325,6 +356,23 @@ namespace PCGToolkit.Graph
             HandleKeyboardShortcut(evt);
         }
         
+        private void ToggleInspectorWindow()
+        {
+            if (_inspectorWindow == null)
+            {
+                _inspectorWindow = PCGNodeInspectorWindow.Open();
+                _inspectorWindow.BindGraphView(graphView);
+                // 立即显示当前选中
+                var currentSelected = graphView.GetSelectedNodeVisual();
+                _inspectorWindow.InspectNode(currentSelected);
+            }
+            else
+            {
+                _inspectorWindow.Close();
+                _inspectorWindow = null;
+            }
+        }
+
         private void HandleKeyboardShortcut(KeyDownEvent evt)
         {
             // Ctrl+S: Save

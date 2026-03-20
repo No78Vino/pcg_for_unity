@@ -114,6 +114,38 @@ namespace PCGToolkit.Core
         }
 
         /// <summary>
+        /// 便捷方法：创建/更新属性并设置单个值，返回 this 以支持链式调用。
+        /// </summary>
+        public AttributeStore SetAttribute(string name, object value)
+        {
+            AttribType type = InferType(value);
+            if (_attributes.TryGetValue(name, out var existing))
+            {
+                existing.DefaultValue = value;
+                existing.Values.Clear();
+                existing.Values.Add(value);
+            }
+            else
+            {
+                var attr = new PCGAttribute(name, type, value);
+                attr.Values.Add(value);
+                _attributes[name] = attr;
+            }
+            return this;
+        }
+
+        private static AttribType InferType(object value)
+        {
+            if (value is float || value is double) return AttribType.Float;
+            if (value is int) return AttribType.Int;
+            if (value is Vector2) return AttribType.Vector2;
+            if (value is Vector3) return AttribType.Vector3;
+            if (value is Vector4) return AttribType.Vector4;
+            if (value is Color) return AttribType.Color;
+            return AttribType.String;
+        }
+
+        /// <summary>
         /// 清空所有属性
         /// </summary>
         public void Clear()

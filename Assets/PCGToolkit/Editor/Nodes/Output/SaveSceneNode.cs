@@ -132,7 +132,9 @@ namespace PCGToolkit.Nodes.Output
             }
 
             // 保存 Mesh 资产
-            string meshAssetPath = Path.ChangeExtension(scenePath, "_Mesh.asset");
+            string meshAssetPath = Path.Combine(
+                Path.GetDirectoryName(scenePath),
+                Path.GetFileNameWithoutExtension(scenePath) + "_Mesh.asset");
             AssetDatabase.CreateAsset(mesh, meshAssetPath);
 
             // 保存场景

@@ -99,7 +99,9 @@ namespace PCGToolkit.Nodes.Output
             }
 
             // 保存 Mesh 资产
-            string meshAssetPath = Path.ChangeExtension(savePath, ".asset");
+            string meshAssetPath = Path.Combine(
+                Path.GetDirectoryName(savePath),
+                Path.GetFileNameWithoutExtension(savePath) + "_Mesh.asset");
             AssetDatabase.CreateAsset(mesh, meshAssetPath);
 
             // 保存为 Prefab

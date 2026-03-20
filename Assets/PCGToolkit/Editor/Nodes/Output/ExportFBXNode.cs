@@ -88,17 +88,19 @@ namespace PCGToolkit.Nodes.Output
             try
             {
                 // 检查 FBX 导出器是否可用
-                var fbxExporterType = System.Type.GetType("UnityEditor.Formats.Fbx.Exporter.FBXExporter, UnityEditor.Formats.Fbx.Editor");
+                var fbxExporterType = System.Type.GetType("UnityEditor.Formats.Fbx.Exporter.ModelExporter, Unity.Formats.Fbx.Editor");
                 if (fbxExporterType != null)
                 {
                     // 使用反射调用 FBX 导出
-                    var exportMethod = fbxExporterType.GetMethod("ExportGameObjects",
-                        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+                    var exportMethod = fbxExporterType.GetMethod("ExportObject",
+                        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public,
+                        null,
+                        new System.Type[] { typeof(string), typeof(UnityEngine.Object) },
+                        null);
 
                     if (exportMethod != null)
                     {
-                        var gameObjects = new GameObject[] { go };
-                        exportMethod.Invoke(null, new object[] { gameObjects, fbxPath });
+                        exportMethod.Invoke(null, new object[] { fbxPath, go });
                         fbxExportSuccess = true;
                         ctx.Log($"ExportFBX: 已导出到 {fbxPath}");
                     }

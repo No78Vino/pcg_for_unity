@@ -84,9 +84,6 @@ namespace PCGToolkit.Nodes.Procedural
             Quaternion rotation = Quaternion.identity;
             float currentStep = stepLength;
 
-            for (int gen = 0; gen < iterations; gen++)
-                currentStep *= stepScale;
-
             foreach (char c in current)
             {
                 switch (c)

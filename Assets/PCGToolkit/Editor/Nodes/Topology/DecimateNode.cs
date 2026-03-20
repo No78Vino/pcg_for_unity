@@ -132,55 +132,55 @@ namespace PCGToolkit.Nodes.Topology
 
             // 迭代坍缩边
             int currentCount = originalCount;
-            int removedFaces = 0;
 
             while (currentCount > finalCount && edgeCosts.Count > 0)
             {
                 var edge = edgeCosts.Dequeue();
 
-                // 检查边是否仍然有效
-                if (!edgeTris.ContainsKey(edge) || edgeTris[edge].Count != 2) continue;
-
-                // 坍缩边
+                // 重新检查边是否仍然有效（edgeTris 可能已过期）
+                // 验证边的两个顶点是否仍然存在于某个三角形中
                 int v0 = edge.Item1;
                 int v1 = edge.Item2;
 
-                // 合并顶点（将 v1 合并到 v0 的位置）
+                // 找到包含这条边的三角形
+                var adjacentTris = new List<int>();
+                for (int triIdx = 0; triIdx < geo.Primitives.Count; triIdx++)
+                {
+                    var tri = geo.Primitives[triIdx];
+                    if (tri == null) continue;
+                    bool hasV0 = tri[0] == v0 || tri[1] == v0 || tri[2] == v0;
+                    bool hasV1 = tri[0] == v1 || tri[1] == v1 || tri[2] == v1;
+                    if (hasV0 && hasV1) adjacentTris.Add(triIdx);
+                }
+
+                // 边必须恰好被 2 个三角形共享才能安全坍缩
+                if (adjacentTris.Count != 2) continue;
+
+                // 合并顶点（将 v1 合并到 v0 的中点位置）
                 Vector3 newPos = (geo.Points[v0] + geo.Points[v1]) * 0.5f;
                 geo.Points[v0] = newPos;
 
                 // 更新所有引用 v1 的面
-                var trisToUpdate = new List<int>(edgeTris[edge]);
-                foreach (int triIdx in trisToUpdate)
+                for (int triIdx = 0; triIdx < geo.Primitives.Count; triIdx++)
                 {
-                    if (triIdx >= geo.Primitives.Count) continue;
-
                     var tri = geo.Primitives[triIdx];
-                    bool hasV1 = false;
+                    if (tri == null) continue;
 
                     for (int i = 0; i < 3; i++)
                     {
                         if (tri[i] == v1)
-                        {
                             tri[i] = v0;
-                            hasV1 = true;
-                        }
                     }
 
-                    if (hasV1)
+                    // 检查是否产生退化三角形（重复顶点）
+                    if (tri[0] == tri[1] || tri[1] == tri[2] || tri[0] == tri[2])
                     {
-                        // 检查是否产生退化三角形（重复顶点）
-                        if (tri[0] == tri[1] || tri[1] == tri[2] || tri[0] == tri[2])
-                        {
-                            geo.Primitives[triIdx] = null; // 标记删除
-                            removedFaces++;
-                        }
+                        geo.Primitives[triIdx] = null; // 标记删除
                     }
                 }
 
-                // 移除坍缩的面
+                // 移除标记删除的面
                 geo.Primitives.RemoveAll(t => t == null);
-
                 currentCount = geo.Primitives.Count;
             }
 

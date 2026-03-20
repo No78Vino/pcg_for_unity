@@ -112,26 +112,29 @@ namespace PCGToolkit.Nodes.Curve
                 // 添加倒角起点
                 newPoints.Add(filletStart);
 
-                // 生成圆弧段
-                float startAngle = Mathf.Atan2(
-                    Vector3.Dot(Vector3.Cross(normal, dirIn), bisector),
-                    Vector3.Dot(dirIn, bisector)
-                );
-                float endAngle = startAngle + angle;
+                // 生成圆弧段（使用球面线性插值）
+                Vector3 fromCenter = filletStart - center;
+                Vector3 toCenter = filletEnd - center;
+
+                float arcAngle = Vector3.Angle(fromCenter, toCenter) * Mathf.Deg2Rad;
+                float sinArc = Mathf.Sin(arcAngle);
 
                 for (int j = 1; j < divisions; j++)
                 {
                     float t = (float)j / divisions;
-                    float a = Mathf.Lerp(startAngle, endAngle, t);
 
-                    // 在圆弧上的点
-                    Vector3 localPoint = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * radius;
-
-                    // 构建圆弧的局部坐标系
-                    Vector3 arcRight = dirIn;
-                    Vector3 arcForward = Vector3.Cross(normal, arcRight).normalized;
-
-                    Vector3 arcPoint = center + arcRight * localPoint.x + arcForward * localPoint.z;
+                    Vector3 arcPoint;
+                    if (sinArc < 0.001f)
+                    {
+                        // 角度太小，退化为线性插值
+                        arcPoint = Vector3.Lerp(filletStart, filletEnd, t);
+                    }
+                    else
+                    {
+                        float a = Mathf.Sin((1f - t) * arcAngle) / sinArc;
+                        float b = Mathf.Sin(t * arcAngle) / sinArc;
+                        arcPoint = center + a * fromCenter + b * toCenter;
+                    }
                     newPoints.Add(arcPoint);
                 }
 

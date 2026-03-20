@@ -98,6 +98,21 @@ namespace PCGToolkit.Core
         }
 
         /// <summary>
+        /// 从参数字典中获取 Color 值
+        /// </summary>
+        protected Color GetParamColor(Dictionary<string, object> parameters, string name, Color defaultValue)
+        {
+            if (parameters != null && parameters.TryGetValue(name, out var val))
+            {
+                if (val is Color c) return c;
+                if (val is Vector4 v4) return new Color(v4.x, v4.y, v4.z, v4.w);
+                if (val is string s && ColorUtility.TryParseHtmlString(s, out var parsed))
+                    return parsed;
+            }
+            return defaultValue;
+        }
+
+        /// <summary>
         /// 构建单输出结果字典
         /// </summary>
         protected Dictionary<string, PCGGeometry> SingleOutput(string portName, PCGGeometry geometry)

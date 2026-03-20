@@ -96,7 +96,6 @@ namespace PCGToolkit.Nodes.Procedural
                 Vector3 seedPoint = seedPoints[i];
 
                 // 计算这个种子点的 Voronoi 单元
-                // 简化实现：生成一个基于到其他种子点距离的凸多面体
                 var cellVertices = ComputeVoronoiCell(seedPoint, seedPoints, min, max, i);
 
                 if (cellVertices.Count < 4) continue;
@@ -159,57 +158,138 @@ namespace PCGToolkit.Nodes.Procedural
 
         private List<Vector3> ComputeVoronoiCell(Vector3 seed, List<Vector3> allSeeds, Vector3 min, Vector3 max, int seedIndex)
         {
-            // 简化的 Voronoi 单元计算
-            // 通过裁剪包围盒的每个面来得到单元顶点
+            // 使用半空间裁剪法计算 3D Voronoi 单元
+            // 从包围盒的 6 个面（每面 2 个三角形）开始，逐步用中垂面裁剪
 
-            var vertices = new List<Vector3>();
+            // 包围盒的 8 个角点
+            Vector3[] boxVerts = new Vector3[]
+            {
+                new Vector3(min.x, min.y, min.z), // 0
+                new Vector3(max.x, min.y, min.z), // 1
+                new Vector3(max.x, max.y, min.z), // 2
+                new Vector3(min.x, max.y, min.z), // 3
+                new Vector3(min.x, min.y, max.z), // 4
+                new Vector3(max.x, min.y, max.z), // 5
+                new Vector3(max.x, max.y, max.z), // 6
+                new Vector3(min.x, max.y, max.z), // 7
+            };
 
-            // 从包围盒的 8 个角点开始
-            vertices.Add(new Vector3(min.x, min.y, min.z));
-            vertices.Add(new Vector3(max.x, min.y, min.z));
-            vertices.Add(new Vector3(max.x, max.y, min.z));
-            vertices.Add(new Vector3(min.x, max.y, min.z));
-            vertices.Add(new Vector3(min.x, min.y, max.z));
-            vertices.Add(new Vector3(max.x, min.y, max.z));
-            vertices.Add(new Vector3(max.x, max.y, max.z));
-            vertices.Add(new Vector3(min.x, max.y, max.z));
+            // 包围盒的 12 个三角形（6 个面，每面 2 个三角形）
+            var faces = new List<int[]>
+            {
+                new[]{0,2,1}, new[]{0,3,2}, // 前面 (-Z)
+                new[]{4,5,6}, new[]{4,6,7}, // 后面 (+Z)
+                new[]{0,1,5}, new[]{0,5,4}, // 底面 (-Y)
+                new[]{2,3,7}, new[]{2,7,6}, // 顶面 (+Y)
+                new[]{0,4,7}, new[]{0,7,3}, // 左面 (-X)
+                new[]{1,2,6}, new[]{1,6,5}, // 右面 (+X)
+            };
 
-            // 用每个相邻种子点的中垂面裁剪
+            var vertices = new List<Vector3>(boxVerts);
+
+            // 用每个相邻种子点的中垂面裁剪凸多面体
             foreach (var other in allSeeds)
             {
                 if (other == seed) continue;
 
-                // 中垂面
                 Vector3 midpoint = (seed + other) * 0.5f;
                 Vector3 normal = (other - seed).normalized;
 
-                // 裁剪顶点列表
-                var newVertices = new List<Vector3>();
+                // 对每个三角面进行半空间裁剪
+                var newFaces = new List<int[]>();
 
-                for (int i = 0; i < vertices.Count; i++)
+                foreach (var face in faces)
                 {
-                    Vector3 v0 = vertices[i];
-                    Vector3 v1 = vertices[(i + 1) % vertices.Count];
+                    // 计算每个顶点到裁剪面的距离
+                    float d0 = Vector3.Dot(vertices[face[0]] - midpoint, normal);
+                    float d1 = Vector3.Dot(vertices[face[1]] - midpoint, normal);
+                    float d2 = Vector3.Dot(vertices[face[2]] - midpoint, normal);
 
-                    float d0 = Vector3.Dot(v0 - midpoint, normal);
-                    float d1 = Vector3.Dot(v1 - midpoint, normal);
-
-                    if (d0 <= 0) newVertices.Add(v0);
-
-                    if ((d0 > 0 && d1 < 0) || (d0 < 0 && d1 > 0))
+                    // 所有顶点都在保留侧
+                    if (d0 <= 0 && d1 <= 0 && d2 <= 0)
                     {
-                        // 交点
-                        float t = d0 / (d0 - d1);
-                        Vector3 intersection = v0 + t * (v1 - v0);
-                        newVertices.Add(intersection);
+                        newFaces.Add(face);
+                        continue;
+                    }
+
+                    // 所有顶点都在裁剪侧
+                    if (d0 > 0 && d1 > 0 && d2 > 0)
+                        continue;
+
+                    // 部分裁剪：计算交点并生成新三角形
+                    var insideVerts = new List<int>();
+                    var outsideVerts = new List<int>();
+                    float[] dists = { d0, d1, d2 };
+
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (dists[i] <= 0)
+                            insideVerts.Add(i);
+                        else
+                            outsideVerts.Add(i);
+                    }
+
+                    if (insideVerts.Count == 2)
+                    {
+                        // 两个顶点在内侧，一个在外侧
+                        int outIdx = outsideVerts[0];
+                        int in0 = insideVerts[0];
+                        int in1 = insideVerts[1];
+
+                        // 计算两个交点
+                        float t0 = dists[in0] / (dists[in0] - dists[outIdx]);
+                        Vector3 inter0 = vertices[face[in0]] + t0 * (vertices[face[outIdx]] - vertices[face[in0]]);
+                        int inter0Idx = vertices.Count;
+                        vertices.Add(inter0);
+
+                        float t1 = dists[in1] / (dists[in1] - dists[outIdx]);
+                        Vector3 inter1 = vertices[face[in1]] + t1 * (vertices[face[outIdx]] - vertices[face[in1]]);
+                        int inter1Idx = vertices.Count;
+                        vertices.Add(inter1);
+
+                        // 生成两个新三角形
+                        newFaces.Add(new int[] { face[in0], face[in1], inter0Idx });
+                        newFaces.Add(new int[] { face[in1], inter1Idx, inter0Idx });
+                    }
+                    else if (insideVerts.Count == 1)
+                    {
+                        // 一个顶点在内侧，两个在外侧
+                        int inIdx = insideVerts[0];
+                        int out0 = outsideVerts[0];
+                        int out1 = outsideVerts[1];
+
+                        float t0 = dists[inIdx] / (dists[inIdx] - dists[out0]);
+                        Vector3 inter0 = vertices[face[inIdx]] + t0 * (vertices[face[out0]] - vertices[face[inIdx]]);
+                        int inter0Idx = vertices.Count;
+                        vertices.Add(inter0);
+
+                        float t1 = dists[inIdx] / (dists[inIdx] - dists[out1]);
+                        Vector3 inter1 = vertices[face[inIdx]] + t1 * (vertices[face[out1]] - vertices[face[inIdx]]);
+                        int inter1Idx = vertices.Count;
+                        vertices.Add(inter1);
+
+                        newFaces.Add(new int[] { face[inIdx], inter0Idx, inter1Idx });
                     }
                 }
 
-                vertices = newVertices;
-                if (vertices.Count < 4) break;
+                faces = newFaces;
+                if (faces.Count == 0) break;
             }
 
-            return vertices;
+            // 收集所有使用的顶点
+            var usedVertices = new HashSet<int>();
+            foreach (var face in faces)
+            {
+                usedVertices.Add(face[0]);
+                usedVertices.Add(face[1]);
+                usedVertices.Add(face[2]);
+            }
+
+            var result = new List<Vector3>();
+            foreach (int idx in usedVertices)
+                result.Add(vertices[idx]);
+
+            return result;
         }
     }
 }

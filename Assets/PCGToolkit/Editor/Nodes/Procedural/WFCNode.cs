@@ -136,8 +136,12 @@ namespace PCGToolkit.Nodes.Procedural
                         primitives.Add(new int[] { baseIdx + 1, baseIdx + 2, baseIdx + 6 });
                         primitives.Add(new int[] { baseIdx + 1, baseIdx + 6, baseIdx + 5 });
 
-                        // 存储瓦片类型到面属性
-                        geo.PrimAttribs.SetAttribute("tileType", primitives.Count - 12, tileType);
+                        // 为每种瓦片类型创建 Prim Group
+                        string tileGroupName = $"tile_{tileType}";
+                        if (!geo.PrimGroups.ContainsKey(tileGroupName))
+                            geo.PrimGroups[tileGroupName] = new HashSet<int>();
+                        for (int pi = primitives.Count - 12; pi < primitives.Count; pi++)
+                            geo.PrimGroups[tileGroupName].Add(pi);
                     }
                 }
             }

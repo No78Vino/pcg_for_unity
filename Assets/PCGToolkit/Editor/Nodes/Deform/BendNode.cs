@@ -71,9 +71,6 @@ namespace PCGToolkit.Nodes.Deform
                 float t = posOnAxis / captureLength;
                 float bendAngle = angleRad * t;
 
-                // 计算弯曲后的新位置
-                float newRadius = radius + (axisIndex == 0 ? p.z : (axisIndex == 2 ? p.x : p.z));
-
                 if (axisIndex == 1) // Y轴弯曲
                 {
                     // 原本在 Y 方向的位置转换为圆弧上的角度

@@ -39,16 +39,66 @@ namespace PCGToolkit.Nodes.Deform
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            ctx.Log("Taper: 锥化变形 (TODO)");
-
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
+
+            if (geo.Points.Count == 0)
+            {
+                ctx.LogWarning("Taper: 输入几何体为空");
+                return SingleOutput("geometry", geo);
+            }
+
             float scaleStart = GetParamFloat(parameters, "scaleStart", 1.0f);
             float scaleEnd = GetParamFloat(parameters, "scaleEnd", 0.0f);
-            string axis = GetParamString(parameters, "axis", "y");
+            string axis = GetParamString(parameters, "axis", "y").ToLower();
+            Vector3 origin = GetParamVector3(parameters, "origin", Vector3.zero);
+
+            int axisIndex = axis == "x" ? 0 : (axis == "z" ? 2 : 1);
+
+            // 计算几何体在轴向上的范围
+            float minCoord = float.MaxValue;
+            float maxCoord = float.MinValue;
+
+            foreach (var p in geo.Points)
+            {
+                float coord = axisIndex == 0 ? p.x - origin.x : (axisIndex == 2 ? p.z - origin.z : p.y - origin.y);
+                if (coord < minCoord) minCoord = coord;
+                if (coord > maxCoord) maxCoord = coord;
+            }
+
+            float range = maxCoord - minCoord;
+            if (range < 0.0001f) range = 1f;
+
+            // 对每个点应用锥化
+            for (int i = 0; i < geo.Points.Count; i++)
+            {
+                Vector3 p = geo.Points[i] - origin;
+                float coord = axisIndex == 0 ? p.x : (axisIndex == 2 ? p.z : p.y);
+                float t = (coord - minCoord) / range; // 0~1 比例
+
+                // 线性插值缩放比例
+                float scale = Mathf.Lerp(scaleStart, scaleEnd, t);
+
+                // 应用缩放到垂直于轴的截面
+                if (axisIndex == 0) // X轴：缩放 YZ 平面
+                {
+                    p.y *= scale;
+                    p.z *= scale;
+                }
+                else if (axisIndex == 2) // Z轴：缩放 XY 平面
+                {
+                    p.x *= scale;
+                    p.y *= scale;
+                }
+                else // Y轴：缩放 XZ 平面
+                {
+                    p.x *= scale;
+                    p.z *= scale;
+                }
+
+                geo.Points[i] = p + origin;
+            }
 
             ctx.Log($"Taper: scaleStart={scaleStart}, scaleEnd={scaleEnd}, axis={axis}");
-
-            // TODO: 根据点在轴上的位置比例，插值缩放截面
             return SingleOutput("geometry", geo);
         }
     }

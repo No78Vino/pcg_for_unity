@@ -2,6 +2,8 @@
 
 以下是所有待实现功能的 PCG 节点列表，按 Tier 分组，每个节点包含输入端、输出端设计及功能描述。
 
+**已实现节点** 用 ~~删除线~~ 标记。
+
 ---
 
 ## Tier 4 — Curve
@@ -9,9 +11,9 @@
 | 节点 | 输入端 | 输出端 | 功能描述 |
 |---|---|---|---|
 | `CurveCreateNode` | `curveType: String`（bezier/nurbs/polyline）, `order: Int`, `closed: Bool`, `pointCount: Int` | `geometry: Geometry` | 创建曲线几何体（无几何体输入），控制点和曲线类型存储为 Detail 属性 |
-| `ResampleNode` | `input: Geometry`（必填）, `method: String`（length/count）, `length: Float`, `segments: Int`, `treatAsSubdivision: Bool` | `geometry: Geometry` | 按等弧长间距或固定段数重采样曲线，生成均匀分布的点序列 |
+| ~~`ResampleNode`~~ | ~~已实现~~ | ~~已实现~~ | ~~按等弧长间距或固定段数重采样曲线，生成均匀分布的点序列~~ |
 | `SweepNode` | `backbone: Geometry`（必填）, `crossSection: Geometry`（可选）, `scale: Float`, `twist: Float`, `divisions: Int`, `capEnds: Bool` | `geometry: Geometry` | 沿 backbone 曲线扫掠截面轮廓生成实体网格；使用 Frenet 坐标系定向截面，相邻截面间生成四边形面 |
-| `CarveNode` | `input: Geometry`（必填）, `firstU: Float`, `secondU: Float`, `cutAtFirstU: Bool`, `cutAtSecondU: Bool` | `geometry: Geometry` | 按归一化弧长参数 U（0~1）裁剪曲线，保留 [firstU, secondU] 范围内的部分，可在切割点插入新顶点 |
+| ~~`CarveNode`~~ | ~~已实现~~ | ~~已实现~~ | ~~按归一化弧长参数 U（0~1）裁剪曲线，保留 [firstU, secondU] 范围内的部分，可在切割点插入新顶点~~ |
 | `FilletNode` | `input: Geometry`（必填）, `radius: Float`, `divisions: Int` | `geometry: Geometry` | 将折线的每个尖角替换为圆弧过渡，每个角生成 `divisions` 段弧线 |
 
 ---
@@ -22,12 +24,12 @@
 
 | 节点 | 额外输入端 | 功能描述 |
 |---|---|---|
-| `MountainNode` | `height: Float`, `frequency: Float`, `octaves: Int`, `lacunarity: Float`, `persistence: Float`, `seed: Int`, `noiseType: String`（perlin/simplex/value） | 对每个点沿法线方向施加分形噪声（fBm）位移，产生地形起伏效果 |
-| `BendNode` | `angle: Float`, `upAxis: String`, `captureOrigin: Vector3`, `captureLength: Float` | 在捕获区域内将几何体沿圆弧弯曲，点的位移量与其在 upAxis 上的位置成比例 |
-| `TwistNode` | `angle: Float`, `axis: String`（x/y/z）, `origin: Vector3` | 沿指定轴旋转几何体截面，旋转角度与点在轴上的位置成比例（螺旋扭曲） |
-| `TaperNode` | `scaleStart: Float`, `scaleEnd: Float`, `axis: String`, `origin: Vector3` | 沿指定轴线性插值截面缩放比例，从 scaleStart 渐变到 scaleEnd（锥化效果） |
+| ~~`MountainNode`~~ | ~~已实现~~ | ~~对每个点沿法线方向施加分形噪声（fBm）位移，产生地形起伏效果~~ |
+| ~~`BendNode`~~ | ~~已实现~~ | ~~在捕获区域内将几何体沿圆弧弯曲，点的位移量与其在 upAxis 上的位置成比例~~ |
+| ~~`TwistNode`~~ | ~~已实现~~ | ~~沿指定轴旋转几何体截面，旋转角度与点在轴上的位置成比例（螺旋扭曲）~~ |
+| ~~`TaperNode`~~ | ~~已实现~~ | ~~沿指定轴线性插值截面缩放比例，从 scaleStart 渐变到 scaleEnd（锥化效果）~~ |
 | `LatticeNode` | `input: Geometry`（必填）, `lattice: Geometry`（必填）, `restLattice: Geometry`（可选）, `divisionsX/Y/Z: Int` | 自由变形（FFD）：计算每个点在 restLattice 中的三线性参数坐标，用 lattice 控制点的 Bernstein 基函数求出变形后位置 |
-| `SmoothNode` | `iterations: Int`, `strength: Float`（0~1）, `group: String`, `preserveVolume: Bool` | 拉普拉斯平滑：迭代将每个点移向邻居重心；`preserveVolume=true` 时使用 HC-Laplacian 修正以防止体积收缩 |
+| ~~`SmoothNode`~~ | ~~已实现~~ | ~~拉普拉斯平滑：迭代将每个点移向邻居重心；`preserveVolume=true` 时使用 HC-Laplacian 修正以防止体积收缩~~ |
 
 ---
 
@@ -62,12 +64,25 @@
 
 | 节点 | 输入端 | 输出端 | 功能描述 |
 |---|---|---|---|
-| `ExportMeshNode` | `input: Geometry`（必填）, `assetPath: String`, `createRenderer: Bool` | `geometry: Geometry`（直通） | 将 PCGGeometry 转换为 Unity Mesh 资产并保存；可选在场景中创建 MeshRenderer 预览对象 |
+| ~~`ExportMeshNode`~~ | ~~已实现~~ | ~~已实现~~ | ~~将 PCGGeometry 转换为 Unity Mesh 资产并保存；可选在场景中创建 MeshRenderer 预览对象~~ |
 | `ExportFBXNode` | `input: Geometry`（必填）, `assetPath: String` | `geometry: Geometry`（直通） | 通过 `com.unity.formats.fbx` 包的 `ModelExporter` 将几何体导出为 FBX 文件 |
-| `SavePrefabNode` | `input: Geometry`（必填）, `assetPath: String`, `addCollider: Bool`, `materialPath: String` | `geometry: Geometry`（直通） | 将几何体包装为带 MeshFilter/MeshRenderer（可选 MeshCollider）的 GameObject，用 `PrefabUtility.SaveAsPrefabAsset` 保存为 Prefab |
-| `SaveMaterialNode` | `input: Geometry`（直通，不消耗）, `assetPath: String`, `shaderName: String`, `albedoColor: Color`, `metallic: Float`, `smoothness: Float` | `geometry: Geometry`（直通） | 创建 Unity Material 资产并保存；几何体仅用于判断是否需要材质预览赋值 |
+| ~~`SavePrefabNode`~~ | ~~已实现~~ | ~~已实现~~ | ~~将几何体包装为带 MeshFilter/MeshRenderer（可选 MeshCollider）的 GameObject，用 `PrefabUtility.SaveAsPrefabAsset` 保存为 Prefab~~ |
+| ~~`SaveMaterialNode`~~ | ~~已实现~~ | ~~已实现~~ | ~~创建 Unity Material 资产并保存；几何体仅用于判断是否需要材质预览赋值~~ |
 | `SaveSceneNode` | `input: Geometry`（必填）, `assetPath: String` | `geometry: Geometry`（直通） | 将几何体实例化为场景对象，调用 `EditorSceneManager.SaveScene` 保存当前场景 |
 | `LODGenerateNode` | `input: Geometry`（必填）, `assetPath: String`, `lodLevels: Int` | `geometry: Geometry`（直通，全精度） | 为输入几何体生成多级 LOD：每级用 Decimate 逻辑降面，组装为 `LODGroup` 组件，可选保存为 Prefab |
+
+---
+
+## 实现进度汇总
+
+| Tier | 分类 | 总数 | 已实现 | 待实现 |
+|------|------|------|--------|--------|
+| Tier 4 | Curve | 5 | 2 | 3 |
+| Tier 5 | Deform | 6 | 5 | 1 |
+| Tier 6 | Topology | 6 | 0 | 6 |
+| Tier 7 | Procedural | 3 | 0 | 3 |
+| Tier 8 | Output | 6 | 3 | 3 |
+| **总计** | | **26** | **10** | **16** |
 
 ---
 

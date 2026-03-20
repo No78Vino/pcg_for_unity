@@ -256,6 +256,16 @@ namespace PCGToolkit.Graph
             if (titleLabel != null)
                 titleLabel.style.color = new StyleColor(textColor);
 
+            // P1-4: 节点边框样式（选中时高亮边框）
+            style.borderBottomWidth = 2;
+            style.borderTopWidth = 2;
+            style.borderLeftWidth = 2;
+            style.borderRightWidth = 2;
+            style.borderBottomColor = new StyleColor(new Color(color.r * 0.7f, color.g * 0.7f, color.b * 0.7f));
+            style.borderTopColor = new StyleColor(new Color(color.r * 0.7f, color.g * 0.7f, color.b * 0.7f));
+            style.borderLeftColor = new StyleColor(new Color(color.r * 0.7f, color.g * 0.7f, color.b * 0.7f));
+            style.borderRightColor = new StyleColor(new Color(color.r * 0.7f, color.g * 0.7f, color.b * 0.7f));
+
             // P2-2: 添加参数折叠按钮
             AddCollapseButton();
         }
@@ -295,6 +305,53 @@ namespace PCGToolkit.Graph
             {
                 kvp.Value.style.display = _paramsExpanded ? DisplayStyle.Flex : DisplayStyle.None;
             }
+        }
+
+        // P1-4: 更新节点边框（选中/错误状态）
+        private bool _isSelected = false;
+        private bool _isError = false;
+
+        public void UpdateBorder()
+        {
+            Color borderColor;
+
+            if (_isError)
+            {
+                borderColor = new Color(1f, 0.3f, 0.3f);
+            }
+            else if (_isSelected || selected)
+            {
+                borderColor = new Color(0.9f, 0.7f, 0.2f);
+            }
+            else
+            {
+                // 使用分类颜色的暗色
+                var baseColor = titleContainer.style.backgroundColor.value;
+                borderColor = new Color(baseColor.r * 0.7f, baseColor.g * 0.7f, baseColor.b * 0.7f);
+            }
+
+            style.borderBottomColor = new StyleColor(borderColor);
+            style.borderTopColor = new StyleColor(borderColor);
+            style.borderLeftColor = new StyleColor(borderColor);
+            style.borderRightColor = new StyleColor(borderColor);
+        }
+
+        public void SetSelectedBorder(bool selected)
+        {
+            _isSelected = selected;
+            UpdateBorder();
+        }
+
+        public override void OnSelected()
+        {
+            base.OnSelected();
+            SetSelectedBorder(true);
+        }
+
+        public override void OnUnselected()
+        {
+            base.OnUnselected();
+            SetSelectedBorder(false);
         }
 
         private void CreateInputPorts()

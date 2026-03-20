@@ -255,6 +255,46 @@ namespace PCGToolkit.Graph
             var titleLabel = titleContainer.Q<Label>("title-label");
             if (titleLabel != null)
                 titleLabel.style.color = new StyleColor(textColor);
+
+            // P2-2: 添加参数折叠按钮
+            AddCollapseButton();
+        }
+
+        // P2-2: 参数折叠功能
+        private bool _paramsExpanded = true;
+        private Button _collapseButton;
+
+        private void AddCollapseButton()
+        {
+            if (_collapseButton != null) return;
+
+            _collapseButton = new Button(ToggleParams)
+            {
+                text = "▼",
+                style =
+                {
+                    width = 16, height = 16,
+                    fontSize = 10,
+                    marginLeft = 4, marginRight = 0,
+                    paddingLeft = 0, paddingRight = 0,
+                    backgroundColor = new StyleColor(Color.clear),
+                    color = new StyleColor(Color.white),
+                }
+            };
+            _collapseButton.tooltip = "Collapse/Expand parameters";
+            titleContainer.Insert(0, _collapseButton);
+        }
+
+        private void ToggleParams()
+        {
+            _paramsExpanded = !_paramsExpanded;
+            _collapseButton.text = _paramsExpanded ? "▼" : "▶";
+
+            // 切换非 Geometry 端口的可见性
+            foreach (var kvp in _portWidgets)
+            {
+                kvp.Value.style.display = _paramsExpanded ? DisplayStyle.Flex : DisplayStyle.None;
+            }
         }
 
         private void CreateInputPorts()

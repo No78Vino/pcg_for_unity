@@ -78,7 +78,60 @@ namespace PCGToolkit.Graph
                     return;
                 compatiblePorts.Add(port);
             });
+
+            // P3-3: 端口对齐 - 按端口位置排序，最近的排在前面
+            var startWorldPos = startPort.GetGlobalCenter();
+            compatiblePorts.Sort((a, b) =>
+            {
+                float distA = Vector2.Distance(a.GetGlobalCenter(), startWorldPos);
+                float distB = Vector2.Distance(b.GetGlobalCenter(), startWorldPos);
+                return distA.CompareTo(distB);
+            });
+
             return compatiblePorts;
+        }
+
+        // P3-3: 端口自动对齐（当两个节点靠近时）
+        public void SnapNodesForConnection(PCGNodeVisual nodeA, PCGNodeVisual nodeB)
+        {
+            if (nodeA == null || nodeB == null) return;
+
+            // 获取两个节点最近的端口对
+            Port nearestOutPort = null;
+            Port nearestInPort = null;
+            float minDist = float.MaxValue;
+
+            foreach (var portA in nodeA.outputPorts.Values)
+            {
+                foreach (var portB in nodeB.inputPorts.Values)
+                {
+                    if (portA.portType != portB.portType &&
+                        portA.portType != typeof(object) &&
+                        portB.portType != typeof(object))
+                        continue;
+
+                    float dist = Vector2.Distance(portA.GetGlobalCenter(), portB.GetGlobalCenter());
+                    if (dist < minDist)
+                    {
+                        minDist = dist;
+                        nearestOutPort = portA;
+                        nearestInPort = portB;
+                    }
+                }
+            }
+
+            // 如果距离足够近，自动对齐
+            if (nearestOutPort != null && nearestInPort != null && minDist < 50f)
+            {
+                var outPos = nearestOutPort.GetGlobalCenter();
+                var inPos = nearestInPort.GetGlobalCenter();
+                var offset = outPos - inPos;
+
+                // 移动节点B使端口对齐
+                var newPos = nodeB.GetPosition();
+                newPos.position += offset;
+                nodeB.SetPosition(newPos);
+            }
         }
 
         public void Initialize(PCGGraphEditorWindow editorWindow)

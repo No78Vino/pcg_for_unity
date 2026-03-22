@@ -46,6 +46,8 @@ namespace PCGToolkit.Nodes.Output
                 "Root Name", "根物体名称", "PCG_Assembly"),
             new PCGParamSchema("addColliders", PCGPortDirection.Input, PCGPortType.Bool,
                 "Add Colliders", "是否为每个子物体添加 MeshCollider", false),
+            new PCGParamSchema("enabled", PCGPortDirection.Input, PCGPortType.Bool,
+                "Enabled", "是否执行 Prefab 组装", true),
         };
 
         public override PCGParamSchema[] Outputs => new[]
@@ -62,6 +64,8 @@ namespace PCGToolkit.Nodes.Output
             string savePath   = GetParamString(parameters, "assetPath", "Assets/PCGOutput/assembly.prefab");
             string rootName   = GetParamString(parameters, "rootName", "PCG_Assembly");
             bool addColliders = GetParamBool(parameters, "addColliders", false);
+            if (!GetParamBool(parameters, "enabled", true))
+                return new Dictionary<string, PCGGeometry>();
 
             if (!savePath.EndsWith(".prefab")) savePath += ".prefab";
 

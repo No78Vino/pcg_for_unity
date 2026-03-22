@@ -169,6 +169,17 @@ namespace PCGToolkit.Graph
                 parameters[param.Key] = PCGParamHelper.DeserializeParamValue(param);
             }
 
+            // A7: 将 SceneObjectRef 参数解析并注入 context.SceneReferences
+            foreach (var kvp in parameters)
+            {
+                if (kvp.Value is PCGSceneObjectRef sceneRef)
+                {
+                    var go = sceneRef.Resolve();
+                    if (go != null)
+                        context.SceneReferences[kvp.Key] = go;
+                }
+            }
+
             // 从上游 Const 节点的 GlobalVariables 中获取值
             foreach (var edge in graphData.Edges)
             {
@@ -205,11 +216,20 @@ namespace PCGToolkit.Graph
         }
 
         /// <summary>
-        /// 获取节点的执行结果
+        /// 获取节点的执行结果（单端口）
         /// </summary>
         public PCGGeometry GetNodeOutput(string nodeId, string portName = "geometry")
         {
             return context.GetCachedOutput($"{nodeId}.{portName}");
+        }
+
+        /// <summary>
+        /// 获取节点的完整输出字典（所有端口）
+        /// </summary>
+        public Dictionary<string, PCGGeometry> GetNodeAllOutputs(string nodeId)
+        {
+            _nodeOutputs.TryGetValue(nodeId, out var outputs);
+            return outputs;
         }
 
         /// <summary>

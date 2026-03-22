@@ -38,6 +38,8 @@ namespace PCGToolkit.Nodes.Output
                 "Rotation", "物体旋转（欧拉角）", Vector3.zero),
             new PCGParamSchema("scale", PCGPortDirection.Input, PCGPortType.Vector3,
                 "Scale", "物体缩放", Vector3.one),
+            new PCGParamSchema("enabled", PCGPortDirection.Input, PCGPortType.Bool,
+                "Enabled", "是否执行场景保存", true),
         };
 
         public override PCGParamSchema[] Outputs => new[]
@@ -54,6 +56,8 @@ namespace PCGToolkit.Nodes.Output
             Dictionary<string, object> parameters)
         {
             var geo = GetInputGeometry(inputGeometries, "input");
+            if (!GetParamBool(parameters, "enabled", true))
+                return new Dictionary<string, PCGGeometry> { { "geometry", geo } };
 
             if (geo == null || geo.Points.Count == 0)
             {

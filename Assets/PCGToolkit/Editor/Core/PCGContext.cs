@@ -3,48 +3,29 @@ using UnityEngine;
 
 namespace PCGToolkit.Core
 {
-    /// <summary>
-    /// PCG 节点执行上下文，用于在节点之间传递中间结果和全局状态。
-    /// </summary>
     public class PCGContext
     {
-        /// <summary>是否启用调试模式</summary>
         public bool Debug { get; set; }
-
-        /// <summary>节点执行过程中的中间结果缓存，key 为节点 ID</summary>
         public Dictionary<string, PCGGeometry> NodeOutputCache = new Dictionary<string, PCGGeometry>();
-
-        /// <summary>全局变量，可供所有节点访问</summary>
         public Dictionary<string, object> GlobalVariables = new Dictionary<string, object>();
-
-        /// <summary>当前正在执行的节点 ID</summary>
         public string CurrentNodeId;
-
-        /// <summary>日志记录</summary>
         public List<string> Logs = new List<string>();
-
-        /// <summary>是否有错误发生</summary>
         public bool HasError { get; private set; }
-
-        /// <summary>错误信息</summary>
         public string ErrorMessage { get; private set; }
 
-        /// <summary>
-        /// 默认构造函数
-        /// </summary>
-        public PCGContext() { }
+        // 迭代六：场景对象引用字典（执行期间持有强引用）
+        public Dictionary<string, UnityEngine.Object> SceneReferences = new Dictionary<string, UnityEngine.Object>();
 
-        /// <summary>
-        /// 带调试模式参数的构造函数
-        /// </summary>
-        public PCGContext(bool debug)
+        public PCGContext() { }
+        public PCGContext(bool debug) { Debug = debug; }
+
+        /// <summary>从 SceneReferences 获取 GameObject</summary>
+        public GameObject GetSceneGameObject(string key)
         {
-            Debug = debug;
+            SceneReferences.TryGetValue(key, out var obj);
+            return obj as GameObject;
         }
 
-        /// <summary>
-        /// 记录日志
-        /// </summary>
         public void Log(string message)
         {
             var logEntry = $"[Node:{CurrentNodeId}] {message}";
@@ -52,9 +33,6 @@ namespace PCGToolkit.Core
             UnityEngine.Debug.Log(logEntry);
         }
 
-        /// <summary>
-        /// 记录警告
-        /// </summary>
         public void LogWarning(string message)
         {
             var logEntry = $"[Node:{CurrentNodeId}] WARNING: {message}";
@@ -62,9 +40,6 @@ namespace PCGToolkit.Core
             UnityEngine.Debug.LogWarning(logEntry);
         }
 
-        /// <summary>
-        /// 记录错误
-        /// </summary>
         public void LogError(string message)
         {
             var logEntry = $"[Node:{CurrentNodeId}] ERROR: {message}";
@@ -74,26 +49,17 @@ namespace PCGToolkit.Core
             UnityEngine.Debug.LogError(logEntry);
         }
 
-        /// <summary>
-        /// 缓存节点输出结果
-        /// </summary>
         public void CacheOutput(string nodeId, PCGGeometry geometry)
         {
             NodeOutputCache[nodeId] = geometry;
         }
 
-        /// <summary>
-        /// 获取缓存的节点输出结果
-        /// </summary>
         public PCGGeometry GetCachedOutput(string nodeId)
         {
             NodeOutputCache.TryGetValue(nodeId, out var geo);
             return geo;
         }
 
-        /// <summary>
-        /// 清除所有缓存
-        /// </summary>
         public void ClearCache()
         {
             NodeOutputCache.Clear();
@@ -102,36 +68,24 @@ namespace PCGToolkit.Core
             ErrorMessage = null;
         }
 
-        /// <summary>
-        /// 设置外部输入（用于 SubGraph 注入数据）
-        /// </summary>
         public void SetExternalInput(string key, PCGGeometry geometry)
         {
             NodeOutputCache[$"__external_input__.{key}"] = geometry;
         }
 
-        /// <summary>
-        /// 尝试获取外部输出（用于 SubGraph 读取子图结果）
-        /// </summary>
         public bool TryGetExternalOutput(string key, out PCGGeometry geometry)
         {
             return NodeOutputCache.TryGetValue($"__external_output__.{key}", out geometry);
         }
 
-        /// <summary>
-        /// 设置外部输出（由子图的 Output 节点调用）
-        /// </summary>
         public void SetExternalOutput(string key, PCGGeometry geometry)
         {
             NodeOutputCache[$"__external_output__.{key}"] = geometry;
         }
-        
-        /// <summary>  
-        /// 尝试获取外部输入（由子图的 Input 节点调用）  
-        /// </summary>  
-        public bool TryGetExternalInput(string key, out PCGGeometry geometry)  
-        {  
-            return NodeOutputCache.TryGetValue($"__external_input__.{key}", out geometry);  
+
+        public bool TryGetExternalInput(string key, out PCGGeometry geometry)
+        {
+            return NodeOutputCache.TryGetValue($"__external_input__.{key}", out geometry);
         }
     }
 }

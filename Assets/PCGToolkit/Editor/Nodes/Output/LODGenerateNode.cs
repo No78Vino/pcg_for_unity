@@ -29,6 +29,8 @@ namespace PCGToolkit.Nodes.Output
                 "Screen Percentages", "各级 LOD 的屏幕占比（逗号分隔）", "0.8,0.4,0.1"),
             new PCGParamSchema("createGroup", PCGPortDirection.Input, PCGPortType.Bool,
                 "Create Group", "为每级 LOD 创建分组", true),
+            new PCGParamSchema("enabled", PCGPortDirection.Input, PCGPortType.Bool,
+                "Enabled", "是否执行 LOD 生成", true),
         };
 
         public override PCGParamSchema[] Outputs => new[]
@@ -43,6 +45,8 @@ namespace PCGToolkit.Nodes.Output
             Dictionary<string, object> parameters)
         {
             var inputGeo = GetInputGeometry(inputGeometries, "input");
+            if (!GetParamBool(parameters, "enabled", true))
+                return SingleOutput("geometry", inputGeo);
 
             if (inputGeo.Points.Count == 0 || inputGeo.Primitives.Count == 0)
             {

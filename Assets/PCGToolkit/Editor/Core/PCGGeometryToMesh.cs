@@ -275,49 +275,55 @@ namespace PCGToolkit.Core
         }
 
         /// <summary>
-        /// 将 Unity Mesh 转换为 PCGGeometry
+        /// 将 Unity Mesh 转换为 PCGGeometry（B1 完整实现：submesh→PrimGroup）
         /// </summary>
         public static PCGGeometry FromMesh(Mesh mesh)
         {
-            // TODO: 实现完整的 Mesh → PCGGeometry 转换
-            Debug.Log("[PCGGeometryToMesh] FromMesh: TODO - 将 Unity Mesh 转换为 PCGGeometry");
-
             var geo = new PCGGeometry();
-
-            if (mesh == null)
-                return geo;
+            if (mesh == null) return geo;
 
             geo.Points = new List<Vector3>(mesh.vertices);
 
-            // 将三角形索引转换为 Primitives
-            var tris = mesh.triangles;
-            for (int i = 0; i < tris.Length; i += 3)
-            {
-                geo.Primitives.Add(new int[] { tris[i], tris[i + 1], tris[i + 2] });
-            }
-
-            // TODO: 映射 normals、uv、colors 等到属性系统
-            if (mesh.normals != null && mesh.normals.Length > 0)
+            // 法线
+            if (mesh.normals != null && mesh.normals.Length == mesh.vertexCount)
             {
                 var normalAttr = geo.PointAttribs.CreateAttribute("N", AttribType.Vector3);
                 foreach (var n in mesh.normals)
                     normalAttr.Values.Add(n);
             }
 
-            // 映射 UV
-            if (mesh.uv != null && mesh.uv.Length > 0)
+            // UV
+            if (mesh.uv != null && mesh.uv.Length == mesh.vertexCount)
             {
                 var uvAttr = geo.PointAttribs.CreateAttribute("uv", AttribType.Vector2);
                 foreach (var uv in mesh.uv)
                     uvAttr.Values.Add(uv);
             }
 
-            // 映射 Color
-            if (mesh.colors != null && mesh.colors.Length > 0)
+            // 顶点颜色
+            if (mesh.colors != null && mesh.colors.Length == mesh.vertexCount)
             {
                 var colorAttr = geo.PointAttribs.CreateAttribute("Cd", AttribType.Color);
                 foreach (var c in mesh.colors)
                     colorAttr.Values.Add(c);
+            }
+
+            // Submesh → Primitives + PrimGroups
+            int globalPrimOffset = 0;
+            for (int sub = 0; sub < mesh.subMeshCount; sub++)
+            {
+                int[] tris = mesh.GetTriangles(sub);
+                string groupName = mesh.subMeshCount > 1 ? $"submesh_{sub}" : "default";
+                var groupIndices = new HashSet<int>();
+
+                for (int i = 0; i < tris.Length; i += 3)
+                {
+                    geo.Primitives.Add(new int[] { tris[i], tris[i + 1], tris[i + 2] });
+                    groupIndices.Add(globalPrimOffset++);
+                }
+
+                if (mesh.subMeshCount > 1)
+                    geo.PrimGroups[groupName] = groupIndices;
             }
 
             return geo;

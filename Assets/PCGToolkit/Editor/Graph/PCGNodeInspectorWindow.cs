@@ -6,6 +6,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using PCGToolkit.Core;
+using PCGCore = PCGToolkit.Core;
 
 namespace PCGToolkit.Graph
 {
@@ -284,6 +285,10 @@ namespace PCGToolkit.Graph
 
             // ---- 预设操作区 (A3) ----
             BuildPresetSection(nodeVisual);
+
+            // C2: Output 节点显示单独执行按钮
+            if (pcgNode.Category == PCGNodeCategory.Output)
+                BuildExportButton(nodeVisual);
         }
 
         // ---- 预设操作 (A3) ----
@@ -355,6 +360,38 @@ namespace PCGToolkit.Graph
                 row.Add(loadBtn);
                 container.Add(row);
             }
+        }
+
+        // C2: Output 节点 Export 按钮
+        private void BuildExportButton(PCGNodeVisual nodeVisual)
+        {
+            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 8 } };
+
+            var exportBtn = new Button(() => _graphView?.ExecuteSingleOutputNode(nodeVisual))
+            {
+                text = "Export This Node",
+                tooltip = "立即执行此 Output 节点",
+                style = { flexGrow = 1, backgroundColor = new StyleColor(new Color(0.3f, 0.2f, 0.5f)) }
+            };
+            row.Add(exportBtn);
+
+            // D2: Inject to Scene 按钮（预览用）
+            var injectBtn = new Button(() =>
+            {
+                var geo = _graphView?.GetLastOutputGeometry(nodeVisual.NodeId);
+                if (geo != null)
+                    PCGScenePreview.InjectToScene(geo, nodeVisual.PCGNode.DisplayName);
+                else
+                    UnityEngine.Debug.LogWarning("先执行图再注入场景");
+            })
+            {
+                text = "Inject to Scene",
+                tooltip = "将上次执行结果临时注入场景（预览用）",
+                style = { flexGrow = 1, backgroundColor = new StyleColor(new Color(0.1f, 0.3f, 0.5f)) }
+            };
+            row.Add(injectBtn);
+
+            _paramContainer.Add(row);
         }
 
         /// <summary>
@@ -597,6 +634,31 @@ namespace PCGToolkit.Graph
                     });
                     return field;
                 }
+
+                case PCGPortType.SceneObject:
+                {
+                    var objType = schema.ObjectType ?? typeof(GameObject);
+                    GameObject currentGo = null;
+                    if (currentValue is PCGCore.PCGSceneObjectRef sceneRef)
+                        currentGo = sceneRef.Resolve();
+                    else if (currentValue is GameObject go)
+                        currentGo = go;
+
+                    var field = new ObjectField(schema.DisplayName)
+                    {
+                        objectType = objType,
+                        allowSceneObjects = schema.AllowSceneObjects,
+                        value = currentGo,
+                        style = { flexGrow = 1 }
+                    };
+                    field.RegisterValueChangedCallback(evt =>
+                    {
+                        var newGo = evt.newValue as GameObject;
+                        var newRef = newGo != null ? new PCGCore.PCGSceneObjectRef(newGo) : null;
+                        SyncValueToNode(nodeVisual, schema.Name, newRef);
+                    });
+                    return field;
+                }
             }
 
             return null;
@@ -618,13 +680,14 @@ namespace PCGToolkit.Graph
         {
             return portType switch
             {
-                PCGPortType.Float => new Color(0.4f, 0.6f, 1.0f),
-                PCGPortType.Int => new Color(0.3f, 0.9f, 0.9f),
-                PCGPortType.Vector3 => new Color(1.0f, 0.8f, 0.2f),
-                PCGPortType.String => new Color(1.0f, 0.4f, 0.6f),
-                PCGPortType.Bool => new Color(0.9f, 0.3f, 0.3f),
-                PCGPortType.Color => Color.white,
-                _ => new Color(0.8f, 0.8f, 0.8f),
+                PCGPortType.Float       => new Color(0.4f, 0.6f, 1.0f),
+                PCGPortType.Int         => new Color(0.3f, 0.9f, 0.9f),
+                PCGPortType.Vector3     => new Color(1.0f, 0.8f, 0.2f),
+                PCGPortType.String      => new Color(1.0f, 0.4f, 0.6f),
+                PCGPortType.Bool        => new Color(0.9f, 0.3f, 0.3f),
+                PCGPortType.Color       => Color.white,
+                PCGPortType.SceneObject => new Color(1.0f, 0.6f, 0.1f),
+                _                       => new Color(0.8f, 0.8f, 0.8f),
             };
         }
     }

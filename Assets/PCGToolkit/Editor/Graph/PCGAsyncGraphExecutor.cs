@@ -328,6 +328,16 @@ namespace PCGToolkit.Graph
             {
                 parameters[param.Key] = PCGParamHelper.DeserializeParamValue(param);
             }
+            // A7: 将 SceneObjectRef 参数解析并注入 context.SceneReferences
+            foreach (var kvp in parameters)
+            {
+                if (kvp.Value is PCGSceneObjectRef sceneRef)
+                {
+                    var go = sceneRef.Resolve();
+                    if (go != null)
+                        _context.SceneReferences[kvp.Key] = go;
+                }
+            }
 
             // 收集参数：从上游 Const 节点的 GlobalVariables 中获取值  
             // （Const 节点将值存入 ctx.GlobalVariables["{nodeId}.value"]）  

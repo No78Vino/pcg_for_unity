@@ -155,9 +155,22 @@ namespace PCGToolkit.Core
         }
 
         /// <summary>
-        /// 从参数字典中获取 Color 值
+        /// 从参数字典中获取 GameObject（通过 PCGSceneObjectRef 或直接 GameObject）
+        /// 需要配合 PCGContext.SceneReferences 使用
         /// </summary>
-        protected Color GetParamColor(Dictionary<string, object> parameters, string name, Color defaultValue)
+        protected GameObject GetParamGameObject(PCGContext ctx, Dictionary<string, object> parameters, string name)
+        {
+            // 优先从 context.SceneReferences 获取（A7 执行器桥已注入）
+            if (ctx.SceneReferences.TryGetValue(name, out var unityObj) && unityObj is GameObject ctxGo)
+                return ctxGo;
+            // 直接参数值
+            if (parameters != null && parameters.TryGetValue(name, out var val))
+            {
+                if (val is GameObject go) return go;
+                if (val is PCGSceneObjectRef sceneRef) return sceneRef.Resolve();
+            }
+            return null;
+        }
         {
             if (parameters != null && parameters.TryGetValue(name, out var val))
             {

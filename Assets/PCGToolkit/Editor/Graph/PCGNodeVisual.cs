@@ -338,13 +338,14 @@ namespace PCGToolkit.Graph
         {
             switch (t)
             {
-                case PCGPortType.Float:   return "F";
-                case PCGPortType.Int:     return "I";
-                case PCGPortType.Bool:    return "B";
-                case PCGPortType.String:  return "S";
-                case PCGPortType.Vector3: return "V3";
-                case PCGPortType.Color:   return "C";
-                default:                  return "";
+                case PCGPortType.Float:       return "F";
+                case PCGPortType.Int:         return "I";
+                case PCGPortType.Bool:        return "B";
+                case PCGPortType.String:      return "S";
+                case PCGPortType.Vector3:     return "V3";
+                case PCGPortType.Color:       return "C";
+                case PCGPortType.SceneObject: return "GO";
+                default:                      return "";
             }
         }
 
@@ -378,14 +379,15 @@ namespace PCGToolkit.Graph
         {
             switch (portType)
             {
-                case PCGPortType.Geometry: return typeof(PCGGeometry);
-                case PCGPortType.Float: return typeof(float);
-                case PCGPortType.Int: return typeof(int);
-                case PCGPortType.Vector3: return typeof(Vector3);
-                case PCGPortType.String: return typeof(string);
-                case PCGPortType.Bool: return typeof(bool);
-                case PCGPortType.Color: return typeof(Color);
-                default: return typeof(object);
+                case PCGPortType.Geometry:    return typeof(PCGGeometry);
+                case PCGPortType.Float:       return typeof(float);
+                case PCGPortType.Int:         return typeof(int);
+                case PCGPortType.Vector3:     return typeof(Vector3);
+                case PCGPortType.String:      return typeof(string);
+                case PCGPortType.Bool:        return typeof(bool);
+                case PCGPortType.Color:       return typeof(Color);
+                case PCGPortType.SceneObject: return typeof(GameObject);
+                default:                      return typeof(object);
             }
         }
 
@@ -393,14 +395,15 @@ namespace PCGToolkit.Graph
         {
             switch (portType)
             {
-                case PCGPortType.Geometry: return new Color(0.2f, 0.8f, 0.4f);
-                case PCGPortType.Float: return new Color(0.4f, 0.6f, 1.0f);
-                case PCGPortType.Int: return new Color(0.3f, 0.9f, 0.9f);
-                case PCGPortType.Vector3: return new Color(1.0f, 0.8f, 0.2f);
-                case PCGPortType.String: return new Color(1.0f, 0.4f, 0.6f);
-                case PCGPortType.Bool: return new Color(0.9f, 0.3f, 0.3f);
-                case PCGPortType.Color: return Color.white;
-                default: return Color.gray;
+                case PCGPortType.Geometry:    return new Color(0.2f, 0.8f, 0.4f);
+                case PCGPortType.Float:       return new Color(0.4f, 0.6f, 1.0f);
+                case PCGPortType.Int:         return new Color(0.3f, 0.9f, 0.9f);
+                case PCGPortType.Vector3:     return new Color(1.0f, 0.8f, 0.2f);
+                case PCGPortType.String:      return new Color(1.0f, 0.4f, 0.6f);
+                case PCGPortType.Bool:        return new Color(0.9f, 0.3f, 0.3f);
+                case PCGPortType.Color:       return Color.white;
+                case PCGPortType.SceneObject: return new Color(1.0f, 0.6f, 0.1f);
+                default:                      return Color.gray;
             }
         }
 

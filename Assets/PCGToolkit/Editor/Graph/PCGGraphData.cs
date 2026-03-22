@@ -168,5 +168,31 @@ namespace PCGToolkit.Graph
             Groups.Clear();
             StickyNotes.Clear();
         }
+
+        /// <summary>
+        /// 创建深拷贝（运行时覆盖参数时使用，避免污染资产）
+        /// </summary>
+        public PCGGraphData Clone()
+        {
+            var copy = CreateInstance<PCGGraphData>();
+            copy.GraphName = GraphName;
+            copy.Nodes = new List<PCGNodeData>();
+            foreach (var n in Nodes)
+            {
+                var nd = new PCGNodeData
+                {
+                    NodeId = n.NodeId,
+                    NodeType = n.NodeType,
+                    Position = n.Position,
+                };
+                foreach (var p in n.Parameters)
+                    nd.Parameters.Add(new PCGSerializedParameter { Key = p.Key, ValueType = p.ValueType, ValueJson = p.ValueJson });
+                copy.Nodes.Add(nd);
+            }
+            copy.Edges = new List<PCGEdgeData>();
+            foreach (var e in Edges)
+                copy.Edges.Add(new PCGEdgeData { OutputNodeId = e.OutputNodeId, OutputPort = e.OutputPort, InputNodeId = e.InputNodeId, InputPort = e.InputPort });
+            return copy;
+        }
     }
 }

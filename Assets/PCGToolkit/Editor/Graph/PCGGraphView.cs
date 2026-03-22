@@ -26,6 +26,31 @@ namespace PCGToolkit.Graph
         {
             OnGraphChanged?.Invoke();
         }
+
+        // C2: 执行单个 Output 节点（忽略 enabled 参数）
+        public void ExecuteSingleOutputNode(PCGNodeVisual nodeVisual)
+        {
+            if (nodeVisual == null) return;
+            var data = SaveToGraphData();
+            var nodeData = data.Nodes.Find(n => n.NodeId == nodeVisual.NodeId);
+            if (nodeData != null)
+            {
+                var existing = nodeData.Parameters.Find(p => p.Key == "enabled");
+                if (existing != null) existing.ValueJson = "true";
+                else nodeData.Parameters.Add(new PCGSerializedParameter
+                    { Key = "enabled", ValueType = "bool", ValueJson = "true" });
+            }
+            _lastExecutor = new PCGGraphExecutor(data);
+            _lastExecutor.Execute();
+            UnityEngine.Debug.Log($"[PCGGraphView] Single export executed for {nodeVisual.PCGNode.DisplayName}");
+        }
+
+        // D2: 获取上次执行的节点输出（用于 Inject to Scene）
+        private PCGGraphExecutor _lastExecutor;
+        public PCGGeometry GetLastOutputGeometry(string nodeId)
+        {
+            return _lastExecutor?.GetNodeOutput(nodeId);
+        }
         
         // 迭代三：节点点击事件（用于预览）
         public event Action<string> OnNodeClicked;

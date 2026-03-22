@@ -309,6 +309,14 @@ namespace PCGToolkit.Graph
             _stopButton = new Button(() => OnStopClicked()) { text = L("btn.stop") };  
             _stopButton.style.backgroundColor = new StyleColor(new Color(0.5f, 0.2f, 0.2f));  
             toolbar.Add(_stopButton);  
+            // C3: Export All
+            var exportAllButton = new Button(OnExportAllClicked)
+            {
+                text = "Export All",
+                tooltip = "执行所有 enabled=true 的 Output 节点"
+            };
+            exportAllButton.style.backgroundColor = new StyleColor(new Color(0.3f, 0.2f, 0.5f));
+            toolbar.Add(exportAllButton);
   
             // ---- 分隔 ----  
             toolbar.Add(new ToolbarSpacer());  
@@ -548,7 +556,19 @@ namespace PCGToolkit.Graph
             graphView.ClearAllHighlights();  
             SetToolbarButtonsEnabled(true);  
             UpdateExecutionStateLabel("Stopped");  
-        }  
+        }
+
+        // C3: Export All — 执行图，但所有 enabled=false 的节点会自己透传
+        private void OnExportAllClicked()
+        {
+            var data = GetCurrentGraphData();
+            if (data == null || data.Nodes.Count == 0) return;
+            graphView.ClearAllHighlights();
+            graphView.ClearAllExecutionTimes();
+            _errorPanel?.ClearErrors();
+            _asyncExecutor.Execute(data);
+            Debug.Log("[PCGGraphEditorWindow] Export All triggered.");
+        }
   
         // ---- 辅助方法 ----  
   

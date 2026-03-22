@@ -5,13 +5,65 @@ using PCGToolkit.Graph;
 namespace PCGToolkit.Core
 {
     /// <summary>
-    /// PCG 参数工具类，提供参数序列化/反序列化的共享方法。
+    /// 轻量场景对象引用，可序列化为字符串存入 YAML 资产。
+    /// 执行时通过 instanceID 重新获取 GameObject（仅 Editor 运行期有效）。
     /// </summary>
+    [System.Serializable]
+    public class PCGSceneObjectRef
+    {
+        public int InstanceID;
+        public string HierarchyPath; // 备用路径（instanceID 失效时回退）
+
+        public PCGSceneObjectRef() { }
+        public PCGSceneObjectRef(GameObject go)
+        {
+            if (go == null) return;
+            InstanceID = go.GetInstanceID();
+            HierarchyPath = GetHierarchyPath(go);
+        }
+
+        public GameObject Resolve()
+        {
+            // 先尝试 instanceID（Editor 内最可靠）
+            var obj = UnityEditor.EditorUtility.InstanceIDToObject(InstanceID) as GameObject;
+            if (obj != null) return obj;
+            // 回退：按路径查找
+            if (!string.IsNullOrEmpty(HierarchyPath))
+                return GameObject.Find(HierarchyPath);
+            return null;
+        }
+
+        private static string GetHierarchyPath(GameObject go)
+        {
+            var path = go.name;
+            var parent = go.transform.parent;
+            while (parent != null)
+            {
+                path = parent.name + "/" + path;
+                parent = parent.parent;
+            }
+            return path;
+        }
+
+        // 序列化为 "SceneRef:instanceID:path"
+        public override string ToString() =>
+            $"SceneRef:{InstanceID}:{HierarchyPath ?? ""}";
+
+        public static PCGSceneObjectRef FromString(string s)
+        {
+            if (string.IsNullOrEmpty(s) || !s.StartsWith("SceneRef:"))
+                return null;
+            var parts = s.Substring("SceneRef:".Length).Split(new char[]{':'}, 2);
+            if (parts.Length < 1) return null;
+            var r = new PCGSceneObjectRef();
+            int.TryParse(parts[0], out r.InstanceID);
+            r.HierarchyPath = parts.Length > 1 ? parts[1] : "";
+            return r;
+        }
+    }
+
     public static class PCGParamHelper
     {
-        /// <summary>
-        /// 将 PCGSerializedParameter 反序列化为对应类型的值
-        /// </summary>
         public static object DeserializeParamValue(PCGSerializedParameter param)
         {
             try
@@ -51,11 +103,16 @@ namespace PCGToolkit.Core
                         }
                         return Color.white;
                     }
+                    case "SceneObject":
+                        return PCGSceneObjectRef.FromString(param.ValueJson);
                     case "null":
                     case null:
                     case "":
                         return param.ValueJson;
                     default:
+                        // 如果 ValueJson 是 SceneRef 格式也尝试解析
+                        if (param.ValueJson != null && param.ValueJson.StartsWith("SceneRef:"))
+                            return PCGSceneObjectRef.FromString(param.ValueJson);
                         return param.ValueJson;
                 }
             }
@@ -65,9 +122,6 @@ namespace PCGToolkit.Core
             }
         }
 
-        /// <summary>
-        /// 将值序列化为 JSON 字符串
-        /// </summary>
         public static string SerializeParamValue(object value)
         {
             if (value == null) return "";
@@ -86,6 +140,8 @@ namespace PCGToolkit.Core
                     return $"{v.x.ToString(CultureInfo.InvariantCulture)},{v.y.ToString(CultureInfo.InvariantCulture)},{v.z.ToString(CultureInfo.InvariantCulture)}";
                 case Color c:
                     return $"{c.r.ToString(CultureInfo.InvariantCulture)},{c.g.ToString(CultureInfo.InvariantCulture)},{c.b.ToString(CultureInfo.InvariantCulture)},{c.a.ToString(CultureInfo.InvariantCulture)}";
+                case PCGSceneObjectRef sceneRef:
+                    return sceneRef.ToString();
                 default:
                     return value.ToString();
             }

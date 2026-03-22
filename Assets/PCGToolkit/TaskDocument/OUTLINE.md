@@ -1,164 +1,149 @@
-## 第一大阶段差距分析
-
-你的目标是：**仅依赖 PCG for Unity 就能生产"中国古建筑群程序化生成器"**，输出 FBX、材质、贴图、UV（Trim Sheet）、建筑群布局（Prefab）。
-
-我逐项对照当前代码库的能力做了审计。
+基于对代码库的全面审计，以下是第6轮迭代的任务大纲规划。核心思路是：**让 PCG Graph 从"封闭的离线工具"进化为"可与场景互动的便携生成器"（类 HDA 体验）**。
 
 ---
 
-### 当前已有能力
+## 第6轮迭代：HDA 化场景互动 + 输出控制
 
-| 能力 | 状态 | 关键文件 |
-|------|------|----------|
-| 基础几何体生成 | 完备（Box/Tube/Grid/Torus 等 16 个 Create 节点） | `Assets/PCGToolkit/Editor/Nodes/Create/` |
-| 几何操作 | 完备（Extrude/Boolean/Inset/Bevel/Bridge 等 20+ 节点） | `Assets/PCGToolkit/Editor/Nodes/Geometry/` + `Topology/` |
-| 曲线操作 | 完备（CurveCreate/Sweep/Resample/Carve/Fillet/PolyWire） | `Assets/PCGToolkit/Editor/Nodes/Curve/` |
-| 分布实例化 | 完备（Scatter/CopyToPoints/Instance/Array/Ray） | `Assets/PCGToolkit/Editor/Nodes/Distribute/` |
-| 变形 | 完备（Bend/Twist/Taper/Mountain/Noise/Smooth/Lattice/Creep） | `Assets/PCGToolkit/Editor/Nodes/Deform/` |
-| 基础 UV | 有（UVProject/UVUnwrap/UVLayout/UVTransform） | `Assets/PCGToolkit/Editor/Nodes/UV/` |
-| 材质分配 | 有（MaterialAssign + 多 Submesh 输出） | `MaterialAssignNode.cs` + `PCGGeometryToMesh.cs` |
-| 材质创建 | 有（SaveMaterialNode，支持 Standard shader） | `SaveMaterialNode.cs` |
-| FBX 导出 | 有（ExportFBXNode，com.unity.formats.fbx + OBJ fallback） | `ExportFBXNode.cs` |
-| Prefab 保存 | 有（SavePrefabNode，支持多 Submesh + 材质） | `SavePrefabNode.cs` |
-| 控制流 | 有（ForEach/Switch/Split/SubGraph） | `Assets/PCGToolkit/Editor/Nodes/Utility/` |
-| 表达式系统 | 有（AttribWrangle + ExpressionParser） | `ExpressionParser.cs` | [3-cite-0](#3-cite-0) 
+### 现状分析
+
+当前 PCG Graph 的执行是完全封闭的：
+- `PCGPortType` 只有 `Geometry/Float/Int/Vector3/String/Bool/Color/Any` 8 种类型，**没有场景对象引用类型** [0-cite-0](#0-cite-0)
+- `PCGContext` 没有任何场景引用机制，只有 `GlobalVariables` 和 `NodeOutputCache` [0-cite-1](#0-cite-1)
+- Inspector 的参数控件只有 `FloatField/IntegerField/Toggle/TextField/Vector3Field/ColorField/PopupField`，**没有 `ObjectField`（场景对象选择器）** [0-cite-2](#0-cite-2)
+- Output 节点（`ExportFBXNode`、`SavePrefabNode`、`AssemblePrefabNode` 等）执行时无条件输出，没有 enable/disable 开关 [0-cite-3](#0-cite-3)
 
 ---
 
-### 缺失能力（按阻塞程度排序）
-
-#### 1. Trim Sheet UV 工作流 — 阻塞级
-
-这是最大的缺口。Trim Sheet 的核心操作是：**将不同面组的 UV 精确映射到贴图图集的指定矩形区域**。
-
-当前 `UVProjectNode` 做的是全局投影（planar/cylindrical/spherical/cubic），`UVTransformNode` 做的是全局平移/旋转/缩放。两者都**不支持按面组将 UV 重映射到指定的 [u_min, u_max] × [v_min, v_max] 矩形区域**。 [3-cite-1](#3-cite-1) [3-cite-2](#3-cite-2)
-
-**需要新增**：`UVTrimSheetNode`（或叫 `UVRectMapNode`），功能：
-- 输入：Geometry + Group 名 + 目标 UV 矩形（u_min, u_max, v_min, v_max）
-- 将指定 Group 的面的 UV 归一化后重映射到目标矩形
-- 支持旋转 90° 选项（横竖条切换）
-- 这是 Trim Sheet 技术的核心节点
-
-#### 2. 层级 Prefab 组装 — 阻塞级
-
-当前 `SavePrefabNode` 只能保存**单个 MeshFilter + MeshRenderer** 的扁平 Prefab。中国古建筑群需要：
-- 一栋建筑 = 多个子物体（屋顶、墙体、柱子、斗拱、台基），每个子物体有独立的 Mesh 和材质
-- 一个建筑群 = 多栋建筑 Prefab 按布局摆放 [3-cite-3](#3-cite-3)
-
-**需要新增**：
-- `AssemblePrefabNode`：接收多个 Geometry 输入（每个带名称和 Transform），组装为带层级结构的 Prefab（parent GameObject + 多个 child，每个 child 有独立 MeshFilter/MeshRenderer）
-- 或者增强 `SavePrefabNode` 支持 `@name` 属性按面组拆分为子物体
-
-#### 3. 布局分布系统 — 重要
-
-Scatter + CopyToPoints 可以做随机/点位分布，但中国古建筑群的布局是**规则性的**：
-- 中轴对称
-- 院落围合
-- 前殿后寝
-- 廊庑连接
-
-**需要新增**：
-- `GridLayoutNode`：生成规则网格点位，支持间距、对称轴、排除区域
-- 或者用现有 `Grid` + `AttribWrangle` + `Delete` 组合实现（可行但繁琐）
-- `SymmetryNode`（或 `MirrorNode` 增强）：沿轴镜像复制几何体/点位，保持对称布局
-
-当前 `MirrorNode` 已存在，可以做几何体镜像。布局分布可以通过 SubGraph 组合现有节点实现，不一定需要新节点，但需要**验证 CopyToPoints 在大规模实例化时的性能和正确性**。 [3-cite-4](#3-cite-4)
-
-#### 4. SaveMaterialNode 增强 — 重要
-
-当前 `SaveMaterialNode` 只支持 Standard shader 的基础属性（albedo color/texture, metallic, smoothness, emission）。Trim Sheet 工作流还需要：
-- Normal Map 贴图路径
-- Metallic/Roughness Map
-- Tiling/Offset 参数（用于 Trim Sheet 的全局 tiling）
-- 支持 URP/HDRP shader（不只是 Built-in Standard） [3-cite-5](#3-cite-5)
-
-#### 5. ExportFBXNode 多材质支持 — 重要
-
-当前 `ExportFBXNode` 使用 `PCGGeometryToMesh.Convert()`（单 Submesh），而不是 `ConvertWithSubmeshes()`。这意味着 FBX 导出时**丢失了多材质信息**。需要改为使用 `ConvertWithSubmeshes()` 并正确设置多材质。 [3-cite-6](#3-cite-6)
-
-#### 6. 第4轮遗留 — 中等
-
-- `D2` 执行缓存优化未完成（大型建筑群图会很慢）
-- `A4` 便签注释未完成（复杂图需要注释）
-- Houdini 风格紧凑节点改造（上一轮讨论的方案） [3-cite-7](#3-cite-7)
-
----
-
-### 第5轮迭代规划建议
-
-考虑到你的目标是尽快达到第一大阶段完成，第5轮应该**聚焦 Trim Sheet 工作流和输出管线完善**，而不是继续做编辑器体验优化。
+### 迭代大纲
 
 ```mermaid
 graph TD
-    subgraph "Batch 1 - Trim Sheet UV (P0)"
-        A1["新增 UVTrimSheetNode"]
-        A2["UVProjectNode 增加 group 过滤"]
+    subgraph "Batch 1 - 场景引用基础设施 (P0)"
+        A1["PCGPortType 新增 SceneObject 类型"]
+        A2["PCGParamSchema 新增 ObjectType 字段"]
+        A3["Inspector 支持 ObjectField 控件"]
+        A4["PCGContext 新增 SceneReferences 字典"]
     end
 
-    subgraph "Batch 2 - 输出管线 (P0)"
-        B1["ExportFBXNode 改用 ConvertWithSubmeshes"]
-        B2["SaveMaterialNode 增加 NormalMap/MetallicMap/URP"]
-        B3["新增 AssemblePrefabNode (层级 Prefab)"]
+    subgraph "Batch 2 - 场景输入节点 (P0)"
+        B1["新增 SceneObjectInputNode"]
+        B2["新增 SceneMeshInputNode"]
+        B3["新增 ScenePointsInputNode"]
     end
 
-    subgraph "Batch 3 - 编辑器改造 (P1)"
-        C1["Houdini 风格紧凑节点"]
-        C2["Inspector 默认打开"]
+    subgraph "Batch 3 - 输出节点控制 (P1)"
+        C1["Output 节点新增 enabled 参数"]
+        C2["Output 节点 Inspector 增加 Export 按钮"]
+        C3["Toolbar 增加 Export All 按钮"]
     end
 
-    subgraph "Batch 4 - 验证 (P1)"
-        D1["端到端测试: 单栋古建筑 SubGraph"]
-        D2["端到端测试: 建筑群布局 Graph"]
+    subgraph "Batch 4 - 场景实时预览 (P1)"
+        D1["SceneView 实时 Gizmo 预览"]
+        D2["执行结果直接注入当前场景"]
     end
 
-    A1 --> D1
-    B1 --> D1
+    subgraph "Batch 5 - HDA 化封装 (P2)"
+        E1["PCG Graph Asset 的 Inspector 面板"]
+        E2["PCGGraphRunner 组件"]
+    end
+
+    A1 --> A3
+    A2 --> A3
+    A3 --> B1
+    A4 --> B1
+    B1 --> B2
+    B1 --> B3
+    C1 --> C2
+    C2 --> C3
     B2 --> D1
-    B3 --> D2
-    C1 --> D1
+    D1 --> D2
+    D2 --> E1
+    E1 --> E2
 ```
-
-#### Batch 1 — Trim Sheet UV 核心（P0，最高优先级）
-
-| 任务 | 文件 | 说明 |
-|------|------|------|
-| 新增 `UVTrimSheetNode` | `Assets/PCGToolkit/Editor/Nodes/UV/UVTrimSheetNode.cs` | 核心功能：输入 Group + UV Rect (u_min, v_min, u_max, v_max)，将该 Group 面的 UV 归一化后映射到指定矩形。支持 `projectionAxis` 参数（选择投影方向）和 `rotate90` 选项 |
-| `UVProjectNode` 增加 Group 过滤 | `UVProjectNode.cs` | 当前 `group` 参数存在但未实现过滤逻辑（投影时忽略了 group 参数），需要补全 |
-
-#### Batch 2 — 输出管线完善（P0）
-
-| 任务 | 文件 | 说明 |
-|------|------|------|
-| `ExportFBXNode` 多材质修复 | `ExportFBXNode.cs` | 将 `PCGGeometryToMesh.Convert()` 改为 `ConvertWithSubmeshes()`，正确设置多 Submesh 和材质 |
-| `SaveMaterialNode` 增强 | `SaveMaterialNode.cs` | 新增 `normalMapPath`、`metallicMapPath`、`occlusionMapPath` 参数；新增 `shaderType` 枚举（Standard/URP_Lit/HDRP_Lit）；新增 `tiling`/`offset` Vector2 参数 |
-| 新增 `AssemblePrefabNode` | `Assets/PCGToolkit/Editor/Nodes/Output/AssemblePrefabNode.cs` | 接收多个 Geometry 输入（input0~inputN），每个 Geometry 的 `@name` Detail 属性作为子物体名，组装为层级 Prefab。支持 `@transform` 属性控制子物体的局部 Transform |
-
-#### Batch 3 — 编辑器改造（P1）
-
-| 任务 | 文件 | 说明 |
-|------|------|------|
-| Houdini 风格紧凑节点 | `PCGNodeVisual.cs` + `PCGGraphView.cs` + `PCGGraphEditorWindow.cs` | 上一轮讨论的方案：删除内联编辑器，Inspector 默认打开 |
-| 便签注释 | `PCGGraphView.cs` + `PCGGraphSerializer.cs` | 第4轮遗留的 A4 |
-
-#### Batch 4 — 端到端验证（P1）
-
-| 任务 | 说明 |
-|------|------|
-| 单栋古建筑 SubGraph | 用现有节点 + 新增的 UVTrimSheet 构建一个完整的单栋建筑（台基 + 柱子 + 墙体 + 屋顶），验证 Trim Sheet UV → 材质 → FBX/Prefab 全流程 |
-| 建筑群布局 Graph | 用 Grid + AttribWrangle + CopyToPoints + AssemblePrefab 构建一个 3×3 院落布局，验证多建筑实例化和 Prefab 层级输出 |
 
 ---
 
-### 第5轮之后还差什么？
+### Batch 1 — 场景引用基础设施 (P0，最高优先级)
 
-即使第5轮全部完成，到达第一大阶段还可能需要：
+这是所有后续功能的地基。
 
-1. **贴图生成/引用管线**：目前没有节点能生成或合成贴图（Trim Sheet 贴图本身需要外部制作）。如果你接受"Trim Sheet 贴图由美术手工制作，PCG 只负责 UV 映射"，这不是阻塞项。但如果你希望 PCG 也能程序化生成 Trim Sheet 贴图，那需要额外的图像处理节点。
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| **A1**: `PCGPortType` 新增 `SceneObject` | `PCGParamSchema.cs` | 在枚举中增加 `SceneObject` 类型，用于表示"来自场景的 GameObject 引用" |
+| **A2**: `PCGParamSchema` 新增 `ObjectType` 字段 | `PCGParamSchema.cs` | 新增 `System.Type ObjectType` 字段（如 `typeof(GameObject)`、`typeof(MeshFilter)`），用于约束 ObjectField 的选择范围 |
+| **A3**: Inspector 支持 `ObjectField` | `PCGNodeInspectorWindow.cs` | 在 `CreateInspectorWidget` 中为 `PCGPortType.SceneObject` 渲染 `ObjectField`，`allowSceneObjects = true`，选中后将 `instanceID` 存入参数 |
+| **A4**: `PCGContext` 新增场景引用 | `PCGContext.cs` | 新增 `Dictionary<string, GameObject> SceneReferences`，执行器在执行前将 Inspector 中选择的场景对象注入此字典 |
+| **A5**: `PCGNodeVisual` 端口着色 | `PCGNodeVisual.cs` | 在 `GetSystemType` 和 `GetPortColor` 中为 `SceneObject` 类型添加映射（建议用橙色区分） |
+| **A6**: 序列化支持 | `PCGGraphView.cs` + `PCGParamHelper.cs` | 场景对象引用通过 `instanceID` 或 `GlobalObjectId` 序列化/反序列化，确保保存/加载图时不丢失引用 |
 
-2. **屋顶曲线 Profile**：中国古建筑的屋顶曲线（举折、举架）是特殊的数学曲线，不是简单的 Bezier。可能需要一个专用的 `RoofProfileNode` 或用 `AttribWrangle` 表达式实现。
+---
 
-3. **执行性能**：建筑群图可能有 50+ 节点，当前没有执行缓存（D2 未完成），每次修改都全图重算。对于大型图这会很慢。
+### Batch 2 — 场景输入节点 (P0)
 
-4. **SubGraph 模板库**：古建筑的各个构件（斗拱、柱础、瓦当、脊兽）应该封装为可复用的 SubGraph。这不是代码工作，而是内容制作工作。
+有了基础设施后，实现具体的场景交互节点。
 
-**我的判断**：完成第5轮迭代后，PCG for Unity 在**节点能力层面**基本够用。剩余的差距主要在**内容制作**（SubGraph 模板）和**性能优化**（执行缓存）上，可以在实际制作古建筑的过程中逐步补齐。 [3-cite-8](#3-cite-8)
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| **B1**: `SceneObjectInputNode` | 新建 `Nodes/Create/SceneObjectInputNode.cs` | 核心节点。输入：一个 `SceneObject` 类型参数（通过 ObjectField 选择场景中的 GameObject）。输出：将该 GameObject 的 `MeshFilter.sharedMesh` 转换为 `PCGGeometry`（反向 `PCGGeometryToMesh`），包含 Points、Primitives、UV、Normals。同时将 Transform 信息写入 Detail 属性 |
+| **B2**: `SceneMeshInputNode` | 新建 `Nodes/Create/SceneMeshInputNode.cs` | 专门读取场景 Mesh 的简化版本。支持 `readUV`/`readNormals`/`readVertexColors` 开关。支持多 Submesh → PrimGroup 映射 |
+| **B3**: `ScenePointsInputNode` | 新建 `Nodes/Create/ScenePointsInputNode.cs` | 读取场景中一组 GameObject 的位置/旋转/缩放作为点云。用途：选中场景中几个空物体作为分布锚点，PCG 在这些点上生成内容（如藤曼覆盖的参考物） |
+| **B4**: `MeshToGeometry` 工具方法 | `PCGGeometryToMesh.cs` 或新建 `MeshToPCGGeometry.cs` | 实现 `Unity Mesh → PCGGeometry` 的反向转换，供 B1/B2 调用。这是目前代码库中**完全缺失**的能力 |
+
+---
+
+### Batch 3 — 输出节点控制 (P1)
+
+让每个 Output 节点可以独立控制是否执行输出。
+
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| **C1**: Output 节点新增 `enabled` 参数 | `ExportFBXNode.cs`、`SavePrefabNode.cs`、`AssemblePrefabNode.cs`、`SaveMaterialNode.cs`、`SaveSceneNode.cs`、`ExportMeshNode.cs`、`LODGenerateNode.cs` | 所有 Output 类节点在 `Inputs` 中新增 `enabled` Bool 参数（默认 true）。`Execute` 开头检查 `enabled`，为 false 时跳过输出但仍透传 Geometry |
+| **C2**: Inspector 增加 Export 按钮 | `PCGNodeInspectorWindow.cs` | 当选中的节点 `Category == Output` 时，在 Inspector 底部显示一个醒目的 "Export" 按钮，点击后**仅执行该节点的输出逻辑**（不重新执行整个图，使用上次执行的缓存结果） |
+| **C3**: Toolbar 增加 "Export All" | `PCGGraphEditorWindow.cs` | 在 toolbar 的 Execute 按钮旁新增 "Export All" 按钮，功能：遍历图中所有 `enabled=true` 的 Output 节点，依次执行输出。与 Execute 的区别是：Execute 执行全图计算，Export All 只触发输出动作 |
+
+---
+
+### Batch 4 — 场景实时预览 (P1)
+
+让 PCG 的结果直接在 SceneView 中可见，而不是只在独立的 Preview 窗口中。
+
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| **D1**: SceneView Gizmo 预览 | 新建 `Graph/PCGScenePreview.cs` | 使用 `SceneView.duringSceneGui` 回调，在 SceneView 中用 `Graphics.DrawMeshNow` 或 `Handles.DrawWireMesh` 绘制当前选中节点的 Geometry 输出。支持线框/实体切换。这样用户可以在场景中直观看到 PCG 生成的结果与场景物体的空间关系 |
+| **D2**: "Inject to Scene" 功能 | `PCGGraphEditorWindow.cs` 或 Output 节点 | 新增一个操作：将执行结果作为临时 GameObject 注入当前打开的场景（不保存为 Prefab/FBX，只是临时预览）。用户满意后再点 Export 正式输出。类似 Houdini HDA 的 "Cook" 后直接在 viewport 看到结果 |
+
+---
+
+### Batch 5 — HDA 化封装 (P2，进阶)
+
+这是最终目标：让 PCG Graph 可以像 HDA 一样作为组件挂在场景物体上。
+
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| **E1**: PCG Graph Asset Inspector | 新建 `Graph/PCGGraphAssetInspector.cs` | 为 `.asset`（PCGGraphData）文件创建自定义 Inspector。在 Project 窗口选中一个 PCG Graph 资产时，Inspector 中直接显示该图的所有暴露参数（标记为 `exposed` 的参数），用户可以直接调参并执行，无需打开 Graph Editor |
+| **E2**: `PCGGraphRunner` MonoBehaviour | 新建 `Graph/PCGGraphRunner.cs` | 一个可以挂在场景 GameObject 上的组件（Editor-only）。引用一个 PCGGraphData 资产，在 Inspector 中暴露该图的参数。点击 "Cook" 按钮执行图并将结果作为子物体生成。这就是 HDA 的 Unity 等价物——把 PCG Graph 当做一个"生成器组件"使用 |
+| **E3**: 参数暴露机制 | `PCGParamSchema.cs` + `PCGNodeBase.cs` | 新增 `bool Exposed` 字段。标记为 Exposed 的参数会出现在 PCGGraphRunner 和 Graph Asset Inspector 中，作为"对外接口"。类似 Houdini HDA 的 promoted parameters |
+
+---
+
+### 优先级与依赖关系总结
+
+| 优先级 | Batch | 核心价值 | 前置依赖 |
+|--------|-------|----------|----------|
+| **P0** | Batch 1 | 场景引用基础设施 | 无 |
+| **P0** | Batch 2 | 场景输入节点（解决"藤曼覆盖参考物"的核心需求） | Batch 1 |
+| **P1** | Batch 3 | 输出控制（解决"单独控制是否输出"的需求） | 无（可与 Batch 1 并行） |
+| **P1** | Batch 4 | 场景实时预览 | Batch 1+2 |
+| **P2** | Batch 5 | HDA 化封装（终极目标） | Batch 1+2+3+4 |
+
+---
+
+### 关键技术难点
+
+1. **`Mesh → PCGGeometry` 反向转换**（B4）：目前只有 `PCGGeometryToMesh`，没有反向。需要处理 submesh → PrimGroup 映射、UV 通道、顶点共享/拆分等问题。 [0-cite-4](#0-cite-4)
+
+2. **场景对象引用的序列化**（A6）：`instanceID` 在 Editor 重启后会变。需要用 `GlobalObjectId`（Unity 2019.2+）来持久化场景对象引用，或者存储对象路径（`Transform` 层级路径）。
+
+3. **执行器与场景引用的桥接**（A4）：当前 `PCGAsyncGraphExecutor.ExecuteNodeInternal` 只从 `_nodeOutputs` 和 `parameters` 收集输入。需要增加一个阶段：在执行前将 Inspector 中选择的场景对象解析为实际的 `GameObject` 引用，注入 `PCGContext.SceneReferences`。 [0-cite-5](#0-cite-5)
+
+4. **Output 节点的"仅输出"执行**（C2）：需要在 `PCGAsyncGraphExecutor` 中支持"使用缓存结果重新执行单个节点"的模式，而不是每次都全图重算。

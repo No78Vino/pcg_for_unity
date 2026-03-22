@@ -29,6 +29,8 @@ namespace PCGToolkit.Nodes.Output
                 "Copy Textures", "是否复制纹理", false),
             new PCGParamSchema("exportAnimations", PCGPortDirection.Input, PCGPortType.Bool,
                 "Export Animations", "是否导出动画", false),
+            new PCGParamSchema("enabled", PCGPortDirection.Input, PCGPortType.Bool,
+                "Enabled", "是否执行导出", true),
         };
 
         public override PCGParamSchema[] Outputs => new[]
@@ -45,7 +47,8 @@ namespace PCGToolkit.Nodes.Output
             Dictionary<string, object> parameters)
         {
             var geo = GetInputGeometry(inputGeometries, "input");
-
+            if (!GetParamBool(parameters, "enabled", true))
+                return SingleOutput("geometry", geo);
             if (geo == null || geo.Points.Count == 0)
             {
                 ctx.LogWarning("ExportFBX: 输入几何体为空，跳过导出");

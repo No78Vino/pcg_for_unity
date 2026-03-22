@@ -24,6 +24,8 @@ namespace PCGToolkit.Nodes.Output
                 "Save Path", "保存路径（Assets/ 开头，.prefab 结尾）", "Assets/PCGOutput/output.prefab"),
             new PCGParamSchema("createRenderer", PCGPortDirection.Input, PCGPortType.Bool,
                 "Create Renderer", "是否创建 MeshRenderer 并保存为 Prefab", true),
+            new PCGParamSchema("enabled", PCGPortDirection.Input, PCGPortType.Bool,
+                "Enabled", "是否执行导出（false 则透传跳过）", true),
         };
 
         public override PCGParamSchema[] Outputs => new[]
@@ -38,6 +40,8 @@ namespace PCGToolkit.Nodes.Output
             Dictionary<string, object> parameters)
         {
             var geo = GetInputGeometry(inputGeometries, "input");
+            if (!GetParamBool(parameters, "enabled", true))
+                return SingleOutput("geometry", geo);
 
             if (geo == null || geo.Points.Count == 0)
             {

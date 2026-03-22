@@ -28,6 +28,8 @@ namespace PCGToolkit.Nodes.Output
                 "Add Collider", "是否添加 MeshCollider", false),
             new PCGParamSchema("convexCollider", PCGPortDirection.Input, PCGPortType.Bool,
                 "Convex Collider", "碰撞体是否为凸包", false),
+            new PCGParamSchema("enabled", PCGPortDirection.Input, PCGPortType.Bool,
+                "Enabled", "是否执行导出", true),
         };
 
         public override PCGParamSchema[] Outputs => new[]
@@ -43,6 +45,8 @@ namespace PCGToolkit.Nodes.Output
             Dictionary<string, object> parameters)
         {
             var geo = GetInputGeometry(inputGeometries, "input");
+            if (!GetParamBool(parameters, "enabled", true))
+                return SingleOutput("geometry", geo ?? new PCGGeometry());
 
             if (geo == null || geo.Points.Count == 0)
             {

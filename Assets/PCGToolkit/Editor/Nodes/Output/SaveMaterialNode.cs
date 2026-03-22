@@ -52,6 +52,8 @@ namespace PCGToolkit.Nodes.Output
             {
                 EnumOptions = new[] { "opaque", "cutout", "transparent", "fade" }
             },
+            new PCGParamSchema("enabled", PCGPortDirection.Input, PCGPortType.Bool,
+                "Enabled", "是否执行材质保存", true),
         };
 
         public override PCGParamSchema[] Outputs => new[]
@@ -65,6 +67,8 @@ namespace PCGToolkit.Nodes.Output
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
+            if (!GetParamBool(parameters, "enabled", true))
+                return new System.Collections.Generic.Dictionary<string, PCGGeometry>();
             string savePath        = GetParamString(parameters, "assetPath", "Assets/PCGOutput/material.mat");
             string shaderType      = GetParamString(parameters, "shaderType", "Standard");
             string customShader    = GetParamString(parameters, "customShader", "");

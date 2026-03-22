@@ -1,16 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 using PCGToolkit.Core;
 
-namespace PCGToolkit.Runtime
+namespace PCGToolkit.Graph
 {
     [AddComponentMenu("PCG Toolkit/PCG Graph Runner")]
     public class PCGGraphRunner : MonoBehaviour
     {
-#if UNITY_EDITOR
         [Header("Graph Asset")]
-        public PCGToolkit.Graph.PCGGraphData GraphAsset;
-#endif
+        public PCGGraphData GraphAsset;
 
         [Header("Exposed Parameters")]
         public List<PCGExposedParam> ExposedParams = new List<PCGExposedParam>();
@@ -28,12 +27,9 @@ namespace PCGToolkit.Runtime
 
         private void Start()
         {
-#if UNITY_EDITOR
             if (RunOnStart) Run();
-#endif
         }
 
-#if UNITY_EDITOR
         public void Run()
         {
             if (GraphAsset == null)
@@ -58,12 +54,12 @@ namespace PCGToolkit.Runtime
                 }
                 else
                 {
-                    nodeData.Parameters.Add(new PCGToolkit.Graph.PCGSerializedParameter
+                    nodeData.Parameters.Add(new PCGSerializedParameter
                         { Key = ep.ParamName, ValueType = ep.ValueType, ValueJson = valJson });
                 }
             }
 
-            var executor = new PCGToolkit.Graph.PCGGraphExecutor(dataCopy);
+            var executor = new PCGGraphExecutor(dataCopy);
             executor.Execute();
 
             foreach (var nodeData in dataCopy.Nodes)
@@ -87,10 +83,9 @@ namespace PCGToolkit.Runtime
             var mf = target.GetComponent<MeshFilter>() ?? target.AddComponent<MeshFilter>();
             var mr = target.GetComponent<MeshRenderer>() ?? target.AddComponent<MeshRenderer>();
             mf.sharedMesh = mesh;
-            mr.sharedMaterial = UnityEditor.AssetDatabase.GetBuiltinExtraResource<Material>("Default-Material.mat");
+            mr.sharedMaterial = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Material.mat");
             if (OutputTarget == null) OutputTarget = target;
         }
-#endif
 
         private static string SerializeValue(PCGExposedParam ep)
         {

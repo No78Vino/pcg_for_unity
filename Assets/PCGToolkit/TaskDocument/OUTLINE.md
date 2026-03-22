@@ -1,195 +1,244 @@
-# PCG for Unity 第2轮迭代评估与下一轮指导
+# PCG for Unity 第4轮迭代方向评估与计划大纲
 
-## 最新提交概览
+## 项目现状总结
 
-[`a71de58`](https://github.com/No78Vino/pcg_for_unity/commit/a71de58ab170d48e3ce4d2d4dd721e213a30517d) ("PCG第2轮功能迭代") 是一次非常大的提交（5488 additions, 11666 deletions），新增/重写了约 30 个节点和核心模块。 [0-cite-0](#0-cite-0)
-
----
-
-## 当前节点库全景（~100个节点）
-
-| 分类 | 数量 | 节点 |
-|------|------|------|
-| **Create** | 15 | Box, Sphere, Tube, Grid, Circle, Line, Torus, Delete, GroupCreate, ImportMesh, Merge, Transform, **Font★**, **Heightfield★**, **PlatonicSolids★** |
-| **Attribute** | 8 | AttribCreate, AttribSet, AttribCopy, AttribDelete, AttribPromote, **AttribWrangle★**, **AttribRandomize★**, **AttribTransfer★** |
-| **Geometry** | 18 | Blast, Boolean, Clip, Extrude, Fuse, Normal, Reverse, Sort, Measure, Pack, Unpack, **Facet★**, **Inset★**, **Mirror★**, **Peak★**, **PolyExpand2D★**, **Triangulate★**, Subdivide(重写CC★) |
-| **Deform** | 8 | Bend, Twist, Taper, Lattice, Mountain, Smooth, **Creep★**, **Noise★** |
-| **Topology** | 8 | PolyBevel(重写★), PolyBridge, PolyFill, Remesh, Decimate, ConvexDecomp(重写★), **EdgeDivide★**, **PolySplit★** |
-| **Distribute** | 6 | Scatter, CopyToPoints, Instance, Ray, **Array★**, **PointsFromVolume★** |
-| **Curve** | 6 | CurveCreate, Resample, Sweep, Carve, Fillet, **PolyWire★** |
-| **UV** | 4 | UVProject, UVUnwrap(增强★), UVLayout(增强★), UVTransform |
-| **Procedural** | 3 | LSystem, VoronoiFracture, WFC(增强★) |
-| **Utility** | 19 | ForEach★, Switch, Split, Compare★, FitRange★, GroupCombine★, Ramp★, SubGraph系列, Math系列, Const系列, Null, Random |
-| **Output** | 6 | ExportFBX, ExportMesh, SavePrefab, SaveMaterial, SaveScene, LODGenerate |
-
-（★ = 本次新增或重大重写）
-
+当前项目 v0.5.0-alpha，共 **~90 个节点**，分布在 12 个类别中。经过 3 轮迭代，核心节点能力（表达式系统、多材质、实例化、ForEach）已基本完备。但编辑器体验层面存在明显短板： [1-cite-0](#1-cite-0)
 
 ---
 
-## 能否制作程序化建筑生成器？
+## 第4轮迭代方向
 
-**短回答：基本具备了，但有明显短板。**
-
-### 已具备的建筑生成关键能力
-
-| 建筑生成需求 | 对应节点 | 状态 |
-|---|---|---|
-| 墙体/楼层挤出 | `Extrude` + `Inset` | ✅ |
-| 窗洞/门洞开孔 | `Boolean` (Subtract) | ✅ 但拓扑质量存疑 |
-| 楼层重复 | `Array` + `CopyToPoints` | ✅ |
-| 对称建筑 | `Mirror` | ✅ |
-| 装饰线脚/栏杆 | `Sweep` + `PolyWire` | ✅ |
-| 模块化组装 | `SubGraph` + `ForEach` | ✅ |
-| 边缘倒角 | `PolyBevel` | ✅ |
-| 表面细节 | `Peak` + `Noise` | ✅ |
-| 自定义逻辑 | `AttribWrangle` (VEX子集) | ✅ 但功能有限 |
-| UV/材质 | UV系列 + `SaveMaterial` | ✅ |
-| 输出 | FBX/Prefab/Scene | ✅ |
-
-### 关键缺口（离"复杂3D建筑"还差的部分）
-
-#### 1. 流程控制能力不足（最大短板）
-
-`ExpressionParser` 不支持 `if/else`、`for` 循环、比较运算符（`<`, `>`, `==`）。这意味着无法在 Wrangle 中写条件逻辑，比如"如果是顶层就生成屋顶，否则生成普通楼层"。 [0-cite-1](#0-cite-1)
-
-`ForEachNode` 虽然已实现，但只支持 byGroup/byPiece/count 三种模式，缺少 **feedback 模式**（上一次迭代的输出作为下一次的输入进行累积变换）。 [0-cite-2](#0-cite-2)
-
-实际上 `IterateByCount` 已经有 feedback 的雏形（`current = result`），但它把所有中间结果都 add 到 results 里再 merge，而不是只输出最终结果。这对建筑的"逐层叠加"场景不太对。
-
-#### 2. 缺少 Group Expression / 条件选择
-
-建筑生成的核心模式是：**按属性值选择不同的面组，对不同组执行不同操作**。目前 `GroupCreateNode` 和 `Switch` 节点存在，但缺少一个 **基于表达式的 Group 过滤器**（如 `@floor == 3` 或 `@type == "window"`）。
-
-#### 3. Boolean 拓扑质量
-
-`BooleanNode` 使用 Clipper2 做 2D 布尔，对 3D 网格的 CSG 操作（如在墙面上开窗洞）可能产生非流形拓扑。建筑生成对 Boolean 的拓扑清洁度要求很高。 [0-cite-3](#0-cite-3)
-
-#### 4. 缺少 Copy Stamp / 变体实例化
-
-Houdini 建筑生成的核心模式之一是 `CopyToPoints` + stamp 变量（每个拷贝可以有不同参数）。当前 `CopyToPoints` 和 `Instance` 节点是否支持 per-copy 参数变体？如果不支持，就无法做"每层窗户样式不同"这类需求。
-
-#### 5. 缺少 Primitive Split / 面独立化
-
-建筑生成经常需要把一个面"独立化"（每个面变成独立的点集），然后对每个面单独做 Extrude/Inset。`Pack`/`Unpack` 节点存在，但需要确认是否实现了 Houdini 的 "Connectivity + ForEach Piece" 工作流。
-
-#### 6. 缺少 Shape Grammar / Rule-based 系统
-
-WFC 适合做平面布局，但建筑的立面生成更适合 **Shape Grammar**（类似 CGA Shape / Houdini Labs Building Generator 的规则系统）。这是一个 Tier 7+ 的高级功能。
+本轮聚焦三个方向：**编辑器体验优化**、**节点参数规范化**、**第3轮遗留 Bug 修复**。
 
 ---
 
-## 量化差距评估
+## 迭代计划大纲
 
-```
-程序化建筑生成器（简单方盒子建筑）：  ████████░░ 80%  — 基本可做
-程序化建筑生成器（中等复杂度）：      ██████░░░░ 60%  — 缺条件逻辑和变体
-程序化建筑生成器（高复杂度/装饰物）：  ████░░░░░░ 40%  — 缺 Shape Grammar、干净 Boolean、材质分配
-```
+### 方向 A: 编辑器体验优化
 
----
+#### A1: 中英文本地化系统 (P1)
 
-## 第3轮迭代指导方针
+**现状**: 所有 UI 文本硬编码。`DisplayName` 是英文，`Description` 是中文，toolbar 按钮全英文（"New"、"Save"、"Execute"），Inspector 标签也是英文。没有统一的语言切换机制。 [1-cite-1](#1-cite-1) [1-cite-2](#1-cite-2)
 
-按优先级排序，以下是让系统真正能做复杂建筑的关键任务：
+**方案**:
+1. 新建 `Assets/PCGToolkit/Editor/Core/PCGLocalization.cs`，实现 `PCGLocalization` 静态类
+2. 使用 `Dictionary<string, Dictionary<string, string>>` 存储 `{ "en": { "key": "value" }, "zh": { "key": "value" } }`
+3. 在 `PCGParamSchema` 中将 `DisplayName` 和 `Description` 改为 localization key，或新增 `DisplayNameZh` / `DescriptionZh` 字段
+4. 在 `PCGGraphEditorWindow` toolbar 添加语言切换按钮（EN/中）
+5. 语言偏好存储到 `EditorPrefs`
 
-### P0 — 表达式系统补全（最高优先级）
+#### A2: 节点搜索窗口增强 (P2)
 
-在 `ExpressionParser` 中增加：
-- **比较运算符**: `<`, `>`, `<=`, `>=`, `==`, `!=`
-- **逻辑运算符**: `&&`, `||`, `!`
-- **三元表达式**: `condition ? a : b`
-- **if/else 语句**: `if (@floor > 3) { @type = 1; } else { @type = 0; }`
+**现状**: `PCGNodeSearchWindow` 只按 `DisplayName` 匹配，不支持中文搜索、别名搜索、描述搜索。 [1-cite-3](#1-cite-3)
 
-这是解锁建筑生成能力的最关键一步。没有条件逻辑，AttribWrangle 只能做数学变换，无法做决策。 [0-cite-4](#0-cite-4)
+**方案**:
+1. 搜索时同时匹配 `DisplayName`、`Description`、`Name`（类型名）
+2. 支持拼音首字母搜索（如输入 "jc" 匹配 "挤出"）
+3. 在搜索结果中显示节点描述作为副标题
 
-### P1 — Group Expression Node
+#### A3: 节点预设/收藏系统 (P3)
 
-新增一个 `GroupExpression` 节点，允许用表达式创建分组：
-```
-@P.y > 5 && @P.y < 8   →  创建 "middle_floors" 组
-@primnum % 2 == 0       →  创建 "even_faces" 组
-```
-这让 `ForEach byGroup` + `Switch` 的组合变得真正可用。
+**现状**: 用户无法保存常用的节点参数配置。每次创建节点都从默认值开始。
 
-### P2 — ForEach Feedback 模式修正
+**方案**:
+1. 在 Inspector 面板添加 "Save Preset" / "Load Preset" 按钮
+2. 预设存储为 JSON 文件到 `Assets/PCGToolkit/Presets/` 目录
+3. 右键节点菜单添加 "Apply Preset" 子菜单
 
-修改 `ForEachNode` 的 `IterateByCount` 模式：
-- 增加 `feedback` 参数（bool），为 true 时只输出最终迭代结果而非 merge 所有中间结果
-- 这对"逐层叠加建筑"至关重要：第1次生成地基，第2次在地基上加一层，第3次再加一层... [0-cite-2](#0-cite-2)
+#### A4: 节点注释/便签 (P3)
 
-### P3 — CopyToPoints Stamp 变量
+**现状**: 图编辑器中无法添加注释或便签来标注节点用途。
 
-增强 `CopyToPointsNode`：
-- 读取目标点上的自定义属性（如 `@variant`, `@scale`, `@rotation`）
-- 将这些属性注入到被拷贝几何体的 SubGraph 执行上下文中
-- 实现 per-instance 变体
-
-### P4 — 面独立化节点 (Primitive Separate / Connectivity)
-
-新增 `ConnectivityNode`：
-- 为每个连通分量写入 `@class` 属性
-- 配合 `ForEach byPiece` 实现"对每个面独立操作"
-
-新增 `FaceSeparateNode`（或叫 `Fuse` 的反操作）：
-- 将共享顶点的面拆成独立点集
-- 这是 Extrude Individual 的前置操作
-
-### P5 — Boolean 3D 质量提升
-
-当前 Boolean 可能是 2D 投影实现。需要：
-- 通过 `GeometryBridge` 转换到 `DMesh3`，使用 geometry3Sharp 的 `MeshBoolean` 做真正的 3D CSG
-- 或者集成 `libigl` / `CGAL` 的 C# binding
-- 输出后自动 Fuse + Normal 清理拓扑 [0-cite-5](#0-cite-5)
-
-### P6 — 材质 ID / 面材质分配
-
-建筑的不同部分需要不同材质（墙面、玻璃、金属框架等）：
-- 在 `PrimAttribs` 中支持 `@material` 或 `@shop_materialpath` 属性
-- `ExportFBX` / `SavePrefab` 时按材质属性自动分配多材质
-- 新增 `MaterialAssignNode`：按 PrimGroup 分配材质路径
-
-### P7 — Shape Grammar 节点（中期目标）
-
-这是真正的"建筑生成器"核心：
-- 新增 `ShapeGrammarNode`：输入一个面 + 规则集，递归细分
-- 规则示例：`Facade -> Floor* Roof`，`Floor -> Window Wall Window`
-- 可以参考 CGA Shape (CityEngine) 或 Houdini Labs Building Generator 的设计
-- 这个节点的复杂度很高，建议作为 Phase 4 的目标
-
-### P8 — 实用建筑 SubGraph 模板库
-
-在节点能力补全后，创建一组预制 SubGraph：
-- `BuildingFloor.asset` — 单层楼板生成
-- `WindowFrame.asset` — 窗框生成（Inset + Extrude + Bevel）
-- `Balcony.asset` — 阳台生成
-- `Roof.asset` — 屋顶生成（坡顶/平顶）
-- `Facade.asset` — 立面生成（Grid + ForEach + 随机变体）
+**方案**:
+1. 在 `PCGGraphView` 中支持创建 `StickyNote` 元素（GraphView 原生支持）
+2. 序列化到 `PCGGraphData` 中
 
 ---
 
-## 总结优先级矩阵
+### 方向 B: 节点参数规范化（String → EnumOptions）
+
+#### B1: 批量为缺失 EnumOptions 的节点补全下拉框 (P1)
+
+**现状**: 项目中已有 `EnumOptions` 机制（第4次迭代加入），`PCGNodeVisual` 和 `PCGNodeInspectorWindow` 都已支持渲染 `PopupField<string>` 下拉框。但大量节点仍然使用裸字符串参数，用户需要手动输入 "linear"/"radial" 等值，容易拼错。 [1-cite-4](#1-cite-4)
+
+以下是需要补全 `EnumOptions` 的完整清单（共 **21 个节点，约 30 个参数**）：
+
+| 节点 | 参数名 | 当前默认值 | 应补全的 EnumOptions |
+|------|--------|-----------|---------------------|
+| `ArrayNode` | `mode` | `"linear"` | `["linear", "radial"]` |
+| `BooleanNode` | `operation` | `"union"` | `["union", "intersect", "subtract"]` |
+| `ConnectivityNode` | `connectType` | `"point"` | `["point", "prim"]` |
+| `GroupExpressionNode` | `class` | `"point"` | `["point", "primitive"]` |
+| `FacetNode` | `mode` | `"unique"` | `["unique", "consolidate", "computeNormals"]` |
+| `FacetNode` | `normalMode` | `"flat"` | `["flat", "smooth"]` |
+| `ForEachNode` | `mode` | `"byGroup"` | `["byGroup", "byPiece", "count"]` |
+| `BendNode` | `upAxis` | `"y"` | `["x", "y", "z"]` |
+| `TwistNode` | `axis` | `"y"` | `["x", "y", "z"]` |
+| `TaperNode` | `axis` | `"y"` | `["x", "y", "z"]` |
+| `MountainNode` | `noiseType` | `"perlin"` | `["perlin", "simplex", "value"]` |
+| `NoiseNode` | `noiseType` | `"perlin"` | `["perlin", "worley", "curl"]` |
+| `NoiseNode` | `direction` | `"normal"` | `["normal", "axis", "3d"]` |
+| `CurveCreateNode` | `curveType` | `"polyline"` | `["bezier", "polyline"]` |
+| `CurveCreateNode` | `shape` | `"circle"` | `["circle", "line", "spiral", "random"]` |
+| `ResampleNode` | `method` | `"length"` | `["length", "count"]` |
+| `PolyExpand2DNode` | `joinType` | `"round"` | `["round", "miter", "square"]` |
+| `PolyFillNode` | `fillMode` | `"triangulate"` | `["triangulate", "fan", "center"]` |
+| `PlatonicSolidsNode` | `type` | `"icosahedron"` | `["tetrahedron", "octahedron", "icosahedron", "dodecahedron"]` |
+| `GroupCombineNode` | `operation` | `"union"` | `["union", "intersect", "subtract"]` |
+| `GroupCombineNode` | `groupType` | `"prim"` | `["point", "prim"]` |
+| `CompareNode` | `operation` | `"equal"` | `["equal", "notEqual", "greater", "less", "greaterEqual", "lessEqual"]` |
+| `RampNode` | `mode` | `"smooth"` | `["linear", "smooth", "step"]` |
+| `SaveMaterialNode` | `renderMode` | `"opaque"` | `["opaque", "cutout", "transparent", "fade"]` |
+| `AttributeRandomizeNode` | `class` | `"point"` | `["point", "primitive"]` |
+| `AttributeRandomizeNode` | `type` | `"float"` | `["float", "vector3", "color"]` |
+| `AttributeRandomizeNode` | `distribution` | `"uniform"` | `["uniform", "gaussian"]` |
+
+已有 `EnumOptions` 的节点（无需修改）：`MathFloatNode`、`MathVectorNode`、`AttributePromoteNode`、`AttributeCopyNode`、`AttributeDeleteNode`。 [1-cite-5](#1-cite-5) [1-cite-6](#1-cite-6)
+
+---
+
+### 方向 C: 第3轮遗留 Bug 修复 (P0)
+
+这部分是上一轮分析中发现的确认 Bug，必须在第4轮优先修复：
+
+| ID | 文件 | 问题 |
+|----|------|------|
+| C1 | `ExpressionParser.cs` | 赋值检测误判 `!=`/`<=`/`>=` |
+| C2 | `ExpressionParser.cs` | `ParseBlock` 与 vector literal `{}` 冲突 |
+| C3 | `ExpressionParser.cs` | `MatchKeyword` 不检查下划线 |
+| C4 | `ExpressionParser.cs` | `ParseUnary` 负号调用 `ParsePrimary` 而非 `ParseUnary` |
+| C5 | `SavePrefabNode.cs` | 早期返回路径残留 `prefabPath` 键 |
+| C6 | `InstanceNode.cs` | 端口声明只有 0-3，但 `MaxInstances=8` |
+| C7 | `ForEachNode.cs` | 嵌套 ForEach 变量污染 `ctx.GlobalVariables` |
+| C8 | `CopyToPointsNode.cs` | `pscale` 直接强转 float |
+| C9 | `ConnectivityNode.cs` + `ForEachNode.cs` | Union-Find 代码重复 | [1-cite-7](#1-cite-7) [1-cite-8](#1-cite-8) [1-cite-9](#1-cite-9) [1-cite-10](#1-cite-10) 
+
+---
+
+### 方向 D: 自主发掘的改进项
+
+#### D1: `PCGNodeBase` 增加参数验证框架 (P2)
+
+**现状**: 每个节点的 `Execute` 方法开头都有大量重复的空值检查和参数范围校验代码。
+
+**方案**: 在 `PCGNodeBase` 中新增 `ValidateInputs()` 方法，根据 `PCGParamSchema.Required`、`Min`/`Max`、`EnumOptions` 自动校验，减少节点代码冗余。
+
+#### D2: `PCGGraphExecutor` 执行缓存优化 (P2)
+
+**现状**: 每次执行整个图时，所有节点都重新计算。对于大型图，修改末端节点参数后仍需全图重算。
+
+**方案**: 基于节点参数 hash 实现脏标记传播，只重新执行参数变化的节点及其下游。
+
+#### D3: 节点 Tooltip 统一规范 (P3)
+
+**现状**: `port.tooltip = schema.Description` 使用中文描述，但 `port.portName = schema.DisplayName` 使用英文。Tooltip 和 portName 语言不一致。 [1-cite-11](#1-cite-11)
+
+**方案**: 纳入 A1 本地化系统统一处理。
+
+#### D4: `PCGGeometry.Clone()` 深拷贝审计 (P2)
+
+**现状**: 多个节点在 `Execute` 开头调用 `geo.Clone()`，但未验证 Clone 是否正确深拷贝了所有属性（PointAttribs、VertexAttribs、PrimAttribs、DetailAttribs、Groups）。如果 Clone 是浅拷贝，修改副本会影响原始数据。
+
+**方案**: 审计 `PCGGeometry.Clone()` 实现，确保所有 `AttributeStore` 和 `Groups` 都是深拷贝。
+
+#### D5: ExpressionParser 单元测试 (P1)
+
+**现状**: ExpressionParser 经过 3 轮大幅增强，但没有单元测试。Bug C1-C4 都是在代码审查中发现的，说明缺乏测试覆盖。
+
+**方案**: 新建 `Assets/PCGToolkit/Tests/ExpressionParserTests.cs`，覆盖：
+- 比较运算符（`<=`, `>=`, `!=`, `==`）
+- if/else 块内 vector literal
+- 关键词边界（`float_value`, `if_cond`）
+- 一元运算符嵌套（`-!x`, `--x`）
+- 赋值语句 vs 表达式语句
+
+---
+
+## 执行任务分级规划
 
 ```mermaid
-graph LR
-    subgraph "P0-P2: 解锁建筑生成基础"
-        A["P0: ExpressionParser\nif/else/比较/逻辑"]
-        B["P1: GroupExpression"]
-        C["P2: ForEach Feedback"]
-    end
-    subgraph "P3-P4: 变体与模块化"
-        D["P3: CopyToPoints Stamp"]
-        E["P4: FaceSeparate\n+ Connectivity"]
-    end
-    subgraph "P5-P6: 质量提升"
-        F["P5: Boolean 3D"]
-        G["P6: 面材质分配"]
-    end
-    subgraph "P7-P8: 高级能力"
-        H["P7: Shape Grammar"]
-        I["P8: 建筑SubGraph模板库"]
-    end
-    A --> B --> C --> D --> E --> F --> G --> H --> I
+gantt
+    title "第4轮迭代执行计划"
+    dateFormat X
+    axisFormat %s
+
+    section "Batch 1 - Bug修复 (P0)"
+    "C1-C5: ExpressionParser 5个Bug" :a1, 0, 2
+    "C6-C9: 节点Bug修复" :a2, 0, 2
+
+    section "Batch 2 - 参数规范化 (P1)"
+    "B1: 21个节点补全EnumOptions" :b1, 2, 4
+    "D5: ExpressionParser单元测试" :b2, 2, 4
+
+    section "Batch 3 - 本地化 (P1)"
+    "A1: 本地化系统核心" :c1, 4, 7
+    "D3: Tooltip统一" :c2, 7, 8
+
+    section "Batch 4 - 体验优化 (P2)"
+    "D1: 参数验证框架" :d1, 8, 10
+    "D4: Clone深拷贝审计" :d2, 8, 9
+    "A2: 搜索窗口增强" :d3, 9, 11
+    "D2: 执行缓存优化" :d4, 10, 12
+
+    section "Batch 5 - 锦上添花 (P3)"
+    "A3: 节点预设系统" :e1, 12, 14
+    "A4: 便签注释" :e2, 12, 13
 ```
 
-完成 P0-P4 后，你的工具就能做出"中等复杂度的程序化建筑"了。完成 P5-P8 后，才能真正对标 Houdini Labs Building Generator 的能力水平。
+### Batch 1 — Bug 修复 (P0，最高优先级)
+
+| 任务 | 文件 | 工作量 |
+|------|------|--------|
+| C1: `<=`/`>=`/`!=` 赋值误判 | `ExpressionParser.cs` | 小 |
+| C2: `ParseBlock` 与 `{}` 冲突 | `ExpressionParser.cs` | 中 |
+| C3: `MatchKeyword` 下划线 | `ExpressionParser.cs` | 小 |
+| C4: `ParseUnary` 递归错误 | `ExpressionParser.cs` | 小 |
+| C5: SavePrefabNode 残留键 | `SavePrefabNode.cs` | 小 |
+| C6: InstanceNode 端口不匹配 | `InstanceNode.cs` | 小 |
+| C7: ForEach 变量污染 | `ForEachNode.cs` | 小 |
+| C8: CopyToPoints 强转 | `CopyToPointsNode.cs` | 小 |
+| C9: Union-Find 提取公共方法 | 新建 `PCGGeometryUtils.cs` | 中 |
+
+### Batch 2 — 参数规范化 + 测试 (P1)
+
+| 任务 | 文件 | 工作量 |
+|------|------|--------|
+| B1: 21 个节点补全 EnumOptions | 21 个节点文件 | 中（机械性工作） |
+| D5: ExpressionParser 单元测试 | 新建测试文件 | 中 |
+
+### Batch 3 — 本地化系统 (P1)
+
+| 任务 | 文件 | 工作量 |
+|------|------|--------|
+| A1: 本地化核心 | 新建 `PCGLocalization.cs` | 大 |
+| A1: PCGParamSchema 适配 | `PCGParamSchema.cs` | 中 |
+| A1: 编辑器 UI 适配 | `PCGGraphEditorWindow.cs`, `PCGNodeVisual.cs`, `PCGNodeInspectorWindow.cs`, `PCGNodeSearchWindow.cs` | 大 |
+| D3: Tooltip 统一 | 随 A1 一起完成 | 小 |
+
+### Batch 4 — 体验优化 (P2)
+
+| 任务 | 文件 | 工作量 |
+|------|------|--------|
+| D1: 参数验证框架 | `PCGNodeBase.cs` | 中 |
+| D4: Clone 深拷贝审计 | `PCGGeometry.cs` | 小 |
+| A2: 搜索窗口增强 | `PCGNodeSearchWindow.cs` | 中 |
+| D2: 执行缓存优化 | `PCGGraphExecutor.cs` | 大 |
+
+### Batch 5 — 锦上添花 (P3)
+
+| 任务 | 文件 | 工作量 |
+|------|------|--------|
+| A3: 节点预设系统 | 新建 `PCGPresetManager.cs` | 中 |
+| A4: 便签注释 | `PCGGraphView.cs`, `PCGGraphSerializer.cs` | 中 |
+
+---
+
+## 预期成果
+
+完成第4轮迭代后：
+- 所有第3轮遗留 Bug 清零
+- 30 个裸字符串参数全部变为下拉框，用户不再需要记忆/手输选项值
+- 编辑器支持中英文一键切换
+- ExpressionParser 有完整的单元测试保障
+- 节点搜索支持中文和模糊匹配
+- 执行引擎支持增量计算

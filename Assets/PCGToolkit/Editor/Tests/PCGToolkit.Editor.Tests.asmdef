@@ -1,5 +1,5 @@
 {
-    "name": "PCGToolkit.Tests",
+    "name": "PCGToolkit.Editor.Tests",
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using PCGToolkit.Core;
 
 namespace PCGToolkit.Core
 {

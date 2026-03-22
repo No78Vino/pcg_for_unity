@@ -296,36 +296,38 @@ namespace PCGToolkit.Graph
             foldout.style.marginTop = 4;
             foldout.style.marginBottom = 4;
 
+            // 先建列表容器
+            var presetListContainer = new VisualElement();
+
             // Save Preset 行
             var saveRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 4 } };
-            var presetNameField = new TextField { placeholderText = "Preset name…", style = { flexGrow = 1 } };
+            var presetNameField = new TextField { value = "", style = { flexGrow = 1 } };
+            presetNameField.tooltip = "Preset name";
             var saveBtn = new Button(() =>
             {
                 string name = presetNameField.value.Trim();
                 if (string.IsNullOrEmpty(name)) name = "Default";
                 PCGPresetManager.SavePreset(nodeType, name, nodeVisual.GetPortDefaultValues());
-                RefreshPresetList(foldout, nodeVisual, nodeType);
+                RefreshPresetList(presetListContainer, nodeVisual, nodeType);
             }) { text = "Save" };
             saveRow.Add(presetNameField);
             saveRow.Add(saveBtn);
             foldout.Add(saveRow);
 
-            // 已有预设列表
-            RefreshPresetList(foldout, nodeVisual, nodeType);
+            foldout.Add(presetListContainer);
+            RefreshPresetList(presetListContainer, nodeVisual, nodeType);
 
             _paramContainer.Add(foldout);
         }
 
-        private void RefreshPresetList(Foldout foldout, PCGNodeVisual nodeVisual, string nodeType)
+        private void RefreshPresetList(VisualElement container, PCGNodeVisual nodeVisual, string nodeType)
         {
-            // 移除所有现有的预设按钮（保留前两个子元素：saveRow）
-            while (foldout.childCount > 1)
-                foldout.RemoveAt(foldout.childCount - 1);
+            container.Clear();
 
             var presets = PCGPresetManager.GetPresetsForNode(nodeType);
             if (presets == null || presets.Length == 0)
             {
-                foldout.Add(new Label("No saved presets")
+                container.Add(new Label("No saved presets")
                 {
                     style = { fontSize = 10, color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)) }
                 });
@@ -335,23 +337,23 @@ namespace PCGToolkit.Graph
             foreach (var filePath in presets)
             {
                 string presetName = PCGPresetManager.GetPresetName(filePath);
+                string capturedPath = filePath;
                 var row = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 2 } };
                 var nameLabel = new Label(presetName) { style = { flexGrow = 1, fontSize = 11 } };
                 var loadBtn = new Button(() =>
                 {
-                    var data = PCGPresetManager.LoadPreset(filePath);
+                    var data = PCGPresetManager.LoadPreset(capturedPath);
                     if (data != null)
                     {
                         nodeVisual.SetPortDefaultValues(data);
                         _graphView?.NotifyGraphChanged();
-                        // 刷新 Inspector 以显示新值
                         _currentNode = null;
                         RebuildForNode(nodeVisual);
                     }
                 }) { text = "Load", style = { width = 50 } };
                 row.Add(nameLabel);
                 row.Add(loadBtn);
-                foldout.Add(row);
+                container.Add(row);
             }
         }
 

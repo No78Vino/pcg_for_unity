@@ -1,10 +1,17 @@
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor;
 using PCGToolkit.Core;
+#endif
 
 namespace PCGToolkit.Graph
 {
+    /// <summary>
+    /// HDA 风格运行时组件：将 PCGGraphData 资产绑定到场景 GameObject，
+    /// 可在 Inspector 中覆盖暴露参数并触发图执行。
+    /// 图执行仅在 Unity Editor 中有效。
+    /// </summary>
     [AddComponentMenu("PCG Toolkit/PCG Graph Runner")]
     public class PCGGraphRunner : MonoBehaviour
     {
@@ -22,8 +29,11 @@ namespace PCGToolkit.Graph
         [Tooltip("是否将输出 Mesh 实例化为子 GameObject")]
         public bool InstantiateOutput = true;
 
+        /// <summary>
+        /// 上次执行输出的 PCGGeometry 对象（运行时为 object，避免直接依赖 Editor 程序集类型）
+        /// </summary>
         [System.NonSerialized]
-        public PCGGeometry LastOutput;
+        public object LastOutput;
 
         private void Start()
         {
@@ -32,6 +42,7 @@ namespace PCGToolkit.Graph
 
         public void Run()
         {
+#if UNITY_EDITOR
             if (GraphAsset == null)
             {
                 Debug.LogError("[PCGGraphRunner] GraphAsset is not assigned.");
@@ -62,19 +73,29 @@ namespace PCGToolkit.Graph
             var executor = new PCGGraphExecutor(dataCopy);
             executor.Execute();
 
+            PCGGeometry lastGeo = null;
             foreach (var nodeData in dataCopy.Nodes)
             {
                 var geo = executor.GetNodeOutput(nodeData.NodeId, "geometry");
                 if (geo != null && geo.Points.Count > 0)
-                    LastOutput = geo;
+                    lastGeo = geo;
             }
 
-            if (InstantiateOutput && LastOutput != null)
-                ApplyOutputToScene(LastOutput);
+            LastOutput = lastGeo;
+
+            if (InstantiateOutput && lastGeo != null)
+                ApplyOutputToScene(lastGeo);
+#else
+            Debug.LogWarning("[PCGGraphRunner] Graph execution is only available in the Unity Editor.");
+#endif
         }
 
-        private void ApplyOutputToScene(PCGGeometry geo)
+        private void ApplyOutputToScene(object geoObj)
         {
+#if UNITY_EDITOR
+            var geo = geoObj as PCGGeometry;
+            if (geo == null) return;
+
             var mesh = PCGGeometryToMesh.Convert(geo);
             var target = OutputTarget != null ? OutputTarget : new GameObject("PCG_Output");
             if (target.transform.parent != transform)
@@ -85,6 +106,7 @@ namespace PCGToolkit.Graph
             mf.sharedMesh = mesh;
             mr.sharedMaterial = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Material.mat");
             if (OutputTarget == null) OutputTarget = target;
+#endif
         }
 
         private static string SerializeValue(PCGExposedParam ep)

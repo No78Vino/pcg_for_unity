@@ -857,40 +857,13 @@ namespace PCGToolkit.Graph
                 }
             }
 
-            // 处理新建连线
-            if (change.edgesToCreate != null)
-            {
-                foreach (var edge in change.edgesToCreate)
-                {
-                    // 连线时 Inspector 会通过 Update() 轮询自动刷新连接状态
-                    _ = edge;
-                }
-            }
+            // 处理新建连线 — Inspector 通过 Update() 轮询自动刷新连接状态
 
-            // 处理删除元素
-            if (change.elementsToRemove != null)
-            {
-                foreach (var element in change.elementsToRemove)
-                {
-                    _ = element; // Inspector 轮询自动刷新
-                }
-            }
-            }  
-  
+            // 处理删除元素 — Inspector 通过 Update() 轮询自动刷新
+
             return change;  
         }  
         
-        private string FindSchemaName(PCGNodeVisual visual, Port port)  
-        {  
-            if (visual.PCGNode.Inputs == null) return null;  
-            foreach (var schema in visual.PCGNode.Inputs)  
-            {  
-                var inputPort = visual.GetInputPort(schema.Name);  
-                if (inputPort == port)  
-                    return schema.Name;  
-            }  
-            return null;  
-        }
     }
     
     // 迭代二：复制粘贴数据结构

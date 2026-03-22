@@ -128,7 +128,7 @@ namespace PCGToolkit.Graph
             graphView.OnGraphChanged += () =>
             {
                 if (_inspectorWindow != null && _lastSelectedNode != null)
-                    _inspectorWindow.InspectNode(_lastSelectedNode);
+                    _inspectorWindow.ForceRebuildCurrentNode();
             };
             
             // 迭代三：注册节点点击预览回调
@@ -436,6 +436,18 @@ namespace PCGToolkit.Graph
                 _inspectorWindow.Close();
                 _inspectorWindow = null;
             }
+        }
+
+        /// <summary>
+        /// 供 PCGNodeInspectorWindow.TryRebindGraphView() 调用，重新绑定 graphView 并刷新
+        /// </summary>
+        public void BindInspector(PCGNodeInspectorWindow inspector)
+        {
+            _inspectorWindow = inspector;
+            inspector.BindGraphView(graphView);
+            var currentSelected = graphView?.GetSelectedNodeVisual();
+            if (currentSelected != null)
+                inspector.InspectNode(currentSelected);
         }
 
         private void HandleKeyboardShortcut(KeyDownEvent evt)

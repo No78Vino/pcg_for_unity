@@ -51,6 +51,26 @@ namespace PCGToolkit.Graph
         {
             BuildUI();
             ShowEmpty();
+            // Inspector 重新打开时，尝试从已存在的 EditorWindow 重新获取 graphView
+            TryRebindGraphView();
+        }
+
+        private void TryRebindGraphView()
+        {
+            if (_graphView != null) return;
+            // HasOpenInstances 检查 EditorWindow 是否已打开（Unity 2020.1+）
+            var editorWindow = GetWindow<PCGGraphEditorWindow>(false, null, false);
+            if (editorWindow != null)
+                editorWindow.BindInspector(this);
+        }
+
+        /// <summary>
+        /// 强制重建当前节点 Inspector（不检查 _currentNode 是否相同）
+        /// </summary>
+        public void ForceRebuildCurrentNode()
+        {
+            if (_currentNode == null) return;
+            RebuildForNode(_currentNode);
         }
 
         /// <summary>
@@ -60,6 +80,15 @@ namespace PCGToolkit.Graph
         {
             if (nodeVisual == _currentNode) return;
             _currentNode = nodeVisual;
+            
+            if (nodeVisual == null)
+            {
+                ShowEmpty();
+                return;
+            }
+            
+            RebuildForNode(nodeVisual);
+        }
             
             if (nodeVisual == null)
             {
@@ -458,6 +487,7 @@ namespace PCGToolkit.Graph
                     exposeToggle.style.unityBackgroundImageTintColor = new StyleColor(new Color(0.3f, 0.8f, 1.0f));
                 exposeToggle.RegisterValueChangedCallback(evt =>
                 {
+                    if (_graphView == null) TryRebindGraphView();
                     _graphView?.SetParamExposed(nodeVisual.NodeId, schema.Name, evt.newValue);
                 });
                 headerRow.Add(exposeToggle);

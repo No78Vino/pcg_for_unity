@@ -89,15 +89,6 @@ namespace PCGToolkit.Graph
             
             RebuildForNode(nodeVisual);
         }
-            
-            if (nodeVisual == null)
-            {
-                ShowEmpty();
-                return;
-            }
-            
-            RebuildForNode(nodeVisual);
-        }
 
         /// <summary>
         /// 更新执行结果信息（执行完成后调用）

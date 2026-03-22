@@ -1,103 +1,137 @@
 Repository: No78Vino/pcg_for_unity
 
-## Problem
-`PCGGraphRunner` is a MonoBehaviour located at `Assets/PCGToolkit/Editor/Graph/PCGGraphRunner.cs`. Unity compiles scripts in `Editor/` folders into the Editor-only assembly, which means MonoBehaviours there cannot be attached to GameObjects. The user cannot use PCGGraphRunner as a scene component.
+## Goal
+Implement the E5 feature from TASK_TODO.md: an "Expose" toggle button in the PCGNodeInspectorWindow that allows users to mark parameters as exposed to PCGGraphRunner without modifying node source code.
 
-## Solution
+## File Changes
 
-### Step 1: Create a Runtime directory
-Create `Assets/PCGToolkit/Runtime/` directory for scripts that need to be accessible outside the Editor assembly.
+### 1. `Assets/PCGToolkit/Editor/Graph/PCGGraphData.cs`
 
-### Step 2: Move data-only classes to Runtime
-Move the following files from `Assets/PCGToolkit/Editor/Graph/` to `Assets/PCGToolkit/Runtime/`:
-
-1. **`PCGGraphData.cs`** — This is a ScriptableObject that needs to be referenceable by the Runner. It contains: `PCGSerializedParameter`, `PCGNodeData`, `JsonWrapper`, `PCGEdgeData`, `PCGGroupData`, `PCGStickyNoteData`, and `PCGGraphData`. None of these have Editor-only dependencies (they only use `UnityEngine`).
-
-2. **`PCGExposedParam.cs`** — Pure data class, no Editor dependencies. Used as a serialized field in PCGGraphRunner.
-
-### Step 3: Move PCGGraphRunner to Runtime with #if UNITY_EDITOR guards
-Move `Assets/PCGToolkit/Editor/Graph/PCGGraphRunner.cs` to `Assets/PCGToolkit/Runtime/PCGGraphRunner.cs`.
-
-Modify it as follows:
-- Replace `using UnityEditor;` with `#if UNITY_EDITOR` / `using UnityEditor;` / `#endif`
-- Wrap the entire `Run()` method body with `#if UNITY_EDITOR` since it depends on `PCGGraphExecutor`, `PCGNodeRegistry`, `PCGGeometryToMesh`, `PCGContext`, `PCGGeometry` — all Editor-only types
-- Wrap `ApplyOutputToScene()` with `#if UNITY_EDITOR` (it uses `AssetDatabase`)
-- Wrap the `LastOutput` field's type reference — since `PCGGeometry` is in Editor, either:
-    - Option A: Also move `PCGGeometry` and `PCGGeometryToMesh` to Runtime (bigger refactor)
-    - Option B: Change `LastOutput` to `[System.NonSerialized] public object LastOutput;` and cast inside `#if UNITY_EDITOR` blocks
-
-  **Recommended: Option B** for minimal changes. The field is already `[System.NonSerialized]` so it doesn't need to be a specific type for serialization.
-
-The modified PCGGraphRunner.cs should look approximately like:
-
+**Add new data class** (before `PCGGraphData` class, around line 103):
 ```csharp
-using System.Collections.Generic;
-using UnityEngine;
-#if UNITY_EDITOR
-using UnityEditor;
-using PCGToolkit.Core;
-#endif
-
-namespace PCGToolkit.Graph
+[Serializable]
+public class PCGExposedParamInfo
 {
-    [AddComponentMenu("PCG Toolkit/PCG Graph Runner")]
-    public class PCGGraphRunner : MonoBehaviour
-    {
-        [Header("Graph Asset")]
-        public PCGGraphData GraphAsset;
-
-        [Header("Exposed Parameters")]
-        public List<PCGExposedParam> ExposedParams = new List<PCGExposedParam>();
-
-        [Header("Output")]
-        public GameObject OutputTarget;
-        public bool RunOnStart = false;
-        public bool InstantiateOutput = true;
-
-        [System.NonSerialized]
-        public object LastOutput; // PCGGeometry at runtime, but type is Editor-only
-
-        private void Start()
-        {
-            if (RunOnStart) Run();
-        }
-
-        public void Run()
-        {
-#if UNITY_EDITOR
-            // ... existing Run() implementation, keeping all the PCGGraphExecutor logic ...
-            // (copy the existing body here unchanged)
-#else
-            Debug.LogWarning("[PCGGraphRunner] Graph execution is only available in the Unity Editor.");
-#endif
-        }
-
-        private void ApplyOutputToScene(object geoObj)
-        {
-#if UNITY_EDITOR
-            var geo = geoObj as PCGToolkit.Core.PCGGeometry;
-            if (geo == null) return;
-            var mesh = PCGGeometryToMesh.Convert(geo);
-            // ... rest of existing implementation ...
-            mr.sharedMaterial = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Material.mat");
-            // ...
-#endif
-        }
-
-        // SerializeValue stays the same (no Editor dependencies)
-    }
+    public string NodeId;
+    public string ParamName;
 }
 ```
 
-### Step 4: Keep PCGGraphRunnerEditor in Editor
-`Assets/PCGToolkit/Editor/Graph/PCGGraphRunnerEditor.cs` should stay where it is — it's a `CustomEditor` and belongs in the Editor folder. Update its `using` statements if namespaces changed.
+**Add field to `PCGGraphData`** (after line 116, alongside Groups and StickyNotes):
+```csharp
+public List<PCGExposedParamInfo> ExposedParameters = new List<PCGExposedParamInfo>();
+```
 
-### Step 5: Update namespace references
-After moving files, ensure all `using PCGToolkit.Graph;` references in the Editor code still resolve correctly. The moved files should keep the same namespace `PCGToolkit.Graph` so existing references continue to work.
+**Update `Clear()` method** (line 164-170) to also clear ExposedParameters:
+```csharp
+ExposedParameters.Clear();
+```
 
-### Step 6: Verify
-- Open Unity, let it recompile
-- Verify PCGGraphRunner appears in Add Component menu under "PCG Toolkit/PCG Graph Runner"
-- Verify you can drag a PCGGraphData .asset into the GraphAsset field
-- Verify clicking "Run Graph" in the Inspector still executes correctly
-- Verify the node editor's Save/Load still works with PCGGraphData
+**Update `Clone()` method** (line 175-196) to copy ExposedParameters:
+```csharp
+copy.ExposedParameters = new List<PCGExposedParamInfo>();
+foreach (var ep in ExposedParameters)
+    copy.ExposedParameters.Add(new PCGExposedParamInfo { NodeId = ep.NodeId, ParamName = ep.ParamName });
+```
+
+### 2. `Assets/PCGToolkit/Editor/Graph/PCGGraphView.cs`
+
+**Add a tracking field** (near line 14, alongside other private fields):
+```csharp
+private List<PCGExposedParamInfo> _exposedParams = new List<PCGExposedParamInfo>();
+```
+
+**Add public methods** for Inspector to query/modify exposed state:
+```csharp
+public bool IsParamExposed(string nodeId, string paramName)
+{
+    return _exposedParams.Exists(e => e.NodeId == nodeId && e.ParamName == paramName);
+}
+
+public void SetParamExposed(string nodeId, string paramName, bool exposed)
+{
+    if (exposed)
+    {
+        if (!IsParamExposed(nodeId, paramName))
+            _exposedParams.Add(new PCGExposedParamInfo { NodeId = nodeId, ParamName = paramName });
+    }
+    else
+    {
+        _exposedParams.RemoveAll(e => e.NodeId == nodeId && e.ParamName == paramName);
+    }
+    OnGraphChanged?.Invoke();
+}
+```
+
+**Update `SaveToGraphData()`** (around line 803, before `return data;`):
+```csharp
+// Serialize exposed parameters
+data.ExposedParameters = new List<PCGExposedParamInfo>(_exposedParams);
+```
+
+**Update `LoadGraph()`** (around line 719, before the closing brace):
+```csharp
+// Restore exposed parameters
+_exposedParams = data.ExposedParameters != null 
+    ? new List<PCGExposedParamInfo>(data.ExposedParameters) 
+    : new List<PCGExposedParamInfo>();
+```
+
+### 3. `Assets/PCGToolkit/Editor/Graph/PCGNodeInspectorWindow.cs`
+
+**In `CreateInspectorParam()` method** (around line 418-444, in the `headerRow` construction):
+
+After the description label is added to `headerRow` (around line 444), and before `container.Add(headerRow)` (line 445), add the Expose toggle:
+
+```csharp
+// E5: Expose toggle — only for non-Geometry parameter ports
+if (schema.PortType != PCGPortType.Geometry && schema.PortType != PCGPortType.Any)
+{
+    var exposeToggle = new Toggle("")
+    {
+        value = _graphView != null && _graphView.IsParamExposed(nodeVisual.NodeId, schema.Name),
+        tooltip = "Expose this parameter to PCGGraphRunner"
+    };
+    exposeToggle.style.width = 20;
+    exposeToggle.style.marginLeft = 4;
+    // Visual indicator: tint the toggle when exposed
+    if (exposeToggle.value)
+    {
+        exposeToggle.style.unityBackgroundImageTintColor = new StyleColor(new Color(0.3f, 0.8f, 1.0f));
+    }
+    exposeToggle.RegisterValueChangedCallback(evt =>
+    {
+        _graphView?.SetParamExposed(nodeVisual.NodeId, schema.Name, evt.newValue);
+    });
+    headerRow.Add(exposeToggle);
+}
+```
+
+### 4. `Assets/PCGToolkit/Editor/Graph/PCGGraphRunnerEditor.cs`
+
+**Update `SyncExposedParams()` method** (lines 117-176):
+
+Change the inner loop to check BOTH `schema.Exposed` (code-level) AND `graphData.ExposedParameters` (graph-level). Replace the condition on line 136:
+
+```csharp
+// Old: if (!schema.Exposed) continue;
+// New: check both code-level and graph-level exposed state
+bool isExposedInCode = schema.Exposed;
+bool isExposedInGraph = _runner.GraphAsset.ExposedParameters != null &&
+    _runner.GraphAsset.ExposedParameters.Exists(
+        e => e.NodeId == nodeData.NodeId && e.ParamName == schema.Name);
+if (!isExposedInCode && !isExposedInGraph) continue;
+```
+
+This ensures backward compatibility: parameters marked `Exposed = true` in code still work, AND parameters toggled in the Inspector also work.
+
+## Testing
+After implementation:
+1. Open PCG Node Editor, create a few nodes (e.g., BoxNode, ExtrudeNode)
+2. Select a node, check the Inspector — each parameter should have a small toggle on the right of the header row
+3. Toggle a parameter's expose button ON
+4. Save the graph
+5. In a scene, add PCGGraphRunner component, assign the saved graph
+6. Click "Sync Exposed Params from Graph" — the toggled parameter should appear
+7. Verify that code-level `Exposed = true` parameters also still appear
+8. Verify that reloading the graph preserves the exposed toggle state

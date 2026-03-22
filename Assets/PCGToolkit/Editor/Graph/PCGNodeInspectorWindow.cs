@@ -442,6 +442,27 @@ namespace PCGToolkit.Graph
                 };
                 headerRow.Add(descLabel);
             }
+
+            // E5: Expose 切换按钮（仅参数端口，非 Geometry/Any）
+            if (schema.PortType != PCGPortType.Geometry && schema.PortType != PCGPortType.Any)
+            {
+                bool isExposed = _graphView != null && _graphView.IsParamExposed(nodeVisual.NodeId, schema.Name);
+                var exposeToggle = new Toggle("")
+                {
+                    value = isExposed,
+                    tooltip = "Expose to PCGGraphRunner"
+                };
+                exposeToggle.style.width = 20;
+                exposeToggle.style.marginLeft = 4;
+                if (isExposed)
+                    exposeToggle.style.unityBackgroundImageTintColor = new StyleColor(new Color(0.3f, 0.8f, 1.0f));
+                exposeToggle.RegisterValueChangedCallback(evt =>
+                {
+                    _graphView?.SetParamExposed(nodeVisual.NodeId, schema.Name, evt.newValue);
+                });
+                headerRow.Add(exposeToggle);
+            }
+
             container.Add(headerRow);
             
             // 如果已连接，显示 "Connected" 标签，禁用编辑

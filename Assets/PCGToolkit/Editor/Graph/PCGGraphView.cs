@@ -14,6 +14,9 @@ namespace PCGToolkit.Graph
         private PCGGraphData graphData;
         private PCGNodeSearchWindow _searchWindow;
         private PCGGraphEditorWindow _editorWindow;
+
+        // E5: 暴露参数追踪列表（与图数据同步）
+        private List<PCGExposedParamInfo> _exposedParams = new List<PCGExposedParamInfo>();
         
         // 迭代一：脏状态事件
         public event Action OnGraphChanged;
@@ -24,6 +27,26 @@ namespace PCGToolkit.Graph
         // 新增：供 Inspector 调用的脏状态通知
         public void NotifyGraphChanged()
         {
+            OnGraphChanged?.Invoke();
+        }
+
+        // E5: 暴露参数查询/修改
+        public bool IsParamExposed(string nodeId, string paramName)
+        {
+            return _exposedParams.Exists(e => e.NodeId == nodeId && e.ParamName == paramName);
+        }
+
+        public void SetParamExposed(string nodeId, string paramName, bool exposed)
+        {
+            if (exposed)
+            {
+                if (!IsParamExposed(nodeId, paramName))
+                    _exposedParams.Add(new PCGExposedParamInfo { NodeId = nodeId, ParamName = paramName });
+            }
+            else
+            {
+                _exposedParams.RemoveAll(e => e.NodeId == nodeId && e.ParamName == paramName);
+            }
             OnGraphChanged?.Invoke();
         }
 
@@ -717,6 +740,11 @@ namespace PCGToolkit.Graph
                 note.SetPosition(new Rect(noteData.Position, noteData.Size));
                 AddElement(note);
             }
+
+            // E5: 恢复暴露参数
+            _exposedParams = data.ExposedParameters != null
+                ? new List<PCGExposedParamInfo>(data.ExposedParameters)
+                : new List<PCGExposedParamInfo>();
         }  
 
         public PCGGraphData SaveToGraphData()  
@@ -802,6 +830,9 @@ namespace PCGToolkit.Graph
                 }
             });
   
+            // E5: 序列化暴露参数
+            data.ExposedParameters = new List<PCGExposedParamInfo>(_exposedParams);
+
             return data;  
         }  
 

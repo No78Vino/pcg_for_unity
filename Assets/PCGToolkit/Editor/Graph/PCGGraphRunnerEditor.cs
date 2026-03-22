@@ -133,7 +133,12 @@ namespace PCGToolkit.Editor
 
                 foreach (var schema in nodeTemplate.Inputs)
                 {
-                    if (!schema.Exposed) continue;
+                    // E5: 检查代码级（schema.Exposed）和图级（ExposedParameters）两种暴露方式
+                    bool isExposedInCode = schema.Exposed;
+                    bool isExposedInGraph = _runner.GraphAsset.ExposedParameters != null &&
+                        _runner.GraphAsset.ExposedParameters.Exists(
+                            e => e.NodeId == nodeData.NodeId && e.ParamName == schema.Name);
+                    if (!isExposedInCode && !isExposedInGraph) continue;
 
                     // 查找已有同名参数（保留用户设置的值）
                     var existing = _runner.ExposedParams.Find(

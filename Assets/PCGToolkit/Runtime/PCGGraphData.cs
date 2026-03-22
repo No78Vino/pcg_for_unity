@@ -87,10 +87,15 @@ namespace PCGToolkit.Graph
         public Vector2 Size;
     }
     
+    // 迭代六：暴露参数标记（E5）
+    [Serializable]
+    public class PCGExposedParamInfo
+    {
+        public string NodeId;
+        public string ParamName;
+    }
+
     // 迭代四：注释数据
-    /// <summary>
-    /// 注释便签数据
-    /// </summary>
     [Serializable]
     public class PCGStickyNoteData
     {
@@ -114,6 +119,9 @@ namespace PCGToolkit.Graph
         // 迭代四：分组和注释
         public List<PCGGroupData> Groups = new List<PCGGroupData>();
         public List<PCGStickyNoteData> StickyNotes = new List<PCGStickyNoteData>();
+
+        // 迭代六：暴露参数标记（E5）
+        public List<PCGExposedParamInfo> ExposedParameters = new List<PCGExposedParamInfo>();
 
         /// <summary>
         /// 添加节点数据
@@ -167,6 +175,7 @@ namespace PCGToolkit.Graph
             Edges.Clear();
             Groups.Clear();
             StickyNotes.Clear();
+            ExposedParameters.Clear();
         }
 
         /// <summary>
@@ -192,6 +201,9 @@ namespace PCGToolkit.Graph
             copy.Edges = new List<PCGEdgeData>();
             foreach (var e in Edges)
                 copy.Edges.Add(new PCGEdgeData { OutputNodeId = e.OutputNodeId, OutputPort = e.OutputPort, InputNodeId = e.InputNodeId, InputPort = e.InputPort });
+            copy.ExposedParameters = new List<PCGExposedParamInfo>();
+            foreach (var ep in ExposedParameters)
+                copy.ExposedParameters.Add(new PCGExposedParamInfo { NodeId = ep.NodeId, ParamName = ep.ParamName });
             return copy;
         }
     }

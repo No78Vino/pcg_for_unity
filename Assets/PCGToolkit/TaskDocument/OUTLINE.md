@@ -1,244 +1,164 @@
-# PCG for Unity 第4轮迭代方向评估与计划大纲
+## 第一大阶段差距分析
 
-## 项目现状总结
+你的目标是：**仅依赖 PCG for Unity 就能生产"中国古建筑群程序化生成器"**，输出 FBX、材质、贴图、UV（Trim Sheet）、建筑群布局（Prefab）。
 
-当前项目 v0.5.0-alpha，共 **~90 个节点**，分布在 12 个类别中。经过 3 轮迭代，核心节点能力（表达式系统、多材质、实例化、ForEach）已基本完备。但编辑器体验层面存在明显短板： [1-cite-0](#1-cite-0)
-
----
-
-## 第4轮迭代方向
-
-本轮聚焦三个方向：**编辑器体验优化**、**节点参数规范化**、**第3轮遗留 Bug 修复**。
+我逐项对照当前代码库的能力做了审计。
 
 ---
 
-## 迭代计划大纲
+### 当前已有能力
 
-### 方向 A: 编辑器体验优化
-
-#### A1: 中英文本地化系统 (P1)
-
-**现状**: 所有 UI 文本硬编码。`DisplayName` 是英文，`Description` 是中文，toolbar 按钮全英文（"New"、"Save"、"Execute"），Inspector 标签也是英文。没有统一的语言切换机制。 [1-cite-1](#1-cite-1) [1-cite-2](#1-cite-2)
-
-**方案**:
-1. 新建 `Assets/PCGToolkit/Editor/Core/PCGLocalization.cs`，实现 `PCGLocalization` 静态类
-2. 使用 `Dictionary<string, Dictionary<string, string>>` 存储 `{ "en": { "key": "value" }, "zh": { "key": "value" } }`
-3. 在 `PCGParamSchema` 中将 `DisplayName` 和 `Description` 改为 localization key，或新增 `DisplayNameZh` / `DescriptionZh` 字段
-4. 在 `PCGGraphEditorWindow` toolbar 添加语言切换按钮（EN/中）
-5. 语言偏好存储到 `EditorPrefs`
-
-#### A2: 节点搜索窗口增强 (P2)
-
-**现状**: `PCGNodeSearchWindow` 只按 `DisplayName` 匹配，不支持中文搜索、别名搜索、描述搜索。 [1-cite-3](#1-cite-3)
-
-**方案**:
-1. 搜索时同时匹配 `DisplayName`、`Description`、`Name`（类型名）
-2. 支持拼音首字母搜索（如输入 "jc" 匹配 "挤出"）
-3. 在搜索结果中显示节点描述作为副标题
-
-#### A3: 节点预设/收藏系统 (P3)
-
-**现状**: 用户无法保存常用的节点参数配置。每次创建节点都从默认值开始。
-
-**方案**:
-1. 在 Inspector 面板添加 "Save Preset" / "Load Preset" 按钮
-2. 预设存储为 JSON 文件到 `Assets/PCGToolkit/Presets/` 目录
-3. 右键节点菜单添加 "Apply Preset" 子菜单
-
-#### A4: 节点注释/便签 (P3)
-
-**现状**: 图编辑器中无法添加注释或便签来标注节点用途。
-
-**方案**:
-1. 在 `PCGGraphView` 中支持创建 `StickyNote` 元素（GraphView 原生支持）
-2. 序列化到 `PCGGraphData` 中
+| 能力 | 状态 | 关键文件 |
+|------|------|----------|
+| 基础几何体生成 | 完备（Box/Tube/Grid/Torus 等 16 个 Create 节点） | `Assets/PCGToolkit/Editor/Nodes/Create/` |
+| 几何操作 | 完备（Extrude/Boolean/Inset/Bevel/Bridge 等 20+ 节点） | `Assets/PCGToolkit/Editor/Nodes/Geometry/` + `Topology/` |
+| 曲线操作 | 完备（CurveCreate/Sweep/Resample/Carve/Fillet/PolyWire） | `Assets/PCGToolkit/Editor/Nodes/Curve/` |
+| 分布实例化 | 完备（Scatter/CopyToPoints/Instance/Array/Ray） | `Assets/PCGToolkit/Editor/Nodes/Distribute/` |
+| 变形 | 完备（Bend/Twist/Taper/Mountain/Noise/Smooth/Lattice/Creep） | `Assets/PCGToolkit/Editor/Nodes/Deform/` |
+| 基础 UV | 有（UVProject/UVUnwrap/UVLayout/UVTransform） | `Assets/PCGToolkit/Editor/Nodes/UV/` |
+| 材质分配 | 有（MaterialAssign + 多 Submesh 输出） | `MaterialAssignNode.cs` + `PCGGeometryToMesh.cs` |
+| 材质创建 | 有（SaveMaterialNode，支持 Standard shader） | `SaveMaterialNode.cs` |
+| FBX 导出 | 有（ExportFBXNode，com.unity.formats.fbx + OBJ fallback） | `ExportFBXNode.cs` |
+| Prefab 保存 | 有（SavePrefabNode，支持多 Submesh + 材质） | `SavePrefabNode.cs` |
+| 控制流 | 有（ForEach/Switch/Split/SubGraph） | `Assets/PCGToolkit/Editor/Nodes/Utility/` |
+| 表达式系统 | 有（AttribWrangle + ExpressionParser） | `ExpressionParser.cs` | [3-cite-0](#3-cite-0) 
 
 ---
 
-### 方向 B: 节点参数规范化（String → EnumOptions）
+### 缺失能力（按阻塞程度排序）
 
-#### B1: 批量为缺失 EnumOptions 的节点补全下拉框 (P1)
+#### 1. Trim Sheet UV 工作流 — 阻塞级
 
-**现状**: 项目中已有 `EnumOptions` 机制（第4次迭代加入），`PCGNodeVisual` 和 `PCGNodeInspectorWindow` 都已支持渲染 `PopupField<string>` 下拉框。但大量节点仍然使用裸字符串参数，用户需要手动输入 "linear"/"radial" 等值，容易拼错。 [1-cite-4](#1-cite-4)
+这是最大的缺口。Trim Sheet 的核心操作是：**将不同面组的 UV 精确映射到贴图图集的指定矩形区域**。
 
-以下是需要补全 `EnumOptions` 的完整清单（共 **21 个节点，约 30 个参数**）：
+当前 `UVProjectNode` 做的是全局投影（planar/cylindrical/spherical/cubic），`UVTransformNode` 做的是全局平移/旋转/缩放。两者都**不支持按面组将 UV 重映射到指定的 [u_min, u_max] × [v_min, v_max] 矩形区域**。 [3-cite-1](#3-cite-1) [3-cite-2](#3-cite-2)
 
-| 节点 | 参数名 | 当前默认值 | 应补全的 EnumOptions |
-|------|--------|-----------|---------------------|
-| `ArrayNode` | `mode` | `"linear"` | `["linear", "radial"]` |
-| `BooleanNode` | `operation` | `"union"` | `["union", "intersect", "subtract"]` |
-| `ConnectivityNode` | `connectType` | `"point"` | `["point", "prim"]` |
-| `GroupExpressionNode` | `class` | `"point"` | `["point", "primitive"]` |
-| `FacetNode` | `mode` | `"unique"` | `["unique", "consolidate", "computeNormals"]` |
-| `FacetNode` | `normalMode` | `"flat"` | `["flat", "smooth"]` |
-| `ForEachNode` | `mode` | `"byGroup"` | `["byGroup", "byPiece", "count"]` |
-| `BendNode` | `upAxis` | `"y"` | `["x", "y", "z"]` |
-| `TwistNode` | `axis` | `"y"` | `["x", "y", "z"]` |
-| `TaperNode` | `axis` | `"y"` | `["x", "y", "z"]` |
-| `MountainNode` | `noiseType` | `"perlin"` | `["perlin", "simplex", "value"]` |
-| `NoiseNode` | `noiseType` | `"perlin"` | `["perlin", "worley", "curl"]` |
-| `NoiseNode` | `direction` | `"normal"` | `["normal", "axis", "3d"]` |
-| `CurveCreateNode` | `curveType` | `"polyline"` | `["bezier", "polyline"]` |
-| `CurveCreateNode` | `shape` | `"circle"` | `["circle", "line", "spiral", "random"]` |
-| `ResampleNode` | `method` | `"length"` | `["length", "count"]` |
-| `PolyExpand2DNode` | `joinType` | `"round"` | `["round", "miter", "square"]` |
-| `PolyFillNode` | `fillMode` | `"triangulate"` | `["triangulate", "fan", "center"]` |
-| `PlatonicSolidsNode` | `type` | `"icosahedron"` | `["tetrahedron", "octahedron", "icosahedron", "dodecahedron"]` |
-| `GroupCombineNode` | `operation` | `"union"` | `["union", "intersect", "subtract"]` |
-| `GroupCombineNode` | `groupType` | `"prim"` | `["point", "prim"]` |
-| `CompareNode` | `operation` | `"equal"` | `["equal", "notEqual", "greater", "less", "greaterEqual", "lessEqual"]` |
-| `RampNode` | `mode` | `"smooth"` | `["linear", "smooth", "step"]` |
-| `SaveMaterialNode` | `renderMode` | `"opaque"` | `["opaque", "cutout", "transparent", "fade"]` |
-| `AttributeRandomizeNode` | `class` | `"point"` | `["point", "primitive"]` |
-| `AttributeRandomizeNode` | `type` | `"float"` | `["float", "vector3", "color"]` |
-| `AttributeRandomizeNode` | `distribution` | `"uniform"` | `["uniform", "gaussian"]` |
+**需要新增**：`UVTrimSheetNode`（或叫 `UVRectMapNode`），功能：
+- 输入：Geometry + Group 名 + 目标 UV 矩形（u_min, u_max, v_min, v_max）
+- 将指定 Group 的面的 UV 归一化后重映射到目标矩形
+- 支持旋转 90° 选项（横竖条切换）
+- 这是 Trim Sheet 技术的核心节点
 
-已有 `EnumOptions` 的节点（无需修改）：`MathFloatNode`、`MathVectorNode`、`AttributePromoteNode`、`AttributeCopyNode`、`AttributeDeleteNode`。 [1-cite-5](#1-cite-5) [1-cite-6](#1-cite-6)
+#### 2. 层级 Prefab 组装 — 阻塞级
 
----
+当前 `SavePrefabNode` 只能保存**单个 MeshFilter + MeshRenderer** 的扁平 Prefab。中国古建筑群需要：
+- 一栋建筑 = 多个子物体（屋顶、墙体、柱子、斗拱、台基），每个子物体有独立的 Mesh 和材质
+- 一个建筑群 = 多栋建筑 Prefab 按布局摆放 [3-cite-3](#3-cite-3)
 
-### 方向 C: 第3轮遗留 Bug 修复 (P0)
+**需要新增**：
+- `AssemblePrefabNode`：接收多个 Geometry 输入（每个带名称和 Transform），组装为带层级结构的 Prefab（parent GameObject + 多个 child，每个 child 有独立 MeshFilter/MeshRenderer）
+- 或者增强 `SavePrefabNode` 支持 `@name` 属性按面组拆分为子物体
 
-这部分是上一轮分析中发现的确认 Bug，必须在第4轮优先修复：
+#### 3. 布局分布系统 — 重要
 
-| ID | 文件 | 问题 |
-|----|------|------|
-| C1 | `ExpressionParser.cs` | 赋值检测误判 `!=`/`<=`/`>=` |
-| C2 | `ExpressionParser.cs` | `ParseBlock` 与 vector literal `{}` 冲突 |
-| C3 | `ExpressionParser.cs` | `MatchKeyword` 不检查下划线 |
-| C4 | `ExpressionParser.cs` | `ParseUnary` 负号调用 `ParsePrimary` 而非 `ParseUnary` |
-| C5 | `SavePrefabNode.cs` | 早期返回路径残留 `prefabPath` 键 |
-| C6 | `InstanceNode.cs` | 端口声明只有 0-3，但 `MaxInstances=8` |
-| C7 | `ForEachNode.cs` | 嵌套 ForEach 变量污染 `ctx.GlobalVariables` |
-| C8 | `CopyToPointsNode.cs` | `pscale` 直接强转 float |
-| C9 | `ConnectivityNode.cs` + `ForEachNode.cs` | Union-Find 代码重复 | [1-cite-7](#1-cite-7) [1-cite-8](#1-cite-8) [1-cite-9](#1-cite-9) [1-cite-10](#1-cite-10) 
+Scatter + CopyToPoints 可以做随机/点位分布，但中国古建筑群的布局是**规则性的**：
+- 中轴对称
+- 院落围合
+- 前殿后寝
+- 廊庑连接
 
----
+**需要新增**：
+- `GridLayoutNode`：生成规则网格点位，支持间距、对称轴、排除区域
+- 或者用现有 `Grid` + `AttribWrangle` + `Delete` 组合实现（可行但繁琐）
+- `SymmetryNode`（或 `MirrorNode` 增强）：沿轴镜像复制几何体/点位，保持对称布局
 
-### 方向 D: 自主发掘的改进项
+当前 `MirrorNode` 已存在，可以做几何体镜像。布局分布可以通过 SubGraph 组合现有节点实现，不一定需要新节点，但需要**验证 CopyToPoints 在大规模实例化时的性能和正确性**。 [3-cite-4](#3-cite-4)
 
-#### D1: `PCGNodeBase` 增加参数验证框架 (P2)
+#### 4. SaveMaterialNode 增强 — 重要
 
-**现状**: 每个节点的 `Execute` 方法开头都有大量重复的空值检查和参数范围校验代码。
+当前 `SaveMaterialNode` 只支持 Standard shader 的基础属性（albedo color/texture, metallic, smoothness, emission）。Trim Sheet 工作流还需要：
+- Normal Map 贴图路径
+- Metallic/Roughness Map
+- Tiling/Offset 参数（用于 Trim Sheet 的全局 tiling）
+- 支持 URP/HDRP shader（不只是 Built-in Standard） [3-cite-5](#3-cite-5)
 
-**方案**: 在 `PCGNodeBase` 中新增 `ValidateInputs()` 方法，根据 `PCGParamSchema.Required`、`Min`/`Max`、`EnumOptions` 自动校验，减少节点代码冗余。
+#### 5. ExportFBXNode 多材质支持 — 重要
 
-#### D2: `PCGGraphExecutor` 执行缓存优化 (P2)
+当前 `ExportFBXNode` 使用 `PCGGeometryToMesh.Convert()`（单 Submesh），而不是 `ConvertWithSubmeshes()`。这意味着 FBX 导出时**丢失了多材质信息**。需要改为使用 `ConvertWithSubmeshes()` 并正确设置多材质。 [3-cite-6](#3-cite-6)
 
-**现状**: 每次执行整个图时，所有节点都重新计算。对于大型图，修改末端节点参数后仍需全图重算。
+#### 6. 第4轮遗留 — 中等
 
-**方案**: 基于节点参数 hash 实现脏标记传播，只重新执行参数变化的节点及其下游。
-
-#### D3: 节点 Tooltip 统一规范 (P3)
-
-**现状**: `port.tooltip = schema.Description` 使用中文描述，但 `port.portName = schema.DisplayName` 使用英文。Tooltip 和 portName 语言不一致。 [1-cite-11](#1-cite-11)
-
-**方案**: 纳入 A1 本地化系统统一处理。
-
-#### D4: `PCGGeometry.Clone()` 深拷贝审计 (P2)
-
-**现状**: 多个节点在 `Execute` 开头调用 `geo.Clone()`，但未验证 Clone 是否正确深拷贝了所有属性（PointAttribs、VertexAttribs、PrimAttribs、DetailAttribs、Groups）。如果 Clone 是浅拷贝，修改副本会影响原始数据。
-
-**方案**: 审计 `PCGGeometry.Clone()` 实现，确保所有 `AttributeStore` 和 `Groups` 都是深拷贝。
-
-#### D5: ExpressionParser 单元测试 (P1)
-
-**现状**: ExpressionParser 经过 3 轮大幅增强，但没有单元测试。Bug C1-C4 都是在代码审查中发现的，说明缺乏测试覆盖。
-
-**方案**: 新建 `Assets/PCGToolkit/Tests/ExpressionParserTests.cs`，覆盖：
-- 比较运算符（`<=`, `>=`, `!=`, `==`）
-- if/else 块内 vector literal
-- 关键词边界（`float_value`, `if_cond`）
-- 一元运算符嵌套（`-!x`, `--x`）
-- 赋值语句 vs 表达式语句
+- `D2` 执行缓存优化未完成（大型建筑群图会很慢）
+- `A4` 便签注释未完成（复杂图需要注释）
+- Houdini 风格紧凑节点改造（上一轮讨论的方案） [3-cite-7](#3-cite-7)
 
 ---
 
-## 执行任务分级规划
+### 第5轮迭代规划建议
+
+考虑到你的目标是尽快达到第一大阶段完成，第5轮应该**聚焦 Trim Sheet 工作流和输出管线完善**，而不是继续做编辑器体验优化。
 
 ```mermaid
-gantt
-    title "第4轮迭代执行计划"
-    dateFormat X
-    axisFormat %s
+graph TD
+    subgraph "Batch 1 - Trim Sheet UV (P0)"
+        A1["新增 UVTrimSheetNode"]
+        A2["UVProjectNode 增加 group 过滤"]
+    end
 
-    section "Batch 1 - Bug修复 (P0)"
-    "C1-C5: ExpressionParser 5个Bug" :a1, 0, 2
-    "C6-C9: 节点Bug修复" :a2, 0, 2
+    subgraph "Batch 2 - 输出管线 (P0)"
+        B1["ExportFBXNode 改用 ConvertWithSubmeshes"]
+        B2["SaveMaterialNode 增加 NormalMap/MetallicMap/URP"]
+        B3["新增 AssemblePrefabNode (层级 Prefab)"]
+    end
 
-    section "Batch 2 - 参数规范化 (P1)"
-    "B1: 21个节点补全EnumOptions" :b1, 2, 4
-    "D5: ExpressionParser单元测试" :b2, 2, 4
+    subgraph "Batch 3 - 编辑器改造 (P1)"
+        C1["Houdini 风格紧凑节点"]
+        C2["Inspector 默认打开"]
+    end
 
-    section "Batch 3 - 本地化 (P1)"
-    "A1: 本地化系统核心" :c1, 4, 7
-    "D3: Tooltip统一" :c2, 7, 8
+    subgraph "Batch 4 - 验证 (P1)"
+        D1["端到端测试: 单栋古建筑 SubGraph"]
+        D2["端到端测试: 建筑群布局 Graph"]
+    end
 
-    section "Batch 4 - 体验优化 (P2)"
-    "D1: 参数验证框架" :d1, 8, 10
-    "D4: Clone深拷贝审计" :d2, 8, 9
-    "A2: 搜索窗口增强" :d3, 9, 11
-    "D2: 执行缓存优化" :d4, 10, 12
-
-    section "Batch 5 - 锦上添花 (P3)"
-    "A3: 节点预设系统" :e1, 12, 14
-    "A4: 便签注释" :e2, 12, 13
+    A1 --> D1
+    B1 --> D1
+    B2 --> D1
+    B3 --> D2
+    C1 --> D1
 ```
 
-### Batch 1 — Bug 修复 (P0，最高优先级)
+#### Batch 1 — Trim Sheet UV 核心（P0，最高优先级）
 
-| 任务 | 文件 | 工作量 |
-|------|------|--------|
-| C1: `<=`/`>=`/`!=` 赋值误判 | `ExpressionParser.cs` | 小 |
-| C2: `ParseBlock` 与 `{}` 冲突 | `ExpressionParser.cs` | 中 |
-| C3: `MatchKeyword` 下划线 | `ExpressionParser.cs` | 小 |
-| C4: `ParseUnary` 递归错误 | `ExpressionParser.cs` | 小 |
-| C5: SavePrefabNode 残留键 | `SavePrefabNode.cs` | 小 |
-| C6: InstanceNode 端口不匹配 | `InstanceNode.cs` | 小 |
-| C7: ForEach 变量污染 | `ForEachNode.cs` | 小 |
-| C8: CopyToPoints 强转 | `CopyToPointsNode.cs` | 小 |
-| C9: Union-Find 提取公共方法 | 新建 `PCGGeometryUtils.cs` | 中 |
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| 新增 `UVTrimSheetNode` | `Assets/PCGToolkit/Editor/Nodes/UV/UVTrimSheetNode.cs` | 核心功能：输入 Group + UV Rect (u_min, v_min, u_max, v_max)，将该 Group 面的 UV 归一化后映射到指定矩形。支持 `projectionAxis` 参数（选择投影方向）和 `rotate90` 选项 |
+| `UVProjectNode` 增加 Group 过滤 | `UVProjectNode.cs` | 当前 `group` 参数存在但未实现过滤逻辑（投影时忽略了 group 参数），需要补全 |
 
-### Batch 2 — 参数规范化 + 测试 (P1)
+#### Batch 2 — 输出管线完善（P0）
 
-| 任务 | 文件 | 工作量 |
-|------|------|--------|
-| B1: 21 个节点补全 EnumOptions | 21 个节点文件 | 中（机械性工作） |
-| D5: ExpressionParser 单元测试 | 新建测试文件 | 中 |
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| `ExportFBXNode` 多材质修复 | `ExportFBXNode.cs` | 将 `PCGGeometryToMesh.Convert()` 改为 `ConvertWithSubmeshes()`，正确设置多 Submesh 和材质 |
+| `SaveMaterialNode` 增强 | `SaveMaterialNode.cs` | 新增 `normalMapPath`、`metallicMapPath`、`occlusionMapPath` 参数；新增 `shaderType` 枚举（Standard/URP_Lit/HDRP_Lit）；新增 `tiling`/`offset` Vector2 参数 |
+| 新增 `AssemblePrefabNode` | `Assets/PCGToolkit/Editor/Nodes/Output/AssemblePrefabNode.cs` | 接收多个 Geometry 输入（input0~inputN），每个 Geometry 的 `@name` Detail 属性作为子物体名，组装为层级 Prefab。支持 `@transform` 属性控制子物体的局部 Transform |
 
-### Batch 3 — 本地化系统 (P1)
+#### Batch 3 — 编辑器改造（P1）
 
-| 任务 | 文件 | 工作量 |
-|------|------|--------|
-| A1: 本地化核心 | 新建 `PCGLocalization.cs` | 大 |
-| A1: PCGParamSchema 适配 | `PCGParamSchema.cs` | 中 |
-| A1: 编辑器 UI 适配 | `PCGGraphEditorWindow.cs`, `PCGNodeVisual.cs`, `PCGNodeInspectorWindow.cs`, `PCGNodeSearchWindow.cs` | 大 |
-| D3: Tooltip 统一 | 随 A1 一起完成 | 小 |
+| 任务 | 文件 | 说明 |
+|------|------|------|
+| Houdini 风格紧凑节点 | `PCGNodeVisual.cs` + `PCGGraphView.cs` + `PCGGraphEditorWindow.cs` | 上一轮讨论的方案：删除内联编辑器，Inspector 默认打开 |
+| 便签注释 | `PCGGraphView.cs` + `PCGGraphSerializer.cs` | 第4轮遗留的 A4 |
 
-### Batch 4 — 体验优化 (P2)
+#### Batch 4 — 端到端验证（P1）
 
-| 任务 | 文件 | 工作量 |
-|------|------|--------|
-| D1: 参数验证框架 | `PCGNodeBase.cs` | 中 |
-| D4: Clone 深拷贝审计 | `PCGGeometry.cs` | 小 |
-| A2: 搜索窗口增强 | `PCGNodeSearchWindow.cs` | 中 |
-| D2: 执行缓存优化 | `PCGGraphExecutor.cs` | 大 |
-
-### Batch 5 — 锦上添花 (P3)
-
-| 任务 | 文件 | 工作量 |
-|------|------|--------|
-| A3: 节点预设系统 | 新建 `PCGPresetManager.cs` | 中 |
-| A4: 便签注释 | `PCGGraphView.cs`, `PCGGraphSerializer.cs` | 中 |
+| 任务 | 说明 |
+|------|------|
+| 单栋古建筑 SubGraph | 用现有节点 + 新增的 UVTrimSheet 构建一个完整的单栋建筑（台基 + 柱子 + 墙体 + 屋顶），验证 Trim Sheet UV → 材质 → FBX/Prefab 全流程 |
+| 建筑群布局 Graph | 用 Grid + AttribWrangle + CopyToPoints + AssemblePrefab 构建一个 3×3 院落布局，验证多建筑实例化和 Prefab 层级输出 |
 
 ---
 
-## 预期成果
+### 第5轮之后还差什么？
 
-完成第4轮迭代后：
-- 所有第3轮遗留 Bug 清零
-- 30 个裸字符串参数全部变为下拉框，用户不再需要记忆/手输选项值
-- 编辑器支持中英文一键切换
-- ExpressionParser 有完整的单元测试保障
-- 节点搜索支持中文和模糊匹配
-- 执行引擎支持增量计算
+即使第5轮全部完成，到达第一大阶段还可能需要：
+
+1. **贴图生成/引用管线**：目前没有节点能生成或合成贴图（Trim Sheet 贴图本身需要外部制作）。如果你接受"Trim Sheet 贴图由美术手工制作，PCG 只负责 UV 映射"，这不是阻塞项。但如果你希望 PCG 也能程序化生成 Trim Sheet 贴图，那需要额外的图像处理节点。
+
+2. **屋顶曲线 Profile**：中国古建筑的屋顶曲线（举折、举架）是特殊的数学曲线，不是简单的 Bezier。可能需要一个专用的 `RoofProfileNode` 或用 `AttribWrangle` 表达式实现。
+
+3. **执行性能**：建筑群图可能有 50+ 节点，当前没有执行缓存（D2 未完成），每次修改都全图重算。对于大型图这会很慢。
+
+4. **SubGraph 模板库**：古建筑的各个构件（斗拱、柱础、瓦当、脊兽）应该封装为可复用的 SubGraph。这不是代码工作，而是内容制作工作。
+
+**我的判断**：完成第5轮迭代后，PCG for Unity 在**节点能力层面**基本够用。剩余的差距主要在**内容制作**（SubGraph 模板）和**性能优化**（执行缓存）上，可以在实际制作古建筑的过程中逐步补齐。 [3-cite-8](#3-cite-8)

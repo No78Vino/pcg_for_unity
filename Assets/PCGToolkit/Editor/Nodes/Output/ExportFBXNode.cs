@@ -70,15 +70,28 @@ namespace PCGToolkit.Nodes.Output
                 Directory.CreateDirectory(directory);
             }
 
-            // 转换为 Mesh
-            var mesh = PCGGeometryToMesh.Convert(geo);
+            // 转换为 Mesh（多材质支持）
+            var meshResult = PCGGeometryToMesh.ConvertWithSubmeshes(geo);
+            var mesh = meshResult.Mesh;
             mesh.name = Path.GetFileNameWithoutExtension(fbxPath);
 
-            // 创建临时 GameObject
+            // 创建临时 GameObject，设置多 Submesh 材质
             var go = new GameObject(mesh.name);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Diffuse.mat");
+
+            // 按 submesh 数量分配材质
+            var defaultMat = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Diffuse.mat");
+            int matCount = meshResult.MaterialPaths != null ? meshResult.MaterialPaths.Count : 0;
+            var mats = new Material[Mathf.Max(1, matCount)];
+            for (int i = 0; i < mats.Length; i++)
+            {
+                Material m = null;
+                if (i < matCount && !string.IsNullOrEmpty(meshResult.MaterialPaths[i]))
+                    m = AssetDatabase.LoadAssetAtPath<Material>(meshResult.MaterialPaths[i]);
+                mats[i] = m != null ? m : defaultMat;
+            }
+            renderer.sharedMaterials = mats;
 
             // 尝试使用 FBX 导出器
             // 注意：这需要 com.unity.formats.fbx 包
@@ -135,47 +148,43 @@ namespace PCGToolkit.Nodes.Output
             if (meshFilter == null || meshFilter.sharedMesh == null) return;
 
             var mesh = meshFilter.sharedMesh;
+            var mats = go.GetComponent<MeshRenderer>()?.sharedMaterials;
             var sb = new System.Text.StringBuilder();
 
-            sb.AppendLine($"# OBJ file exported from PCGToolkit");
+            sb.AppendLine("# OBJ file exported from PCGToolkit");
             sb.AppendLine($"o {go.name}");
 
-            // 顶点
             foreach (var v in mesh.vertices)
-            {
                 sb.AppendLine($"v {v.x} {v.y} {v.z}");
-            }
 
-            // UV
             if (mesh.uv.Length > 0)
-            {
                 foreach (var uv in mesh.uv)
-                {
                     sb.AppendLine($"vt {uv.x} {uv.y}");
-                }
-            }
 
-            // 法线
             foreach (var n in mesh.normals)
-            {
                 sb.AppendLine($"vn {n.x} {n.y} {n.z}");
-            }
 
-            // 面
-            int[] triangles = mesh.triangles;
-            for (int i = 0; i < triangles.Length; i += 3)
+            bool hasUV = mesh.uv.Length > 0;
+            bool hasNormals = mesh.normals.Length > 0;
+
+            for (int s = 0; s < mesh.subMeshCount; s++)
             {
-                int i0 = triangles[i] + 1;
-                int i1 = triangles[i + 1] + 1;
-                int i2 = triangles[i + 2] + 1;
+                string matName = (mats != null && s < mats.Length && mats[s] != null)
+                    ? mats[s].name : $"mat_{s}";
+                sb.AppendLine($"usemtl {matName}");
 
-                if (mesh.uv.Length > 0)
+                int[] tris = mesh.GetTriangles(s);
+                for (int i = 0; i < tris.Length; i += 3)
                 {
-                    sb.AppendLine($"f {i0}/{i0}/{i0} {i1}/{i1}/{i1} {i2}/{i2}/{i2}");
-                }
-                else
-                {
-                    sb.AppendLine($"f {i0}//{i0} {i1}//{i1} {i2}//{i2}");
+                    int i0 = tris[i] + 1, i1 = tris[i + 1] + 1, i2 = tris[i + 2] + 1;
+                    if (hasUV && hasNormals)
+                        sb.AppendLine($"f {i0}/{i0}/{i0} {i1}/{i1}/{i1} {i2}/{i2}/{i2}");
+                    else if (hasUV)
+                        sb.AppendLine($"f {i0}/{i0} {i1}/{i1} {i2}/{i2}");
+                    else if (hasNormals)
+                        sb.AppendLine($"f {i0}//{i0} {i1}//{i1} {i2}//{i2}");
+                    else
+                        sb.AppendLine($"f {i0} {i1} {i2}");
                 }
             }
 

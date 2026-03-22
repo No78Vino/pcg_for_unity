@@ -19,7 +19,10 @@ namespace PCGToolkit.Nodes.UV
             new PCGParamSchema("input", PCGPortDirection.Input, PCGPortType.Geometry,
                 "Input", "输入几何体", null, required: true),
             new PCGParamSchema("projectionType", PCGPortDirection.Input, PCGPortType.String,
-                "Projection Type", "投影类型（planar/cylindrical/spherical/cubic）", "planar"),
+                "Projection Type", "投影类型（planar/cylindrical/spherical/cubic）", "planar")
+            {
+                EnumOptions = new[] { "planar", "cylindrical", "spherical", "cubic" }
+            },
             new PCGParamSchema("group", PCGPortDirection.Input, PCGPortType.String,
                 "Group", "仅对指定分组投影（留空=全部）", ""),
             new PCGParamSchema("scale", PCGPortDirection.Input, PCGPortType.Vector3,
@@ -41,107 +44,112 @@ namespace PCGToolkit.Nodes.UV
         {
             var geo = GetInputGeometry(inputGeometries, "input").Clone();
             string projectionType = GetParamString(parameters, "projectionType", "planar");
-            Vector3 scale = GetParamVector3(parameters, "scale", Vector3.one);
-            Vector3 offset = GetParamVector3(parameters, "offset", Vector3.zero);
+            string group          = GetParamString(parameters, "group", "");
+            Vector3 scale         = GetParamVector3(parameters, "scale", Vector3.one);
+            Vector3 offset        = GetParamVector3(parameters, "offset", Vector3.zero);
 
             if (geo.Points.Count == 0)
                 return SingleOutput("geometry", geo);
 
-            // 计算 UV 并存储为 Vector3 属性（x=U, y=V, z=0）
-            var uvAttr = geo.PointAttribs.CreateAttribute("uv", AttribType.Vector3);
+            // 确定需要投影的顶点集合（通过面组过滤）
+            HashSet<int> targetVerts = null;
+            if (!string.IsNullOrEmpty(group))
+            {
+                if (geo.PrimGroups.TryGetValue(group, out var primSet))
+                {
+                    targetVerts = new HashSet<int>();
+                    foreach (int pi in primSet)
+                        if (pi < geo.Primitives.Count)
+                            foreach (int vi in geo.Primitives[pi])
+                                targetVerts.Add(vi);
+                }
+                else
+                {
+                    ctx.LogWarning($"UVProject: 面组 '{group}' 不存在，对全部面投影");
+                }
+            }
+
+            // 获取或创建 UV 属性
+            var uvAttr = geo.PointAttribs.GetAttribute("uv");
+            if (uvAttr == null)
+            {
+                uvAttr = geo.PointAttribs.CreateAttribute("uv", AttribType.Vector3);
+                for (int i = 0; i < geo.Points.Count; i++)
+                    uvAttr.Values.Add(Vector3.zero);
+            }
+            else if (uvAttr.Values.Count < geo.Points.Count)
+            {
+                while (uvAttr.Values.Count < geo.Points.Count)
+                    uvAttr.Values.Add(Vector3.zero);
+            }
 
             // 计算包围盒中心作为投影原点
             Vector3 center = Vector3.zero;
             foreach (var p in geo.Points) center += p;
             center /= geo.Points.Count;
 
-            switch (projectionType.ToLower())
+            for (int idx = 0; idx < geo.Points.Count; idx++)
             {
-                case "planar":
-                    // XZ 平面投影（从上方投射）
-                    foreach (var p in geo.Points)
-                    {
-                        Vector3 uv = new Vector3(
-                            (p.x - center.x) * scale.x + offset.x,
-                            (p.z - center.z) * scale.y + offset.y,
-                            0f
-                        );
-                        uvAttr.Values.Add(uv);
-                    }
-                    break;
+                // 如果有 group 过滤且该顶点不在目标集中，跳过
+                if (targetVerts != null && !targetVerts.Contains(idx))
+                    continue;
 
-                case "cylindrical":
-                    // 柱面投影（Y轴为轴心）
-                    foreach (var p in geo.Points)
+                var p = geo.Points[idx];
+                Vector3 uv = Vector3.zero;
+
+                switch (projectionType.ToLower())
+                {
+                    case "cylindrical":
                     {
                         Vector3 local = p - center;
                         float angle = Mathf.Atan2(local.x, local.z);
                         float u = angle / (2f * Mathf.PI) + 0.5f;
                         float v = local.y * scale.y + offset.y;
-                        uvAttr.Values.Add(new Vector3(u * scale.x + offset.x, v, 0f));
+                        uv = new Vector3(u * scale.x + offset.x, v, 0f);
+                        break;
                     }
-                    break;
-
-                case "spherical":
-                    // 球面投影
-                    foreach (var p in geo.Points)
+                    case "spherical":
                     {
                         Vector3 local = (p - center).normalized;
                         float theta = Mathf.Atan2(local.x, local.z);
-                        float phi = Mathf.Acos(local.y);
-                        float u = theta / (2f * Mathf.PI) + 0.5f;
-                        float v = phi / Mathf.PI;
-                        uvAttr.Values.Add(new Vector3(u * scale.x + offset.x, v * scale.y + offset.y, 0f));
+                        float phi   = Mathf.Acos(Mathf.Clamp(local.y, -1f, 1f));
+                        float u     = theta / (2f * Mathf.PI) + 0.5f;
+                        float v     = phi / Mathf.PI;
+                        uv = new Vector3(u * scale.x + offset.x, v * scale.y + offset.y, 0f);
+                        break;
                     }
-                    break;
-
-                case "cubic":
-                    // 立方体投影（选择投影面积最大的面）
-                    foreach (var p in geo.Points)
+                    case "cubic":
                     {
                         Vector3 local = p - center;
-                        Vector3 abs = new Vector3(Mathf.Abs(local.x), Mathf.Abs(local.y), Mathf.Abs(local.z));
-                        Vector2 uv;
-
+                        Vector3 abs   = new Vector3(Mathf.Abs(local.x), Mathf.Abs(local.y), Mathf.Abs(local.z));
+                        float u, v;
                         if (abs.x >= abs.y && abs.x >= abs.z)
                         {
-                            // X 面
-                            uv = new Vector2(
-                                local.z * Mathf.Sign(local.x) * scale.x + offset.x,
-                                local.y * scale.y + offset.y
-                            );
+                            u = local.z * Mathf.Sign(local.x) * scale.x + offset.x;
+                            v = local.y * scale.y + offset.y;
                         }
                         else if (abs.y >= abs.x && abs.y >= abs.z)
                         {
-                            // Y 面
-                            uv = new Vector2(
-                                local.x * scale.x + offset.x,
-                                local.z * Mathf.Sign(local.y) * scale.y + offset.y
-                            );
+                            u = local.x * scale.x + offset.x;
+                            v = local.z * Mathf.Sign(local.y) * scale.y + offset.y;
                         }
                         else
                         {
-                            // Z 面
-                            uv = new Vector2(
-                                local.x * scale.x + offset.x,
-                                local.y * Mathf.Sign(local.z) * scale.y + offset.y
-                            );
+                            u = local.x * scale.x + offset.x;
+                            v = local.y * Mathf.Sign(local.z) * scale.y + offset.y;
                         }
-                        uvAttr.Values.Add(new Vector3(uv.x, uv.y, 0f));
+                        uv = new Vector3(u, v, 0f);
+                        break;
                     }
-                    break;
-
-                default:
-                    // 默认平面投影
-                    foreach (var p in geo.Points)
-                    {
-                        uvAttr.Values.Add(new Vector3(
+                    default: // planar — XZ 平面投影
+                        uv = new Vector3(
                             (p.x - center.x) * scale.x + offset.x,
                             (p.z - center.z) * scale.y + offset.y,
-                            0f
-                        ));
-                    }
-                    break;
+                            0f);
+                        break;
+                }
+
+                uvAttr.Values[idx] = uv;
             }
 
             return SingleOutput("geometry", geo);

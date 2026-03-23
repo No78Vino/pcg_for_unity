@@ -6,11 +6,11 @@
 |-------|------|--------|------|
 | Phase 1 | 基础设施 + 最小可用管线 | **95%** | 核心数据模型、Tier 0 节点、geometry3Sharp 集成、FBX 导出均已完成 |
 | Phase 2 | 核心几何 + 分布实例化 + GraphView | **95%** | Tier 1/3 节点、GraphView 编辑器、SubGraph 机制均已实现 |
-| Phase 3 | UV + 曲线 + AI 接口 | **85%** | Tier 2/4 节点已实现，AI Skill 层和通信层已完成；xatlas 未真正集成 |
-| Phase 4 | 变形 + 高级拓扑 | **90%** | Tier 5/6 节点全部有实现，Remesh/Decimate 已切换到 g3 |
-| Phase 5 | 程序化规则 + 完善 | **65%** | Tier 7 节点有基础实现，LOD 生成仍用自研减面，整体打磨不足 |
+| Phase 3 | UV + 曲线 + AI 接口 | **90%** | Tier 2/4 节点已实现，AI Skill 层和通信层已完成，Graph API 含完整 CRUD；xatlas 未真正集成 |
+| Phase 4 | 变形 + 高级拓扑 | **95%** | Tier 5/6 节点全部有实现，Remesh/Decimate/LOD 均已切换到 g3 |
+| Phase 5 | 程序化规则 + 完善 | **70%** | Tier 7 节点有基础实现，示例 SubGraph 已创建，文档已补全 |
 
-**综合完成度：约 85%**
+**综合完成度：约 90%**
 
 ---
 
@@ -32,14 +32,23 @@
 
 | # | 问题 | 严重度 | 说明 |
 |---|------|--------|------|
-| 1 | **测试文件未合入 main** | P0 | commit 中添加了 CurveNodeTests/DeformNodeTests/UVNodeTests/DistributeNodeTests/UtilityNodeTests/GeometryNodeTests，但 Tests 目录仅有 6 个文件 |
-| 2 | **NODE_TODO.md 严重过时** | P1 | 仍显示 10/26 已实现，实际所有节点均有代码实现 |
-| 3 | **无示例 SubGraph 资产** | P1 | Examples 目录不存在，用户无法快速上手 |
-| 4 | **LODGenerateNode 仍用自研减面** | P1 | 未利用 g3 Reducer，质量不足 |
-| 5 | **xatlas 未真正集成** | P2 | UV Unwrap/Layout 使用简化算法 |
-| 6 | **Const 系列节点 Execute 为空壳** | P2 | ConstFloat/Int/Bool/String/Vector3/Color 节点的 Execute 体为 TODO |
-| 7 | **Clipper2 未集成** | P2 | 2D 布尔运算缺失 |
-| 8 | **Procedural 节点质量** | P2 | WFC/LSystem/VoronoiFracture 使用简化算法 | [0-cite-9](#0-cite-9) [0-cite-10](#0-cite-10) 
+| 1 | **xatlas 未真正集成** | P2 | UV Unwrap/Layout 使用简化算法 |
+| 2 | **Clipper2 未集成** | P2 | 2D 布尔运算缺失 |
+| 3 | **Procedural 节点质量** | P2 | WFC/LSystem/VoronoiFracture 使用简化算法 |
+
+---
+
+### 第9轮迭代成果确认
+
+1. **Graph API CRUD 闭环** — AgentServer 新增 4 个 Action（`delete_node`/`disconnect_nodes`/`delete_graph`/`list_graphs`），总计 12 个 Action，支持完整的增删改查操作
+2. **connect_nodes 端口存在性校验** — 连接不存在的端口会返回明确错误信息
+3. **LODGenerateNode g3 集成** — DecimateGeometry() 从约 130 行自研算法替换为 g3 Reducer（约 15 行），与 DecimateNode 一致
+4. **代码重复消除** — 将 ParseSimpleJson/Esc/F 提取为 JsonHelper 共享工具类，AgentServer 和 SkillExecutor 不再有重复实现
+5. **HandleExecuteGraph 键名去重** — 输出键名从 `{NodeType}_{Port}` 改为 `{NodeId}_{Port}`，避免同类型节点键名冲突
+6. **示例 SubGraph** — 创建 ExampleSubGraphGenerator 编辑器脚本 + README，包含 3 个示例（ParametricTable/TerrainScatter/BeveledWall）
+7. **AgentSession 增强** — 新增 ListGraphSummaries() 方法支持 list_graphs
+8. **测试加固** — AgentIntegrationTests 新增 10 个测试方法覆盖所有新 Action + 端到端错误恢复流程
+9. **文档更新** — HandBook.md Action 列表扩充为 12 个 + 错误恢复示例；AI_AGENT_GUIDE.md 更新推荐工作流
 
 ---
 

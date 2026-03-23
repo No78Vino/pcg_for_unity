@@ -41,6 +41,18 @@ namespace PCGToolkit.Communication
             return new List<string>(_activeGraphs.Keys);
         }
 
+        public List<(string id, string name, int nodeCount)> ListGraphSummaries()
+        {
+            var result = new List<(string id, string name, int nodeCount)>();
+            foreach (var kvp in _activeGraphs)
+            {
+                string name = kvp.Value != null ? kvp.Value.GraphName : "Unknown";
+                int nodeCount = kvp.Value != null ? kvp.Value.Nodes.Count : 0;
+                result.Add((kvp.Key, name, nodeCount));
+            }
+            return result;
+        }
+
         public int Count => _activeGraphs.Count;
     }
 }

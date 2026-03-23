@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 using UnityEngine;
 using PCGToolkit.Communication;
@@ -42,7 +41,7 @@ namespace PCGToolkit.Skill
                         ? parametersJsonArray[i]
                         : "{}";
 
-                    var parameters = ParseSimpleJson(paramsJson);
+                    var parameters = JsonHelper.ParseSimpleJson(paramsJson);
                     currentGeo = adapter.ExecuteAndGetGeometry(currentGeo, parameters);
 
                     int pts = currentGeo?.Points.Count ?? 0;
@@ -81,55 +80,6 @@ namespace PCGToolkit.Skill
         public string ListSkills()
         {
             return SkillSchemaExporter.ExportAll();
-        }
-
-        private static Dictionary<string, object> ParseSimpleJson(string json)
-        {
-            var dict = new Dictionary<string, object>();
-            if (string.IsNullOrEmpty(json) || json.Trim() == "{}") return dict;
-
-            json = json.Trim();
-            if (json.StartsWith("{")) json = json.Substring(1);
-            if (json.EndsWith("}")) json = json.Substring(0, json.Length - 1);
-
-            int depth = 0;
-            int start = 0;
-            bool inString = false;
-            var pairs = new List<string>();
-
-            for (int i = 0; i < json.Length; i++)
-            {
-                char c = json[i];
-                if (c == '"' && (i == 0 || json[i - 1] != '\\')) inString = !inString;
-                if (inString) continue;
-                if (c == '{' || c == '[') depth++;
-                else if (c == '}' || c == ']') depth--;
-                else if (c == ',' && depth == 0)
-                {
-                    pairs.Add(json.Substring(start, i - start));
-                    start = i + 1;
-                }
-            }
-            if (start < json.Length) pairs.Add(json.Substring(start));
-
-            foreach (var pair in pairs)
-            {
-                var colonIdx = pair.IndexOf(':');
-                if (colonIdx < 0) continue;
-                var key = pair.Substring(0, colonIdx).Trim().Trim('"');
-                var value = pair.Substring(colonIdx + 1).Trim();
-
-                if (value.StartsWith("\"") && value.EndsWith("\""))
-                    dict[key] = value.Trim('"');
-                else if (value == "true") dict[key] = true;
-                else if (value == "false") dict[key] = false;
-                else if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float f))
-                    dict[key] = f;
-                else
-                    dict[key] = value;
-            }
-
-            return dict;
         }
     }
 }

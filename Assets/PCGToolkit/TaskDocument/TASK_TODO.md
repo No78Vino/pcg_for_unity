@@ -4,21 +4,36 @@
 
 # 第8轮迭代任务计划
 
+## 迭代完成总结
+
+> **所有 Batch 已完成。**
+
+| Batch | 状态 | 说明 |
+|-------|------|------|
+| B1: Skill 层补全 | ✅ 已完成（第7轮） | GetJsonSchema/Execute/ExecutePipeline/ExportToFile 在第7轮迭代已实现 |
+| B2: AI SubGraph 构建 API | ✅ 已完成 | AgentProtocol 扩展 + AgentSession + 8 个新 Action (create_graph/add_node/connect_nodes/set_param/save_graph/execute_graph/list_nodes/get_graph_info) |
+| B3: geometry3Sharp 深度集成 | ✅ 已完成 | RemeshNode → g3 Remesher, DecimateNode → g3 Reducer, GeometryBridge Cd 双向传递 |
+| B4: 节点测试全覆盖 | ✅ 已完成 | 新增 7 个测试文件 (Curve/Deform/UV/Distribute/Utility/Geometry/Agent端到端), ExpressionParser 测试扩展 |
+| B5: 通信层增强 | ✅ 已完成 | HTTP 正常工作, WebSocket 支持已集成, 超时字段已加入 AgentProtocol |
+| B6: 文档更新 | ✅ 已完成 | NODE_TODO.md 更新, HandBook.md 新增 AI Agent API 章节, AI_AGENT_GUIDE.md 新增 Graph 构建 API 说明 |
+
+---
+
 ## 迭代主题：**AI SubGraph 构建闭环 + geometry3Sharp 深度集成 + Skill 层补全 + 测试加固**
 
-## 当前关键缺口分析
+## 原始缺口分析（迭代前状态）
 
-1. **`PCGNodeSkillAdapter.GetJsonSchema()` 和 `Execute()` 仍为 TODO 空壳**，Agent 无法真正调用任何节点 [1-cite-0](#1-cite-0)
+1. ~~**`PCGNodeSkillAdapter.GetJsonSchema()` 和 `Execute()` 仍为 TODO 空壳**~~ → 第7轮已实现
 
-2. **`SkillExecutor.ExecutePipeline()` 为 TODO 空壳**，链式调用不可用 [1-cite-1](#1-cite-1)
+2. ~~**`SkillExecutor.ExecutePipeline()` 为 TODO 空壳**~~ → 第7轮已实现
 
-3. **`AgentServer.ProcessRequest` 仅支持 4 个 Action**，缺少 graph 构建相关 Action（`create_graph`、`add_node`、`connect_nodes`、`set_param`、`save_subgraph`、`execute_graph`） [1-cite-2](#1-cite-2)
+3. ~~**`AgentServer.ProcessRequest` 仅支持 4 个 Action**~~ → 第8轮新增 8 个 Action
 
-4. **`RemeshNode` / `DecimateNode` 使用简化自研算法**，未利用 geometry3Sharp 的 `Remesher` / `Reducer` [1-cite-3](#1-cite-3) [1-cite-4](#1-cite-4)
+4. ~~**`RemeshNode` / `DecimateNode` 使用简化自研算法**~~ → 第8轮已切换到 g3
 
-5. **`GeometryBridge` 不传递 VertexColor 和自定义 Attribute** [1-cite-5](#1-cite-5)
+5. ~~**`GeometryBridge` 不传递 VertexColor 和自定义 Attribute**~~ → 第7轮已实现 Cd 传递
 
-6. **测试目录仅有 `ExpressionParserTests.cs`** [1-cite-6](#1-cite-6)
+6. ~~**测试目录仅有 `ExpressionParserTests.cs`**~~ → 第8轮新增 7 个测试文件
 
 ---
 

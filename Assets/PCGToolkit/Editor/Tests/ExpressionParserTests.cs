@@ -176,5 +176,134 @@ namespace PCGToolkit.Tests
         [Test] public void Function_Abs_Works()   => Assert.AreEqual(5f, Eval("abs(-5)"),        0.001f);
         [Test] public void Function_Min_Works()   => Assert.AreEqual(3f, Eval("min(3, 7)"),      0.001f);
         [Test] public void Function_Clamp_Works() => Assert.AreEqual(5f, Eval("clamp(10, 0, 5)"), 0.001f);
+
+        // ---- 第8轮扩展: 三角函数 ----
+
+        [Test]
+        public void Function_Sin_Zero()
+        {
+            Assert.AreEqual(0f, Eval("sin(0)"), 0.001f);
+        }
+
+        [Test]
+        public void Function_Cos_Zero()
+        {
+            Assert.AreEqual(1f, Eval("cos(0)"), 0.001f);
+        }
+
+        // ---- 第8轮扩展: 三元表达式与属性 ----
+
+        [Test]
+        public void Ternary_WithAttribute()
+        {
+            Assert.AreEqual(0f, Eval("@P.y > 0 ? 1 : 0"), 0.001f);
+        }
+
+        [Test]
+        public void Ternary_NestedCondition()
+        {
+            Assert.AreEqual(10f, Eval("1 > 0 ? (2 > 1 ? 10 : 20) : 30"), 0.001f);
+        }
+
+        // ---- 第8轮扩展: 内置函数嵌套 ----
+
+        [Test]
+        public void Function_Max_Works()
+        {
+            Assert.AreEqual(7f, Eval("max(3, 7)"), 0.001f);
+        }
+
+        [Test]
+        public void Function_Floor_Works()
+        {
+            Assert.AreEqual(3f, Eval("floor(3.7)"), 0.001f);
+        }
+
+        [Test]
+        public void Function_Ceil_Works()
+        {
+            Assert.AreEqual(4f, Eval("ceil(3.2)"), 0.001f);
+        }
+
+        [Test]
+        public void Function_Sqrt_Works()
+        {
+            Assert.AreEqual(3f, Eval("sqrt(9)"), 0.001f);
+        }
+
+        [Test]
+        public void Function_Pow_Works()
+        {
+            Assert.AreEqual(8f, Eval("pow(2, 3)"), 0.001f);
+        }
+
+        // ---- 第8轮扩展: 赋值语句 ----
+
+        [Test]
+        public void Assignment_VectorAttribute_FromComponents()
+        {
+            Run("@Cd = {1, 0, 0};");
+            Assert.IsTrue(_ctx.Outputs.ContainsKey("@Cd"));
+            var cd = (Vector3)_ctx.Outputs["@Cd"];
+            Assert.AreEqual(1f, cd.x, 0.001f);
+            Assert.AreEqual(0f, cd.y, 0.001f);
+            Assert.AreEqual(0f, cd.z, 0.001f);
+        }
+
+        // ---- 第8轮扩展: 多语句 ----
+
+        [Test]
+        public void MultiStatement_SequentialAssignment()
+        {
+            Run("float a = 3; float b = a * 2;");
+            Assert.AreEqual(3f, (float)_ctx.Variables["a"], 0.001f);
+            Assert.AreEqual(6f, (float)_ctx.Variables["b"], 0.001f);
+        }
+
+        // ---- 第8轮扩展: 逻辑运算符 ----
+
+        [Test]
+        public void LogicAnd_TrueTrue_ReturnsTrue()
+        {
+            Assert.AreEqual(1f, Eval("1 > 0 && 2 > 1"), 0.001f);
+        }
+
+        [Test]
+        public void LogicAnd_TrueFalse_ReturnsFalse()
+        {
+            Assert.AreEqual(0f, Eval("1 > 0 && 0 > 1"), 0.001f);
+        }
+
+        [Test]
+        public void LogicOr_FalseTrue_ReturnsTrue()
+        {
+            Assert.AreEqual(1f, Eval("0 > 1 || 2 > 1"), 0.001f);
+        }
+
+        [Test]
+        public void LogicOr_FalseFalse_ReturnsFalse()
+        {
+            Assert.AreEqual(0f, Eval("0 > 1 || 0 > 2"), 0.001f);
+        }
+
+        // ---- 第8轮扩展: 运算符优先级 ----
+
+        [Test]
+        public void OperatorPrecedence_MultiplyBeforeAdd()
+        {
+            Assert.AreEqual(7f, Eval("1 + 2 * 3"), 0.001f);
+        }
+
+        [Test]
+        public void OperatorPrecedence_ParenthesesOverride()
+        {
+            Assert.AreEqual(9f, Eval("(1 + 2) * 3"), 0.001f);
+        }
+
+        [Test]
+        public void Modulo_Works()
+        {
+            Assert.AreEqual(1f, Eval("7 % 3"), 0.001f);
+        }
     }
 }

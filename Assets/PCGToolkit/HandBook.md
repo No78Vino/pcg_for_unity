@@ -438,3 +438,95 @@ graph LR
 - Inspector 面板显示节点执行耗时和输出几何体统计（点数、面数、属性列表）
 - `Run To Selected` 可在任意节点暂停，检查中间结果
 - 支持 Unity 原生 **Undo/Redo**
+
+---
+
+## 十二、AI Agent API
+
+PCG Toolkit 内置 HTTP 服务器 (`AgentServer`)，允许 AI Agent 通过 REST API 调用节点、构建 SubGraph、执行图。
+
+### 启动服务器
+
+```csharp
+var server = new AgentServer(AgentServer.ProtocolType.Http, 8765);
+server.Start(); // 监听 http://localhost:8765/
+```
+
+也可通过菜单启动（如已注册菜单项）。支持 HTTP 和 WebSocket 两种协议。
+
+### 请求格式
+
+所有请求均为 POST JSON：
+
+```json
+{
+  "action": "动作名称",
+  "request_id": "可选的请求ID",
+  ...其他字段
+}
+```
+
+### Action 列表
+
+#### 节点查询与执行
+
+| Action | 说明 | 关键字段 |
+|--------|------|----------|
+| `list_skills` | 列出所有可用 Skill（节点） | — |
+| `list_nodes` | 列出所有节点类型（按 Category 分组，含端口定义） | — |
+| `get_schema` | 获取单个 Skill 的 JSON Schema | `skill_name` |
+| `get_all_schemas` | 获取所有 Skill 的 JSON Schema | — |
+| `execute_skill` | 执行单个节点 | `skill_name`, `parameters` |
+| `execute_pipeline` | 链式执行多个节点 | `pipeline_skills[]`, `pipeline_params[]` |
+
+#### Graph 构建 API
+
+| Action | 说明 | 关键字段 |
+|--------|------|----------|
+| `create_graph` | 创建空图 | `graph_name` |
+| `add_node` | 向图中添加节点 | `graph_id`, `node_type`, `position_x`, `position_y` |
+| `connect_nodes` | 连接两个节点 | `graph_id`, `output_node_id`, `output_port`, `input_node_id`, `input_port` |
+| `set_param` | 设置节点参数 | `graph_id`, `node_id`, `parameters` (JSON) |
+| `execute_graph` | 执行图 | `graph_id` |
+| `save_graph` | 保存图为 .asset | `graph_id`, `asset_path` |
+| `get_graph_info` | 查询图的完整状态 | `graph_id` |
+
+### 端到端示例：通过 API 构建 SubGraph
+
+```bash
+# 1. 创建图
+curl http://localhost:8765/ -d '{"action":"create_graph","graph_name":"MyTool"}'
+# → {"Success":true,"Data":"{\"graph_id\":\"abc-123\",\"graph_name\":\"MyTool\"}"}
+
+# 2. 添加 Grid 节点
+curl http://localhost:8765/ -d '{"action":"add_node","graph_id":"abc-123","node_type":"Grid"}'
+# → {"Success":true,"Data":"{\"node_id\":\"node-001\",\"node_type\":\"Grid\"}"}
+
+# 3. 添加 Subdivide 节点
+curl http://localhost:8765/ -d '{"action":"add_node","graph_id":"abc-123","node_type":"Subdivide"}'
+# → {"Success":true,"Data":"{\"node_id\":\"node-002\",\"node_type\":\"Subdivide\"}"}
+
+# 4. 连接 Grid -> Subdivide
+curl http://localhost:8765/ -d '{"action":"connect_nodes","graph_id":"abc-123","output_node_id":"node-001","output_port":"geometry","input_node_id":"node-002","input_port":"input"}'
+
+# 5. 设置参数
+curl http://localhost:8765/ -d '{"action":"set_param","graph_id":"abc-123","node_id":"node-001","parameters":"{\"rows\":10,\"columns\":10}"}'
+
+# 6. 执行
+curl http://localhost:8765/ -d '{"action":"execute_graph","graph_id":"abc-123"}'
+
+# 7. 保存
+curl http://localhost:8765/ -d '{"action":"save_graph","graph_id":"abc-123","asset_path":"Assets/PCGToolkit/SubGraphs/MyTool.asset"}'
+```
+
+### 推荐工作流
+
+```
+list_nodes → 了解可用节点
+create_graph → 创建空图
+add_node × N → 添加所需节点
+connect_nodes × N → 建立数据流
+set_param × N → 配置参数
+execute_graph → 验证结果
+save_graph → 持久化为 .asset
+```

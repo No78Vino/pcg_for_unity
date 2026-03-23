@@ -306,6 +306,10 @@ namespace PCGToolkit.Graph
             // ---- 预设操作区 (A3) ----
             BuildPresetSection(nodeVisual);
 
+            // SceneSelectionInputNode: Selection Tool 入口
+            if (pcgNode.Name == "SceneSelectionInput")
+                BuildSelectionToolSection(nodeVisual);
+
             // C2: Output 节点显示单独执行按钮
             if (pcgNode.Category == PCGNodeCategory.Output)
                 BuildExportButton(nodeVisual);
@@ -380,6 +384,32 @@ namespace PCGToolkit.Graph
                 row.Add(loadBtn);
                 container.Add(row);
             }
+        }
+
+        // Selection Tool 入口（SceneSelectionInputNode 专用）
+        private void BuildSelectionToolSection(PCGNodeVisual nodeVisual)
+        {
+            var foldout = new Foldout { text = "Selection Tool", value = true };
+            foldout.style.marginTop = 4;
+            foldout.style.marginBottom = 4;
+
+            var openBtn = new Button(() =>
+            {
+                UnityEditor.EditorTools.ToolManager.SetActiveTool<Tools.PCGSelectionTool>();
+            })
+            {
+                text = "Open Selection Tool",
+                tooltip = "激活 PCG 交互选择工具",
+                style = { backgroundColor = new StyleColor(new Color(0.1f, 0.4f, 0.6f)) }
+            };
+            foldout.Add(openBtn);
+
+            var statsLabel = new Label($"Selected: {PCGSelectionState.SelectionCount} ({PCGSelectionState.CurrentMode})");
+            statsLabel.style.fontSize = 10;
+            statsLabel.style.marginTop = 4;
+            foldout.Add(statsLabel);
+
+            _paramContainer.Add(foldout);
         }
 
         // C2: Output 节点 Export 按钮

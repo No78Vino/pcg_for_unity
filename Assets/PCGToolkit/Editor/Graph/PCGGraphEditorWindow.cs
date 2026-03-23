@@ -37,6 +37,10 @@ namespace PCGToolkit.Graph
         // 迭代三：错误面板
         private PCGErrorPanel _errorPanel;
         private VisualElement _mainContainer;
+
+        // 迭代七：性能面板
+        private PCGPerformancePanel _perfPanel;
+        private bool _showPerfPanel = false;
   
         [MenuItem("PCG Toolkit/Node Editor")]  
         public static void OpenWindow()  
@@ -139,6 +143,11 @@ namespace PCGToolkit.Graph
             _errorPanel.style.display = DisplayStyle.None;
             _errorPanel.OnErrorClicked += OnErrorClicked;
             _mainContainer.Add(_errorPanel);
+
+            // 迭代七：创建性能面板（默认隐藏）
+            _perfPanel = new PCGPerformancePanel();
+            _perfPanel.style.display = DisplayStyle.None;
+            _mainContainer.Add(_perfPanel);
         }
         
         // 迭代三：节点点击预览
@@ -237,6 +246,11 @@ namespace PCGToolkit.Graph
                 UpdateExecutionStateLabel(PCGToolkit.Core.PCGLocalization.Get("state.completed"));  
                 SetToolbarButtonsEnabled(true);
                 _progressBar.value = 100f;
+
+                // 迭代七：收集性能数据
+                if (_showPerfPanel && _perfPanel != null && currentGraph != null)
+                    _perfPanel.CollectFromExecutor(_asyncExecutor, currentGraph);
+
                 Debug.Log($"PCG Graph execution completed. Total: {totalMs:F1}ms");  
             };  
   
@@ -348,6 +362,17 @@ namespace PCGToolkit.Graph
             };
             toolbar.Add(inspectorButton);
 
+            // 迭代七：性能面板切换按钮
+            var perfToggle = new ToolbarToggle { text = "Perf" };
+            perfToggle.RegisterValueChangedCallback(evt =>
+            {
+                _showPerfPanel = evt.newValue;
+                _perfPanel.style.display = _showPerfPanel
+                    ? DisplayStyle.Flex
+                    : DisplayStyle.None;
+            });
+            toolbar.Add(perfToggle);
+
             // 迭代四：语言切换按钮
             _langButton = new Button(() =>
             {
@@ -448,6 +473,14 @@ namespace PCGToolkit.Graph
             var currentSelected = graphView?.GetSelectedNodeVisual();
             if (currentSelected != null)
                 inspector.InspectNode(currentSelected);
+        }
+
+        /// <summary>
+        /// 供 Inspector Undo 使用，获取当前图数据对象
+        /// </summary>
+        public PCGGraphData GetCurrentGraphDataForUndo()
+        {
+            return currentGraph;
         }
 
         private void HandleKeyboardShortcut(KeyDownEvent evt)

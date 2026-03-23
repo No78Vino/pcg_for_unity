@@ -890,6 +890,10 @@ namespace PCGToolkit.Graph
         
         private GraphViewChange OnGraphViewChanged(GraphViewChange change)
         {
+            // Undo support: record before changes
+            if (graphData != null)
+                Undo.RecordObject(graphData, "Graph View Change");
+
             // 迭代一：通知脏状态变更
             OnGraphChanged?.Invoke();
 

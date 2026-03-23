@@ -1,18 +1,17 @@
 using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Net;
+using System.Text;
+using System.Threading;
+using UnityEditor;
 using UnityEngine;
 using PCGToolkit.Skill;
 
 namespace PCGToolkit.Communication
 {
-    /// <summary>
-    /// AI Agent 通信服务器
-    /// 支持 HTTP / WebSocket / stdin-stdout 三种通信方式
-    /// </summary>
     public class AgentServer
     {
-        /// <summary>
-        /// 通信协议类型
-        /// </summary>
         public enum ProtocolType
         {
             Http,
@@ -25,6 +24,11 @@ namespace PCGToolkit.Communication
         private bool isRunning;
         private SkillExecutor skillExecutor;
 
+        private HttpListener _listener;
+        private Thread _listenThread;
+        private ConcurrentQueue<HttpListenerContext> _pendingRequests
+            = new ConcurrentQueue<HttpListenerContext>();
+
         public bool IsRunning => isRunning;
 
         public AgentServer(ProtocolType protocol = ProtocolType.Http, int port = 8765)
@@ -34,37 +38,112 @@ namespace PCGToolkit.Communication
             this.skillExecutor = new SkillExecutor();
         }
 
-        /// <summary>
-        /// 启动服务器
-        /// </summary>
         public void Start()
         {
-            // TODO: 根据 protocol 类型启动对应的服务器
-            // HTTP: 使用 HttpListener
-            // WebSocket: 使用 WebSocket 库
-            // StdInOut: 监听标准输入
+            if (protocol != ProtocolType.Http)
+            {
+                Debug.LogWarning($"AgentServer: Only HTTP protocol is currently supported, got {protocol}");
+                return;
+            }
+
+            _listener = new HttpListener();
+            _listener.Prefixes.Add($"http://localhost:{port}/");
+
+            try
+            {
+                _listener.Start();
+            }
+            catch (HttpListenerException e)
+            {
+                Debug.LogError($"AgentServer: Failed to start HTTP listener - {e.Message}");
+                return;
+            }
+
             isRunning = true;
-            Debug.Log($"AgentServer: Start - protocol={protocol}, port={port} (TODO)");
+
+            _listenThread = new Thread(ListenLoop) { IsBackground = true };
+            _listenThread.Start();
+
+            EditorApplication.update += PollAndProcessRequests;
+
+            Debug.Log($"AgentServer: HTTP server started, listening on http://localhost:{port}/");
         }
 
-        /// <summary>
-        /// 停止服务器
-        /// </summary>
+        private void ListenLoop()
+        {
+            while (isRunning && _listener != null && _listener.IsListening)
+            {
+                try
+                {
+                    var asyncResult = _listener.BeginGetContext(null, null);
+                    if (asyncResult.AsyncWaitHandle.WaitOne(500))
+                    {
+                        var ctx = _listener.EndGetContext(asyncResult);
+                        _pendingRequests.Enqueue(ctx);
+                    }
+                }
+                catch (HttpListenerException) { break; }
+                catch (ObjectDisposedException) { break; }
+            }
+        }
+
+        private void PollAndProcessRequests()
+        {
+            int processed = 0;
+            while (processed < 5 && _pendingRequests.TryDequeue(out var httpCtx))
+            {
+                try
+                {
+                    string body = ReadBody(httpCtx.Request);
+                    string responseJson = HandleRequest(body);
+                    WriteResponse(httpCtx, responseJson);
+                }
+                catch (Exception e)
+                {
+                    WriteResponse(httpCtx,
+                        AgentProtocol.CreateErrorResponse($"Internal error: {e.Message}"));
+                }
+                processed++;
+            }
+        }
+
+        private string ReadBody(HttpListenerRequest request)
+        {
+            using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+                return reader.ReadToEnd();
+        }
+
+        private void WriteResponse(HttpListenerContext ctx, string json)
+        {
+            try
+            {
+                var bytes = Encoding.UTF8.GetBytes(json);
+                ctx.Response.ContentType = "application/json; charset=utf-8";
+                ctx.Response.ContentLength64 = bytes.Length;
+                ctx.Response.StatusCode = 200;
+                ctx.Response.OutputStream.Write(bytes, 0, bytes.Length);
+                ctx.Response.Close();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"AgentServer: Failed to write response - {e.Message}");
+            }
+        }
+
         public void Stop()
         {
-            // TODO: 停止服务器，释放资源
             isRunning = false;
-            Debug.Log("AgentServer: Stop (TODO)");
+            EditorApplication.update -= PollAndProcessRequests;
+
+            try { _listener?.Stop(); } catch { }
+            try { _listener?.Close(); } catch { }
+
+            _listenThread?.Join(2000);
+            Debug.Log("AgentServer: Stopped");
         }
 
-        /// <summary>
-        /// 处理收到的请求
-        /// </summary>
         public string HandleRequest(string requestJson)
         {
-            // TODO: 解析请求 JSON → 路由到对应的处理函数
-            Debug.Log($"AgentServer: HandleRequest (TODO)");
-
             try
             {
                 var request = AgentProtocol.ParseRequest(requestJson);
@@ -78,12 +157,16 @@ namespace PCGToolkit.Communication
 
         private string ProcessRequest(AgentProtocol.AgentRequest request)
         {
-            // TODO: 根据请求类型分发处理
             switch (request.Action)
             {
                 case "execute_skill":
                     return AgentProtocol.CreateSuccessResponse(
                         skillExecutor.ExecuteSkill(request.SkillName, request.Parameters),
+                        request.RequestId);
+
+                case "execute_pipeline":
+                    return AgentProtocol.CreateSuccessResponse(
+                        skillExecutor.ExecutePipeline(request.pipeline_skills, request.pipeline_params),
                         request.RequestId);
 
                 case "list_skills":

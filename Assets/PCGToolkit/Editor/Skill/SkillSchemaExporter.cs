@@ -1,45 +1,41 @@
-using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using UnityEditor;
 using UnityEngine;
 
 namespace PCGToolkit.Skill
 {
-    /// <summary>
-    /// Skill JSON Schema 导出器
-    /// 将所有 Skill 导出为符合 OpenAI Function Calling 规范的 JSON Schema
-    /// </summary>
     public static class SkillSchemaExporter
     {
-        /// <summary>
-        /// 导出所有 Skill 的 JSON Schema
-        /// </summary>
         public static string ExportAll()
         {
-            // TODO: 遍历 SkillRegistry，为每个 Skill 生成 JSON Schema
-            Debug.Log("SkillSchemaExporter: ExportAll (TODO)");
-
             SkillRegistry.EnsureInitialized();
+
             var sb = new StringBuilder();
-            sb.AppendLine("[");
+            sb.AppendLine("{");
+            sb.AppendLine("  \"version\": \"1.0\",");
+            sb.AppendLine($"  \"exportTime\": \"{System.DateTime.UtcNow:O}\",");
+            sb.AppendLine("  \"skills\": [");
 
             bool first = true;
             foreach (var skill in SkillRegistry.GetAllSkills())
             {
                 if (!first) sb.AppendLine(",");
                 first = false;
-                sb.Append(skill.GetJsonSchema());
+
+                string schema = skill.GetJsonSchema();
+                sb.Append("    ");
+                sb.Append(schema);
             }
 
-            sb.AppendLine("]");
+            sb.AppendLine();
+            sb.AppendLine("  ]");
+            sb.Append("}");
             return sb.ToString();
         }
 
-        /// <summary>
-        /// 导出单个 Skill 的 JSON Schema
-        /// </summary>
         public static string ExportSingle(string skillName)
         {
-            // TODO: 生成指定 Skill 的 JSON Schema
             var skill = SkillRegistry.GetSkill(skillName);
             if (skill == null)
             {
@@ -49,13 +45,21 @@ namespace PCGToolkit.Skill
             return skill.GetJsonSchema();
         }
 
-        /// <summary>
-        /// 导出到文件
-        /// </summary>
         public static void ExportToFile(string filePath)
         {
-            // TODO: 将所有 Schema 写入文件
-            Debug.Log($"SkillSchemaExporter: ExportToFile - {filePath} (TODO)");
+            string json = ExportAll();
+
+            string directory = System.IO.Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory) && !System.IO.Directory.Exists(directory))
+                System.IO.Directory.CreateDirectory(directory);
+
+            System.IO.File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
+
+            var skillCount = SkillRegistry.GetAllSkills().Count();
+            Debug.Log($"SkillSchemaExporter: Exported {skillCount} skill schemas to {filePath}");
+
+            if (filePath.StartsWith("Assets/"))
+                AssetDatabase.Refresh();
         }
     }
 }

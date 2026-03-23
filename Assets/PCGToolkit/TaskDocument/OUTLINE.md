@@ -1,209 +1,85 @@
 ## 当前项目完成度评估
 
-### 各模块完成情况
+### 各 Phase 完成度
 
-```mermaid
-graph LR
-    subgraph "Core Infrastructure (95%)"
-        A1["PCGGeometry + AttributeStore"]
-        A2["ExpressionParser (VEX-style)"]
-        A3["GeometryBridge (DMesh3)"]
-        A4["PCGContext (multi-error)"]
-    end
+| Phase | 主题 | 完成度 | 说明 |
+|-------|------|--------|------|
+| Phase 1 | 基础设施 + 最小可用管线 | **95%** | 核心数据模型、Tier 0 节点、geometry3Sharp 集成、FBX 导出均已完成 |
+| Phase 2 | 核心几何 + 分布实例化 + GraphView | **95%** | Tier 1/3 节点、GraphView 编辑器、SubGraph 机制均已实现 |
+| Phase 3 | UV + 曲线 + AI 接口 | **85%** | Tier 2/4 节点已实现，AI Skill 层和通信层已完成；xatlas 未真正集成 |
+| Phase 4 | 变形 + 高级拓扑 | **90%** | Tier 5/6 节点全部有实现，Remesh/Decimate 已切换到 g3 |
+| Phase 5 | 程序化规则 + 完善 | **65%** | Tier 7 节点有基础实现，LOD 生成仍用自研减面，整体打磨不足 |
 
-    subgraph "Node Library (90%)"
-        B1["Create: 16 nodes"]
-        B2["Geometry: 20 nodes"]
-        B3["Attribute: 8 nodes"]
-        B4["UV: 5 nodes"]
-        B5["Distribute: 6 nodes"]
-        B6["Curve: 6 nodes"]
-        B7["Deform: 8 nodes"]
-        B8["Topology: 8 nodes"]
-        B9["Procedural: 3 nodes"]
-        B10["Output: 7 nodes"]
-        B11["Input: 2 nodes"]
-        B12["Utility: 20 nodes"]
-    end
-
-    subgraph "Graph Editor (90%)"
-        C1["GraphView + Inspector"]
-        C2["SubGraph + ForEach"]
-        C3["Breakpoints + Error Panel"]
-        C4["Performance Panel"]
-        C5["Scene Preview"]
-    end
-
-    subgraph "AI Agent Layer (75%)"
-        D1["AgentServer HTTP"]
-        D2["SkillExecutor + Pipeline"]
-        D3["SkillSchemaExporter"]
-    end
-
-    subgraph "Runtime/HDA (85%)"
-        E1["PCGGraphRunner"]
-        E2["Exposed Parameters"]
-    end
-```
-
-### 量化统计
-
-| 模块 | 文件数 | 完成度 | 说明 |
-|------|--------|--------|------|
-| **Core 基础设施** | 15 | **95%** | PCGGeometry、AttributeStore、ExpressionParser、GeometryBridge 均已实现 |
-| **节点库** | ~109 | **90%** | NODE_TODO.md 中列出的 26 个待实现节点已全部有文件，但部分节点使用简化算法 |
-| **Graph 编辑器** | 16 | **90%** | GraphView、Inspector、Preview、Error Panel、Performance Panel、Breakpoints 均已实现 |
-| **AI Agent 通信层** | 5 | **75%** | HTTP 已实现，WebSocket/stdin-stdout 未实现；Pipeline 执行已实现 |
-| **Runtime/HDA** | 3 | **85%** | PCGGraphRunner + ExposedParam 已实现 |
-| **测试** | 5 | **50%** | 基础测试框架已建立，但覆盖率有限 |
-| **文档** | 4 | **60%** | AI_AGENT_GUIDE、HandBook、NODE_TODO 存在，但 HandBook 可能不完整 |
-
-### 关键成就（第7轮迭代）
-
-第7轮迭代 ([`96f6622`](https://github.com/No78Vino/pcg_for_unity/commit/96f662241159fa4975be486227c29230bd9ed159)) 完成了： [0-cite-0](#0-cite-0)
-
-- `AgentServer` HTTP 监听（`HttpListener` + `EditorApplication.update` 轮询）
-- `PCGNodeSkillAdapter.GetJsonSchema()` 完整 JSON Schema 生成 [0-cite-1](#0-cite-1)
-- `SkillExecutor.ExecutePipeline()` 链式 Skill 调用 [0-cite-2](#0-cite-2)
-- `PCGContext` 多错误收集（Warning/Error/Fatal 级别） [0-cite-3](#0-cite-3)
-- `PCGGraphExecutor` ContinueOnError 容错执行 [0-cite-4](#0-cite-4)
-- 性能 Profiler 面板 [0-cite-5](#0-cite-5)
-- 节点测试框架 + Agent 端到端测试
-
-
-### 当前短板
-
-1. **第三方库集成不足**：`geometry3Sharp` 仅用于 `GeometryBridge` 转换，`RemeshNode`、`DecimateNode` 等使用简化自研算法而非 geometry3Sharp 的 `Remesher`/`Reducer`；`xatlas`、`MIConvexHull`、`Clipper2` 尚未集成 [0-cite-6](#0-cite-6)
-2. **AI Agent 工作流未闭环**：Agent 可以调用单个 Skill 和 Pipeline，但无法通过 API **创建/保存 SubGraph**（即 AI 的"主战场"能力缺失） [0-cite-7](#0-cite-7)
-3. **测试覆盖率低**：仅 5 个测试文件，大量节点无单元测试
-4. **通信协议单一**：仅 HTTP，WebSocket 未实现
+**综合完成度：约 85%**
 
 ---
 
-## 第8轮迭代计划大纲
+### 第8轮迭代成果确认
 
-### 核心主题：**geometry3Sharp 深度集成 + AI SubGraph 构建能力 + 测试加固**
+第8轮迭代（commit [d900d1de](https://github.com/No78Vino/pcg_for_unity/commit/d900d1de)）完成了以下核心工作： [0-cite-0](#0-cite-0)
+
+1. **AI SubGraph 构建 API** — AgentServer 新增 8 个 graph 操作 Action（`create_graph`/`add_node`/`connect_nodes`/`set_param`/`save_graph`/`execute_graph`/`list_nodes`/`get_graph_info`）
+2. **AgentSession 会话管理** — 支持多图并行构建 [0-cite-1](#0-cite-1)
+3. **geometry3Sharp 深度集成** — RemeshNode 和 DecimateNode 切换到 g3 Remesher/Reducer [0-cite-2](#0-cite-2) [0-cite-3](#0-cite-3)
+4. **GeometryBridge 增强** — 支持 N/uv/Cd 三种属性的双向传递 [0-cite-4](#0-cite-4)
+5. **WebSocket 通信支持** [0-cite-5](#0-cite-5)
+6. **Skill 层补全** — `PCGNodeSkillAdapter.GetJsonSchema()` 和 `Execute()` 已完整实现 [0-cite-6](#0-cite-6) [0-cite-7](#0-cite-7)
+7. **SkillExecutor.ExecutePipeline()** 已实现链式调用 [0-cite-8](#0-cite-8)
+
+---
+
+### 当前遗留问题
+
+| # | 问题 | 严重度 | 说明 |
+|---|------|--------|------|
+| 1 | **测试文件未合入 main** | P0 | commit 中添加了 CurveNodeTests/DeformNodeTests/UVNodeTests/DistributeNodeTests/UtilityNodeTests/GeometryNodeTests，但 Tests 目录仅有 6 个文件 |
+| 2 | **NODE_TODO.md 严重过时** | P1 | 仍显示 10/26 已实现，实际所有节点均有代码实现 |
+| 3 | **无示例 SubGraph 资产** | P1 | Examples 目录不存在，用户无法快速上手 |
+| 4 | **LODGenerateNode 仍用自研减面** | P1 | 未利用 g3 Reducer，质量不足 |
+| 5 | **xatlas 未真正集成** | P2 | UV Unwrap/Layout 使用简化算法 |
+| 6 | **Const 系列节点 Execute 为空壳** | P2 | ConstFloat/Int/Bool/String/Vector3/Color 节点的 Execute 体为 TODO |
+| 7 | **Clipper2 未集成** | P2 | 2D 布尔运算缺失 |
+| 8 | **Procedural 节点质量** | P2 | WFC/LSystem/VoronoiFracture 使用简化算法 | [0-cite-9](#0-cite-9) [0-cite-10](#0-cite-10) 
+
+---
+
+## 第9轮迭代计划大纲
+
+### 迭代主题：**质量加固 + 示例交付 + 第三方库深度集成 + 文档收尾**
 
 ```mermaid
 graph TD
-    subgraph "Batch 1 - geometry3Sharp 深度集成 (P0)"
-        A1["RemeshNode 使用 g3 Remesher"]
-        A2["DecimateNode 使用 g3 Reducer"]
-        A3["BooleanNode 使用 g3 MeshBoolean"]
-        A4["SmoothNode 使用 g3 LaplacianSmooth"]
-        A5["FuseNode 使用 g3 MergeCoincidentEdges"]
-    end
+    B1["B1: 合并缺失文件 + 修复测试"]
+    B2["B2: LODGenerateNode g3 集成"]
+    B3["B3: Const 节点实现 + NODE_TODO 更新"]
+    B4["B4: 示例 SubGraph 资产"]
+    B5["B5: xatlas UV 集成（可选）"]
+    B6["B6: 文档收尾 + HandBook 完善"]
 
-    subgraph "Batch 2 - AI SubGraph 构建 API (P0)"
-        B1["新增 create_graph Skill Action"]
-        B2["新增 add_node / connect_nodes Action"]
-        B3["新增 save_subgraph Action"]
-        B4["新增 test_subgraph Action"]
-    end
-
-    subgraph "Batch 3 - 节点测试全覆盖 (P1)"
-        C1["Curve 节点测试"]
-        C2["Deform 节点测试"]
-        C3["UV 节点测试"]
-        C4["Distribute 节点测试"]
-        C5["Output 节点测试"]
-        C6["Utility 节点测试"]
-    end
-
-    subgraph "Batch 4 - 通信层增强 (P1)"
-        D1["WebSocket 通信支持"]
-        D2["请求队列 + 超时机制"]
-        D3["Agent 会话状态管理"]
-    end
-
-    subgraph "Batch 5 - 文档与示例 (P2)"
-        E1["HandBook 完善"]
-        E2["示例 SubGraph 资产"]
-        E3["NODE_TODO.md 更新"]
-    end
-
-    A1 --> C2
-    B1 --> B2
-    B2 --> B3
-    B3 --> B4
-    C1 --> E2
+    B1 --> B4
+    B2 --> B4
+    B3 --> B6
+    B4 --> B6
 ```
 
----
+### Batch 详情
 
-### Batch 1 — geometry3Sharp 深度集成 (P0)
+| Batch | 标题 | 优先级 | 内容 |
+|-------|------|--------|------|
+| **B1** | 合并缺失测试文件 + 修复 | P0 | 确认 CurveNodeTests/DeformNodeTests/UVNodeTests/DistributeNodeTests/UtilityNodeTests/GeometryNodeTests 是否在 main 分支；若缺失则重新合入；运行全部测试确保通过 |
+| **B2** | LODGenerateNode 切换 g3 Reducer | P0 | `LODGenerateNode.DecimateGeometry()` 内部仍用自研边坍缩算法（约130行），应改为 `GeometryBridge.ToDMesh3() → g3.Reducer → FromDMesh3()` 三步流程，与 DecimateNode 保持一致 |
+| **B3** | Const 节点实现 + NODE_TODO 更新 | P1 | 实现 ConstFloat/Int/Bool/String/Vector3/Color 节点的 Execute 方法（通过 `PCGContext.GlobalVariables` 注入值）；更新 NODE_TODO.md 反映真实状态 |
+| **B4** | 创建示例 SubGraph 资产 | P1 | 在 `Assets/PCGToolkit/Examples/` 下创建 2-3 个示例：(1) ParametricTable — Grid→Extrude→UVProject→SavePrefab；(2) TerrainScatter — Grid→Mountain→Scatter→CopyToPoints；(3) WallModule — Box→PolyBevel→UVProject→SavePrefab。每个附带 README |
+| **B5** | xatlas UV 集成（可选） | P2 | 如果 xatlas C# binding 可用，将 UVUnwrapNode/UVLayoutNode 切换到 xatlas；否则标记为"需要 Native Plugin"并在文档中说明 |
+| **B6** | 文档收尾 | P1 | HandBook.md 补充完整的节点参数参考表；AI_AGENT_GUIDE.md 补充端到端示例（从 `list_nodes` 到 `save_graph` 的完整 JSON 交互）；README.md 更新实施阶段进度 |
 
-当前 `RemeshNode`、`DecimateNode` 等使用简化自研算法，质量不足以用于生产。应通过 `GeometryBridge` 转换为 `DMesh3`，调用 geometry3Sharp 的成熟算法，再转回 `PCGGeometry`。
+### 验收标准
 
-| 任务 | 文件 | 说明 |
-|------|------|------|
-| **A1**: RemeshNode 使用 g3 Remesher | `Nodes/Topology/RemeshNode.cs` | `ToDMesh3` → `Remesher` → `FromDMesh3`，替换当前的简单边分割 |
-| **A2**: DecimateNode 使用 g3 Reducer | `Nodes/Topology/DecimateNode.cs` | `ToDMesh3` → `Reducer` → `FromDMesh3`，替换当前的简单边坍缩 |
-| **A3**: BooleanNode 验证/增强 | `Nodes/Geometry/BooleanNode.cs` | 确认是否已使用 g3 `MeshBoolean`，若未使用则替换 |
-| **A4**: SmoothNode 使用 g3 | `Nodes/Deform/SmoothNode.cs` | 可选使用 g3 的 `LaplacianMeshSmoother` |
-| **A5**: GeometryBridge 增强 | `Core/GeometryBridge.cs` | 补充 VertexAttribs 的双向传递、PrimGroup 的完整映射 |
-
-### Batch 2 — AI SubGraph 构建 API (P0)
-
-根据 `AI_AGENT_GUIDE.md` 的定位，AI 的主战场是**组装 SubGraph**。当前 Agent 只能调用单个 Skill/Pipeline，无法通过 API 创建和保存 SubGraph。
-
-| 任务 | 文件 | 说明 |
-|------|------|------|
-| **B1**: `create_graph` Action | `AgentServer.cs` + `SkillExecutor.cs` | 新增 Action：创建空 `PCGGraphData`，返回 graphId |
-| **B2**: `add_node` / `connect_nodes` / `set_param` Action | `SkillExecutor.cs` | 新增 Action：向指定 graph 添加节点、连线、设置参数 |
-| **B3**: `save_subgraph` Action | `SkillExecutor.cs` | 新增 Action：将构建好的 graph 保存为 `.asset` 文件 |
-| **B4**: `test_subgraph` Action | `SkillExecutor.cs` | 新增 Action：执行指定 SubGraph 并返回输出统计（点数/面数/bounds） |
-| **B5**: `AgentProtocol` 扩展 | `AgentProtocol.cs` | 新增 graph 操作相关的请求/响应字段 |
-
-### Batch 3 — 节点测试全覆盖 (P1)
-
-当前仅有 `CreateNodeTests`、`TopologyNodeTests`、`GraphExecutionTests`、`AgentIntegrationTests`。应为每个 Tier 补充测试。
-
-| 任务 | 文件 | 说明 |
-|------|------|------|
-| **C1**: Curve 节点测试 | 新建 `Tests/CurveNodeTests.cs` | Sweep、Resample、Carve、Fillet 的基本输入输出验证 |
-| **C2**: Deform 节点测试 | 新建 `Tests/DeformNodeTests.cs` | Mountain、Bend、Twist、Taper、Smooth 的变形正确性 |
-| **C3**: UV 节点测试 | 新建 `Tests/UVNodeTests.cs` | UVProject、UVTransform 的 UV 坐标范围验证 |
-| **C4**: Distribute 节点测试 | 新建 `Tests/DistributeNodeTests.cs` | Scatter、CopyToPoints 的点数/分布验证 |
-| **C5**: Utility 节点测试 | 新建 `Tests/UtilityNodeTests.cs` | Const 系列、ForEach、Switch、Split 的逻辑验证 |
-| **C6**: ExpressionParser 测试扩展 | `Tests/ExpressionParserTests.cs` | 补充 if/else、三元表达式、赋值语句的测试用例 |
-
-### Batch 4 — 通信层增强 (P1)
-
-| 任务 | 文件 | 说明 |
-|------|------|------|
-| **D1**: WebSocket 支持 | `AgentServer.cs` | 实现 `ProtocolType.WebSocket` 分支，支持双向实时通信 |
-| **D2**: 请求超时 + 并发控制 | `AgentServer.cs` | 为长时间执行的 Skill 添加超时机制和取消支持 |
-| **D3**: Agent 会话状态 | 新建 `Communication/AgentSession.cs` | 管理 Agent 的会话状态（当前正在构建的 graph、执行历史等） |
-
-### Batch 5 — 文档与示例 (P2)
-
-| 任务 | 文件 | 说明 |
-|------|------|------|
-| **E1**: HandBook 完善 | `HandBook.md` | 补充所有节点的使用说明和参数文档 |
-| **E2**: 示例 SubGraph | 新建 `Assets/PCGToolkit/Examples/` | 创建 2-3 个示例 SubGraph（如"参数化桌子"、"地形生成器"） |
-| **E3**: NODE_TODO.md 更新 | `NODE_TODO.md` | 更新实现进度（当前文件严重过时，显示 10/26 已实现，实际已全部实现） |
-
-### 优先级总结
-
-| 优先级 | Batch | 核心价值 | 前置依赖 |
-|--------|-------|----------|----------|
-| **P0** | Batch 1 | 节点质量从"能跑"提升到"可用于生产" | 无 |
-| **P0** | Batch 2 | 补齐 AI Agent 的核心能力——构建 SubGraph | 无 |
-| **P1** | Batch 3 | 防止回归，保障质量 | 无（可与 Batch 1 并行） |
-| **P1** | Batch 4 | 通信层健壮性 | Batch 2 |
-| **P2** | Batch 5 | 可用性和可维护性 | Batch 1+2 |
-
-### 整体项目完成度估算
-
-按 README 中的 Phase 1-5 路线图：
-
-| Phase | 内容 | 完成度 |
-|-------|------|--------|
-| Phase 1 | 基础设施 + 最小可用管线 | **100%** |
-| Phase 2 | 核心几何 + 分布实例化 + GraphView | **95%** |
-| Phase 3 | UV + 曲线 + AI 接口 | **85%** |
-| Phase 4 | 变形 + 高级拓扑 | **80%**（节点存在但算法质量待提升） |
-| Phase 5 | 程序化规则 + 完善 | **70%**（WFC/LSystem/Voronoi 已实现基础版本） |
-
-**综合完成度：约 85%**。主要差距在于第三方库深度集成和 AI SubGraph 构建闭环。
+| Batch | 验收方式 | 通过标准 |
+|-------|----------|----------|
+| **B1** | Unity Test Runner | 所有测试文件存在且 0 failures |
+| **B2** | 在编辑器中执行 LODGenerate 节点 | LOD0/1/2 面数递减，无退化三角形 |
+| **B3** | 连接 ConstFloat → Grid.rows | Grid 使用 Const 节点提供的值 |
+| **B4** | 在 PCGGraphEditorWindow 中打开示例 .asset | 图结构完整，可执行并预览 |
+| **B5** | UVUnwrap 输出 UV 无重叠 | UV 岛不重叠（如集成成功） |
+| **B6** | HandBook.md 包含所有 Action 的请求/响应示例 | 文档完整可用 |

@@ -711,10 +711,17 @@ namespace PCGToolkit.Graph
         /// </summary>
         private void SyncValueToNode(PCGNodeVisual nodeVisual, string paramName, object value)
         {
-            // 更新节点内部的默认值字典
+            // Undo support: record graph data state before modification
+            var editorWindow = GetWindow<PCGGraphEditorWindow>(false, null, false);
+            if (editorWindow != null)
+            {
+                var graphData = editorWindow.GetCurrentGraphDataForUndo();
+                if (graphData != null)
+                    Undo.RecordObject(graphData, $"Change {paramName}");
+            }
+
             nodeVisual.SetPortDefaultValues(new Dictionary<string, object> { { paramName, value } });
             
-            // 通知图变更（脏状态）
             _graphView?.NotifyGraphChanged();
         }
 

@@ -4,42 +4,38 @@ using g3;
 
 namespace PCGToolkit.Core
 {
-    /// <summary>
-    /// PCGGeometry 与 geometry3Sharp DMesh3 之间的双向转换桥接
-    /// </summary>
     public static class GeometryBridge
     {
-        /// <summary>
-        /// PCGGeometry → DMesh3
-        /// 仅处理三角形面；非三角形面先三角化再添加。
-        /// </summary>
         public static DMesh3 ToDMesh3(PCGGeometry geo)
         {
             if (geo == null || geo.Points.Count == 0)
                 return new DMesh3();
 
             bool hasNormals = geo.PointAttribs.HasAttribute("N");
-            bool hasUVs = geo.PointAttribs.HasAttribute("uv");
+            bool hasUVs = geo.PointAttribs.HasAttribute("uv") || geo.VertexAttribs.HasAttribute("uv");
+            bool hasColors = geo.PointAttribs.HasAttribute("Cd");
 
-            var mesh = new DMesh3(hasNormals, false, hasUVs, true);
+            var mesh = new DMesh3(hasNormals, hasColors, hasUVs, true);
 
             PCGAttribute normalAttr = hasNormals ? geo.PointAttribs.GetAttribute("N") : null;
-            PCGAttribute uvAttr = hasUVs ? geo.PointAttribs.GetAttribute("uv") : null;
+            PCGAttribute uvAttr = geo.PointAttribs.HasAttribute("uv")
+                ? geo.PointAttribs.GetAttribute("uv")
+                : (geo.VertexAttribs.HasAttribute("uv") ? geo.VertexAttribs.GetAttribute("uv") : null);
+            PCGAttribute colorAttr = hasColors ? geo.PointAttribs.GetAttribute("Cd") : null;
 
-            // 添加顶点
             for (int i = 0; i < geo.Points.Count; i++)
             {
                 var p = geo.Points[i];
                 var info = new NewVertexInfo(new Vector3d(p.x, p.y, p.z));
 
-                if (hasNormals && i < normalAttr.Values.Count)
+                if (normalAttr != null && i < normalAttr.Values.Count)
                 {
                     var n = (Vector3)normalAttr.Values[i];
                     info.bHaveN = true;
                     info.n = new Vector3f(n.x, n.y, n.z);
                 }
 
-                if (hasUVs && i < uvAttr.Values.Count)
+                if (uvAttr != null && i < uvAttr.Values.Count)
                 {
                     object uvVal = uvAttr.Values[i];
                     if (uvVal is Vector2 uv2)
@@ -54,16 +50,21 @@ namespace PCGToolkit.Core
                     }
                 }
 
+                if (colorAttr != null && i < colorAttr.Values.Count)
+                {
+                    var cd = (Vector3)colorAttr.Values[i];
+                    info.bHaveC = true;
+                    info.c = new Vector3f(cd.x, cd.y, cd.z);
+                }
+
                 mesh.AppendVertex(info);
             }
 
-            // 添加面（三角化非三角形面）
             for (int pi = 0; pi < geo.Primitives.Count; pi++)
             {
                 var prim = geo.Primitives[pi];
                 if (prim.Length < 3) continue;
 
-                // 确定面组 ID（从 PrimGroups 中查找）
                 int groupId = 0;
                 foreach (var kvp in geo.PrimGroups)
                 {
@@ -78,9 +79,13 @@ namespace PCGToolkit.Core
                 {
                     mesh.AppendTriangle(prim[0], prim[1], prim[2], groupId);
                 }
+                else if (prim.Length == 4)
+                {
+                    mesh.AppendTriangle(prim[0], prim[1], prim[2], groupId);
+                    mesh.AppendTriangle(prim[0], prim[2], prim[3], groupId);
+                }
                 else
                 {
-                    // 扇形三角化
                     for (int j = 1; j < prim.Length - 1; j++)
                     {
                         mesh.AppendTriangle(prim[0], prim[j], prim[j + 1], groupId);
@@ -91,56 +96,66 @@ namespace PCGToolkit.Core
             return mesh;
         }
 
-        /// <summary>
-        /// DMesh3 → PCGGeometry
-        /// 紧凑化后转换，每个三角形作为独立面。
-        /// </summary>
         public static PCGGeometry FromDMesh3(DMesh3 mesh)
         {
             var geo = new PCGGeometry();
             if (mesh == null || mesh.VertexCount == 0)
                 return geo;
 
-            // 紧凑化索引映射
             var compactMesh = new DMesh3(mesh, true);
 
-            // 转换顶点
-            for (int vid = 0; vid < compactMesh.VertexCount; vid++)
+            var vertexMap = new Dictionary<int, int>();
+            int newIdx = 0;
+
+            foreach (int vid in compactMesh.VertexIndices())
             {
                 var v = compactMesh.GetVertex(vid);
                 geo.Points.Add(new Vector3((float)v.x, (float)v.y, (float)v.z));
+                vertexMap[vid] = newIdx;
+                newIdx++;
             }
 
-            // 转换法线
             if (compactMesh.HasVertexNormals)
             {
                 var normalAttr = geo.PointAttribs.CreateAttribute("N", AttribType.Vector3, Vector3.up);
-                for (int vid = 0; vid < compactMesh.VertexCount; vid++)
+                foreach (int vid in compactMesh.VertexIndices())
                 {
                     var n = compactMesh.GetVertexNormal(vid);
                     normalAttr.Values.Add(new Vector3(n.x, n.y, n.z));
                 }
             }
 
-            // 转换 UV
             if (compactMesh.HasVertexUVs)
             {
                 var uvAttr = geo.PointAttribs.CreateAttribute("uv", AttribType.Vector2, Vector2.zero);
-                for (int vid = 0; vid < compactMesh.VertexCount; vid++)
+                foreach (int vid in compactMesh.VertexIndices())
                 {
                     var uv = compactMesh.GetVertexUV(vid);
                     uvAttr.Values.Add(new Vector2(uv.x, uv.y));
                 }
             }
 
-            // 转换三角形面
+            if (compactMesh.HasVertexColors)
+            {
+                var colorAttr = geo.PointAttribs.CreateAttribute("Cd", AttribType.Vector3, Vector3.one);
+                foreach (int vid in compactMesh.VertexIndices())
+                {
+                    var c = compactMesh.GetVertexColor(vid);
+                    colorAttr.Values.Add(new Vector3(c.x, c.y, c.z));
+                }
+            }
+
             var groupMap = new Dictionary<int, string>();
             foreach (int tid in compactMesh.TriangleIndices())
             {
                 var tri = compactMesh.GetTriangle(tid);
-                geo.Primitives.Add(new int[] { tri.a, tri.b, tri.c });
+                geo.Primitives.Add(new int[]
+                {
+                    vertexMap.ContainsKey(tri.a) ? vertexMap[tri.a] : tri.a,
+                    vertexMap.ContainsKey(tri.b) ? vertexMap[tri.b] : tri.b,
+                    vertexMap.ContainsKey(tri.c) ? vertexMap[tri.c] : tri.c
+                });
 
-                // 处理面组
                 if (compactMesh.HasTriangleGroups)
                 {
                     int gid = compactMesh.GetTriangleGroup(tid);

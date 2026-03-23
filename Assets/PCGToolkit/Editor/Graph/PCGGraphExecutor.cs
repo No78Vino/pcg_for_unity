@@ -6,10 +6,6 @@ using PCGToolkit.Core;
 
 namespace PCGToolkit.Graph
 {
-    /// <summary>
-    /// 节点图 DAG 执行引擎
-    /// 支持拓扑排序、脏标记增量执行、缓存
-    /// </summary>
     public class PCGGraphExecutor
     {
         private PCGGraphData graphData;
@@ -18,19 +14,20 @@ namespace PCGToolkit.Graph
         private Dictionary<string, Dictionary<string, PCGGeometry>> _nodeOutputs =
             new Dictionary<string, Dictionary<string, PCGGeometry>>();
 
+        public PCGGraphData GraphData => graphData;
+        public PCGContext Context => context;
+
         public PCGGraphExecutor(PCGGraphData data)
         {
             graphData = data;
             context = new PCGContext();
         }
 
-        /// <summary>
-        /// 执行整个节点图
-        /// </summary>
-        public void Execute()
+        public void Execute(bool continueOnError = false)
         {
             _nodeOutputs.Clear();
             context.ClearCache();
+            context.ContinueOnError = continueOnError;
 
             var sortedNodes = PCGGraphHelper.TopologicalSort(graphData);
             if (sortedNodes == null)
@@ -39,23 +36,48 @@ namespace PCGToolkit.Graph
                 return;
             }
 
+            int successCount = 0;
+            int errorCount = 0;
+
             foreach (var nodeData in sortedNodes)
             {
                 ExecuteNode(nodeData);
-                if (context.HasError)
+
+                var nodeErrors = context.GetNodeErrors(nodeData.NodeId);
+                bool hasNodeError = nodeErrors.Any(e => e.Level >= PCGErrorLevel.Error);
+
+                if (hasNodeError)
                 {
-                    Debug.LogError(
-                        $"PCGGraphExecutor: Execution stopped due to error at node {nodeData.NodeType} ({nodeData.NodeId})");
-                    return;
+                    errorCount++;
+
+                    if (context.HasFatal || !continueOnError)
+                    {
+                        Debug.LogError(
+                            $"PCGGraphExecutor: Execution stopped at {nodeData.NodeType} ({nodeData.NodeId}). " +
+                            $"Completed: {successCount}, Errors: {errorCount}");
+                        return;
+                    }
+
+                    if (!_nodeOutputs.ContainsKey(nodeData.NodeId))
+                    {
+                        _nodeOutputs[nodeData.NodeId] = new Dictionary<string, PCGGeometry>
+                        {
+                            { "geometry", new PCGGeometry() }
+                        };
+                    }
+
+                    Debug.LogWarning(
+                        $"PCGGraphExecutor: Error at {nodeData.NodeType}, continuing with empty geometry.");
+                }
+                else
+                {
+                    successCount++;
                 }
             }
 
-            Debug.Log($"PCGGraphExecutor: Execution completed. {sortedNodes.Count} nodes executed.");
+            Debug.Log($"PCGGraphExecutor: Execution completed. Success: {successCount}, Errors: {errorCount}, Total: {sortedNodes.Count}");
         }
-        
-        /// <summary>
-        /// 使用外部上下文执行节点图（用于 SubGraph）
-        /// </summary>
+
         public void Execute(PCGContext externalContext)
         {
             context = externalContext;
@@ -70,7 +92,11 @@ namespace PCGToolkit.Graph
             foreach (var nodeData in sortedNodes)
             {
                 ExecuteNode(nodeData);
-                if (context.HasError)
+
+                var nodeErrors = context.GetNodeErrors(nodeData.NodeId);
+                bool hasNodeError = nodeErrors.Any(e => e.Level >= PCGErrorLevel.Error);
+
+                if (hasNodeError && (context.HasFatal || !context.ContinueOnError))
                 {
                     Debug.LogError($"PCGGraphExecutor: Execution stopped due to error at node {nodeData.NodeType} ({nodeData.NodeId})");
                     return;
@@ -80,14 +106,10 @@ namespace PCGToolkit.Graph
             Debug.Log($"PCGGraphExecutor: Execution completed. {sortedNodes.Count} nodes executed.");
         }
 
-        /// <summary>
-        /// 增量执行（仅执行脏节点及其下游）
-        /// </summary>
         public void ExecuteIncremental()
         {
             if (dirtyNodes.Count == 0) return;
 
-            // 收集所有需要重新执行的节点（脏节点 + 下游节点）
             var toExecute = new HashSet<string>(dirtyNodes);
             var queue = new Queue<string>(dirtyNodes);
             while (queue.Count > 0)
@@ -117,13 +139,9 @@ namespace PCGToolkit.Graph
             dirtyNodes.Clear();
         }
 
-        /// <summary>
-        /// 标记节点为脏（参数变更时调用）
-        /// </summary>
         public void MarkDirty(string nodeId)
         {
             dirtyNodes.Add(nodeId);
-            // 递归标记所有下游节点
             foreach (var edge in graphData.Edges)
             {
                 if (edge.OutputNodeId == nodeId && !dirtyNodes.Contains(edge.InputNodeId))
@@ -133,9 +151,6 @@ namespace PCGToolkit.Graph
             }
         }
 
-        /// <summary>
-        /// 执行单个节点
-        /// </summary>
         private void ExecuteNode(PCGNodeData nodeData)
         {
             var nodeTemplate = PCGNodeRegistry.GetNode(nodeData.NodeType);
@@ -145,10 +160,8 @@ namespace PCGToolkit.Graph
                 return;
             }
 
-            // 创建新实例执行（避免污染注册表中的模板实例）
             var nodeInstance = (IPCGNode)Activator.CreateInstance(nodeTemplate.GetType());
 
-            // 收集输入几何体（从上游节点的输出缓存中获取）
             var inputGeometries = new Dictionary<string, PCGGeometry>();
             foreach (var edge in graphData.Edges)
             {
@@ -162,14 +175,12 @@ namespace PCGToolkit.Graph
                 }
             }
 
-            // 收集参数（反序列化为正确类型）
             var parameters = new Dictionary<string, object>();
             foreach (var param in nodeData.Parameters)
             {
                 parameters[param.Key] = PCGParamHelper.DeserializeParamValue(param);
             }
 
-            // A7: 将 SceneObjectRef 参数解析并注入 context.SceneReferences
             foreach (var kvp in parameters)
             {
                 if (kvp.Value is PCGSceneObjectRef sceneRef)
@@ -180,7 +191,6 @@ namespace PCGToolkit.Graph
                 }
             }
 
-            // 从上游 Const 节点的 GlobalVariables 中获取值
             foreach (var edge in graphData.Edges)
             {
                 if (edge.InputNodeId == nodeData.NodeId)
@@ -193,13 +203,11 @@ namespace PCGToolkit.Graph
                 }
             }
 
-            // 执行节点
             context.CurrentNodeId = nodeData.NodeId;
             try
             {
                 var result = nodeInstance.Execute(context, inputGeometries, parameters);
 
-                // 缓存输出
                 if (result != null)
                 {
                     _nodeOutputs[nodeData.NodeId] = result;
@@ -212,29 +220,28 @@ namespace PCGToolkit.Graph
             catch (Exception e)
             {
                 context.LogError($"Exception executing node {nodeData.NodeType}: {e.Message}");
+
+                if (context.ContinueOnError)
+                {
+                    _nodeOutputs[nodeData.NodeId] = new Dictionary<string, PCGGeometry>
+                    {
+                        { "geometry", new PCGGeometry() }
+                    };
+                }
             }
         }
 
-        /// <summary>
-        /// 获取节点的执行结果（单端口）
-        /// </summary>
         public PCGGeometry GetNodeOutput(string nodeId, string portName = "geometry")
         {
             return context.GetCachedOutput($"{nodeId}.{portName}");
         }
 
-        /// <summary>
-        /// 获取节点的完整输出字典（所有端口）
-        /// </summary>
         public Dictionary<string, PCGGeometry> GetNodeAllOutputs(string nodeId)
         {
             _nodeOutputs.TryGetValue(nodeId, out var outputs);
             return outputs;
         }
 
-        /// <summary>
-        /// 清除所有缓存
-        /// </summary>
         public void ClearCache()
         {
             context.ClearCache();

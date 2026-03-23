@@ -4,9 +4,6 @@ using UnityEngine;
 
 namespace PCGToolkit.Graph
 {
-    /// <summary>
-    /// 可序列化的节点参数键值对
-    /// </summary>
     [Serializable]
     public class PCGSerializedParameter
     {
@@ -15,9 +12,6 @@ namespace PCGToolkit.Graph
         public string ValueType;
     }
 
-    /// <summary>
-    /// 节点图中单个节点的序列化数据
-    /// </summary>
     [Serializable]
     public class PCGNodeData
     {
@@ -26,9 +20,6 @@ namespace PCGToolkit.Graph
         public Vector2 Position;
         public List<PCGSerializedParameter> Parameters = new List<PCGSerializedParameter>();
 
-        /// <summary>
-        /// 设置参数值（运行时使用）
-        /// </summary>
         public void SetParameter(string key, object value)
         {
             var param = Parameters.Find(p => p.Key == key);
@@ -41,9 +32,6 @@ namespace PCGToolkit.Graph
             param.ValueJson = value != null ? JsonUtility.ToJson(new JsonWrapper { Value = value.ToString() }) : "";
         }
 
-        /// <summary>
-        /// 获取参数值（运行时使用）
-        /// </summary>
         public string GetParameter(string key)
         {
             var param = Parameters.Find(p => p.Key == key);
@@ -52,18 +40,12 @@ namespace PCGToolkit.Graph
         }
     }
 
-    /// <summary>
-    /// JSON 序列化辅助包装
-    /// </summary>
     [Serializable]
     internal class JsonWrapper
     {
         public string Value;
     }
 
-    /// <summary>
-    /// 节点图中单条连线的序列化数据
-    /// </summary>
     [Serializable]
     public class PCGEdgeData
     {
@@ -73,10 +55,6 @@ namespace PCGToolkit.Graph
         public string InputPort;
     }
     
-    // 迭代四：节点分组数据
-    /// <summary>
-    /// 节点分组数据
-    /// </summary>
     [Serializable]
     public class PCGGroupData
     {
@@ -87,7 +65,6 @@ namespace PCGToolkit.Graph
         public Vector2 Size;
     }
     
-    // 迭代六：暴露参数标记（E5）
     [Serializable]
     public class PCGExposedParamInfo
     {
@@ -95,7 +72,6 @@ namespace PCGToolkit.Graph
         public string ParamName;
     }
 
-    // 迭代四：注释数据
     [Serializable]
     public class PCGStickyNoteData
     {
@@ -106,29 +82,62 @@ namespace PCGToolkit.Graph
         public Vector2 Size;
     }
 
-    /// <summary>
-    /// 节点图的完整序列化数据（ScriptableObject）
-    /// </summary>
     [CreateAssetMenu(fileName = "NewPCGGraph", menuName = "PCG Toolkit/PCG Graph")]
     public class PCGGraphData : ScriptableObject
     {
+        public const int CurrentVersion = 7;
+
+        public int Version = CurrentVersion;
         public string GraphName = "New Graph";
         public List<PCGNodeData> Nodes = new List<PCGNodeData>();
         public List<PCGEdgeData> Edges = new List<PCGEdgeData>();
-        
-        // 迭代四：分组和注释
         public List<PCGGroupData> Groups = new List<PCGGroupData>();
         public List<PCGStickyNoteData> StickyNotes = new List<PCGStickyNoteData>();
-
-        // 迭代六：暴露参数标记（E5）
         public List<PCGExposedParamInfo> ExposedParameters = new List<PCGExposedParamInfo>();
 
-        /// <summary>
-        /// 添加节点数据
-        /// </summary>
+        private void OnEnable()
+        {
+            MigrateIfNeeded();
+        }
+
+        private void MigrateIfNeeded()
+        {
+            if (Version >= CurrentVersion) return;
+
+            bool migrated = false;
+
+            if (Version < 4)
+            {
+                if (Groups == null) Groups = new List<PCGGroupData>();
+                if (StickyNotes == null) StickyNotes = new List<PCGStickyNoteData>();
+                Debug.Log($"[PCGGraphData] Migrated '{GraphName}' from v{Version} -> v4 (Groups/StickyNotes)");
+                migrated = true;
+            }
+
+            if (Version < 6)
+            {
+                if (ExposedParameters == null) ExposedParameters = new List<PCGExposedParamInfo>();
+                Debug.Log($"[PCGGraphData] Migrated '{GraphName}' from v{Version} -> v6 (ExposedParameters)");
+                migrated = true;
+            }
+
+            if (Version < 7)
+            {
+                migrated = true;
+            }
+
+            if (migrated)
+            {
+                Version = CurrentVersion;
+#if UNITY_EDITOR
+                UnityEditor.EditorUtility.SetDirty(this);
+                Debug.Log($"[PCGGraphData] Migration complete for '{GraphName}', now at v{Version}");
+#endif
+            }
+        }
+
         public PCGNodeData AddNode(string nodeType, Vector2 position)
         {
-            // TODO: 实现添加节点
             var data = new PCGNodeData
             {
                 NodeId = Guid.NewGuid().ToString(),
@@ -139,19 +148,12 @@ namespace PCGToolkit.Graph
             return data;
         }
 
-        /// <summary>
-        /// 移除节点数据及其关联的连线
-        /// </summary>
         public void RemoveNode(string nodeId)
         {
-            // TODO: 移除节点及关联连线
             Nodes.RemoveAll(n => n.NodeId == nodeId);
             Edges.RemoveAll(e => e.OutputNodeId == nodeId || e.InputNodeId == nodeId);
         }
 
-        /// <summary>
-        /// 添加连线
-        /// </summary>
         public PCGEdgeData AddEdge(string outputNodeId, string outputPortName,
             string inputNodeId, string inputPortName)
         {
@@ -166,9 +168,6 @@ namespace PCGToolkit.Graph
             return edge;
         }
 
-        /// <summary>
-        /// 清空图数据
-        /// </summary>
         public void Clear()
         {
             Nodes.Clear();
@@ -178,12 +177,10 @@ namespace PCGToolkit.Graph
             ExposedParameters.Clear();
         }
 
-        /// <summary>
-        /// 创建深拷贝（运行时覆盖参数时使用，避免污染资产）
-        /// </summary>
         public PCGGraphData Clone()
         {
             var copy = CreateInstance<PCGGraphData>();
+            copy.Version = Version;
             copy.GraphName = GraphName;
             copy.Nodes = new List<PCGNodeData>();
             foreach (var n in Nodes)

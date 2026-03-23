@@ -1,8 +1,19 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace PCGToolkit.Core
 {
+    public enum PCGErrorLevel { Warning, Error, Fatal }
+
+    [System.Serializable]
+    public class PCGError
+    {
+        public string NodeId;
+        public string Message;
+        public PCGErrorLevel Level;
+    }
+
     public class PCGContext
     {
         public bool Debug { get; set; }
@@ -10,21 +21,27 @@ namespace PCGToolkit.Core
         public Dictionary<string, object> GlobalVariables = new Dictionary<string, object>();
         public string CurrentNodeId;
         public List<string> Logs = new List<string>();
-        public bool HasError { get; private set; }
-        public string ErrorMessage { get; private set; }
 
-        // 迭代六：场景对象引用字典（执行期间持有强引用）
+        public List<PCGError> Errors = new List<PCGError>();
+        public bool ContinueOnError { get; set; } = false;
+
+        public bool HasError => Errors.Any(e => e.Level >= PCGErrorLevel.Error);
+        public bool HasFatal => Errors.Any(e => e.Level == PCGErrorLevel.Fatal);
+        public string ErrorMessage => Errors.LastOrDefault(e => e.Level >= PCGErrorLevel.Error)?.Message;
+
         public Dictionary<string, UnityEngine.Object> SceneReferences = new Dictionary<string, UnityEngine.Object>();
 
         public PCGContext() { }
         public PCGContext(bool debug) { Debug = debug; }
 
-        /// <summary>从 SceneReferences 获取 GameObject</summary>
         public GameObject GetSceneGameObject(string key)
         {
             SceneReferences.TryGetValue(key, out var obj);
             return obj as GameObject;
         }
+
+        public IEnumerable<PCGError> GetNodeErrors(string nodeId)
+            => Errors.Where(e => e.NodeId == nodeId);
 
         public void Log(string message)
         {
@@ -35,6 +52,12 @@ namespace PCGToolkit.Core
 
         public void LogWarning(string message)
         {
+            Errors.Add(new PCGError
+            {
+                NodeId = CurrentNodeId,
+                Message = message,
+                Level = PCGErrorLevel.Warning
+            });
             var logEntry = $"[Node:{CurrentNodeId}] WARNING: {message}";
             Logs.Add(logEntry);
             UnityEngine.Debug.LogWarning(logEntry);
@@ -42,10 +65,14 @@ namespace PCGToolkit.Core
 
         public void LogError(string message)
         {
+            Errors.Add(new PCGError
+            {
+                NodeId = CurrentNodeId,
+                Message = message,
+                Level = PCGErrorLevel.Error
+            });
             var logEntry = $"[Node:{CurrentNodeId}] ERROR: {message}";
             Logs.Add(logEntry);
-            HasError = true;
-            ErrorMessage = message;
             UnityEngine.Debug.LogError(logEntry);
         }
 
@@ -64,8 +91,7 @@ namespace PCGToolkit.Core
         {
             NodeOutputCache.Clear();
             Logs.Clear();
-            HasError = false;
-            ErrorMessage = null;
+            Errors.Clear();
         }
 
         public void SetExternalInput(string key, PCGGeometry geometry)

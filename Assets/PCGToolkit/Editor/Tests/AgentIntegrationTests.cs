@@ -15,7 +15,7 @@ namespace PCGToolkit.Tests
         private bool IsFailure(string json) =>
             json.Contains("\"Success\":false") || json.Contains("\"Success\": false");
 
-        // ---- Existing Tests ----
+        // ---- Skill Tests ----
 
         [Test]
         public void HandleRequest_ListSkills_ReturnsNonEmpty()
@@ -94,7 +94,7 @@ namespace PCGToolkit.Tests
             Assert.IsTrue(schema.Contains("\"parameters\""), $"Schema should contain parameters field: {schema}");
         }
 
-        // ---- New: get_all_schemas ----
+        // ---- get_all_schemas ----
 
         [Test]
         public void HandleRequest_GetAllSchemas_ReturnsMultipleSkills()
@@ -108,7 +108,7 @@ namespace PCGToolkit.Tests
             Assert.IsTrue(responseJson.Contains("skills"));
         }
 
-        // ---- New: list_nodes ----
+        // ---- list_nodes ----
 
         [Test]
         public void HandleRequest_ListNodes_ReturnsCategorizedNodes()
@@ -123,7 +123,7 @@ namespace PCGToolkit.Tests
             Assert.IsTrue(responseJson.Contains("Create"));
         }
 
-        // ---- New: create_graph ----
+        // ---- create_graph ----
 
         [Test]
         public void HandleRequest_CreateGraph_ReturnsGraphId()
@@ -139,21 +139,19 @@ namespace PCGToolkit.Tests
                 $"Response should contain graph_id, got: {responseJson}");
         }
 
-        // ---- New: add_node ----
+        // ---- add_node ----
 
         [Test]
         public void HandleRequest_AddNode_ReturnsNodeId()
         {
             var server = CreateServer();
 
-            // First create a graph
             string createResp = server.HandleRequest(
                 "{ \"action\": \"create_graph\", \"graph_name\": \"TestGraph\" }");
             Assert.IsTrue(IsSuccess(createResp));
             string graphId = ExtractField(createResp, "graph_id");
             Assert.IsNotEmpty(graphId, "Should have graph_id");
 
-            // Add a node
             string addResp = server.HandleRequest(
                 $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Grid\", \"position_x\": 100, \"position_y\": 200 }}");
 
@@ -162,8 +160,6 @@ namespace PCGToolkit.Tests
             Assert.IsTrue(addResp.Contains("node_id"),
                 $"Response should contain node_id, got: {addResp}");
         }
-
-        // ---- New: add_node with unknown type ----
 
         [Test]
         public void HandleRequest_AddNode_UnknownType_ReturnsError()
@@ -180,7 +176,7 @@ namespace PCGToolkit.Tests
             Assert.IsTrue(IsFailure(addResp), "Adding unknown node type should fail");
         }
 
-        // ---- New: connect_nodes ----
+        // ---- connect_nodes ----
 
         [Test]
         public void HandleRequest_ConnectNodes_ReturnsSuccess()
@@ -209,7 +205,37 @@ namespace PCGToolkit.Tests
             Assert.IsTrue(connectResp.Contains("edge_created"));
         }
 
-        // ---- New: set_param ----
+        // ---- connect_nodes port validation ----
+
+        [Test]
+        public void HandleRequest_ConnectNodes_InvalidPort_ReturnsError()
+        {
+            var server = CreateServer();
+
+            string createResp = server.HandleRequest(
+                "{ \"action\": \"create_graph\", \"graph_name\": \"TestGraph\" }");
+            string graphId = ExtractField(createResp, "graph_id");
+
+            string addNode1 = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Grid\" }}");
+            string nodeId1 = ExtractField(addNode1, "node_id");
+
+            string addNode2 = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Subdivide\" }}");
+            string nodeId2 = ExtractField(addNode2, "node_id");
+
+            string connectResp = server.HandleRequest(
+                $"{{ \"action\": \"connect_nodes\", \"graph_id\": \"{graphId}\", " +
+                $"\"output_node_id\": \"{nodeId1}\", \"output_port\": \"nonexistent_port\", " +
+                $"\"input_node_id\": \"{nodeId2}\", \"input_port\": \"input\" }}");
+
+            Assert.IsTrue(IsFailure(connectResp),
+                $"Connecting invalid port should fail, got: {connectResp}");
+            Assert.IsTrue(connectResp.Contains("nonexistent_port"),
+                $"Error should mention port name, got: {connectResp}");
+        }
+
+        // ---- set_param ----
 
         [Test]
         public void HandleRequest_SetParam_ReturnsParamCount()
@@ -234,7 +260,7 @@ namespace PCGToolkit.Tests
                 $"Response should contain params_set, got: {setResp}");
         }
 
-        // ---- New: execute_graph ----
+        // ---- execute_graph ----
 
         [Test]
         public void HandleRequest_ExecuteGraph_ReturnsOutputs()
@@ -257,7 +283,7 @@ namespace PCGToolkit.Tests
                 $"Response should contain nodes_executed, got: {execResp}");
         }
 
-        // ---- New: get_graph_info ----
+        // ---- get_graph_info ----
 
         [Test]
         public void HandleRequest_GetGraphInfo_ReturnsStructure()
@@ -281,8 +307,6 @@ namespace PCGToolkit.Tests
             Assert.IsTrue(infoResp.Contains("edges"));
         }
 
-        // ---- New: get_graph_info for non-existent graph ----
-
         [Test]
         public void HandleRequest_GetGraphInfo_NonExistent_ReturnsError()
         {
@@ -293,51 +317,308 @@ namespace PCGToolkit.Tests
             Assert.IsTrue(IsFailure(infoResp), "Non-existent graph should return error");
         }
 
-        // ---- New: End-to-End flow ----
+        // ---- delete_node ----
+
+        [Test]
+        public void HandleRequest_DeleteNode_Success()
+        {
+            var server = CreateServer();
+
+            string createResp = server.HandleRequest(
+                "{ \"action\": \"create_graph\", \"graph_name\": \"DeleteTest\" }");
+            string graphId = ExtractField(createResp, "graph_id");
+
+            string addResp = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Grid\" }}");
+            string nodeId = ExtractField(addResp, "node_id");
+
+            string deleteResp = server.HandleRequest(
+                $"{{ \"action\": \"delete_node\", \"graph_id\": \"{graphId}\", \"node_id\": \"{nodeId}\" }}");
+
+            Assert.IsTrue(IsSuccess(deleteResp),
+                $"delete_node should succeed, got: {deleteResp}");
+            Assert.IsTrue(deleteResp.Contains("\"deleted\": true") || deleteResp.Contains("\"deleted\":true"),
+                $"Response should confirm deletion, got: {deleteResp}");
+
+            string infoResp = server.HandleRequest(
+                $"{{ \"action\": \"get_graph_info\", \"graph_id\": \"{graphId}\" }}");
+            Assert.IsFalse(infoResp.Contains(nodeId),
+                "Deleted node should not appear in graph info");
+        }
+
+        [Test]
+        public void HandleRequest_DeleteNode_NotFound_ReturnsError()
+        {
+            var server = CreateServer();
+
+            string createResp = server.HandleRequest(
+                "{ \"action\": \"create_graph\", \"graph_name\": \"DeleteTest\" }");
+            string graphId = ExtractField(createResp, "graph_id");
+
+            string deleteResp = server.HandleRequest(
+                $"{{ \"action\": \"delete_node\", \"graph_id\": \"{graphId}\", \"node_id\": \"nonexistent\" }}");
+
+            Assert.IsTrue(IsFailure(deleteResp),
+                "Deleting non-existent node should fail");
+        }
+
+        [Test]
+        public void HandleRequest_DeleteNode_CleansEdges()
+        {
+            var server = CreateServer();
+
+            string createResp = server.HandleRequest(
+                "{ \"action\": \"create_graph\", \"graph_name\": \"EdgeCleanTest\" }");
+            string graphId = ExtractField(createResp, "graph_id");
+
+            string addGrid = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Grid\" }}");
+            string gridId = ExtractField(addGrid, "node_id");
+
+            string addSubdiv = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Subdivide\" }}");
+            string subdivId = ExtractField(addSubdiv, "node_id");
+
+            server.HandleRequest(
+                $"{{ \"action\": \"connect_nodes\", \"graph_id\": \"{graphId}\", " +
+                $"\"output_node_id\": \"{gridId}\", \"output_port\": \"geometry\", " +
+                $"\"input_node_id\": \"{subdivId}\", \"input_port\": \"input\" }}");
+
+            string deleteResp = server.HandleRequest(
+                $"{{ \"action\": \"delete_node\", \"graph_id\": \"{graphId}\", \"node_id\": \"{gridId}\" }}");
+
+            Assert.IsTrue(IsSuccess(deleteResp));
+            Assert.IsTrue(deleteResp.Contains("edges_removed"),
+                $"Response should show edges_removed, got: {deleteResp}");
+
+            string infoResp = server.HandleRequest(
+                $"{{ \"action\": \"get_graph_info\", \"graph_id\": \"{graphId}\" }}");
+            Assert.IsFalse(infoResp.Contains(gridId),
+                "Deleted node should not appear in edges");
+        }
+
+        // ---- disconnect_nodes ----
+
+        [Test]
+        public void HandleRequest_DisconnectNodes_Success()
+        {
+            var server = CreateServer();
+
+            string createResp = server.HandleRequest(
+                "{ \"action\": \"create_graph\", \"graph_name\": \"DisconnectTest\" }");
+            string graphId = ExtractField(createResp, "graph_id");
+
+            string addGrid = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Grid\" }}");
+            string gridId = ExtractField(addGrid, "node_id");
+
+            string addSubdiv = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Subdivide\" }}");
+            string subdivId = ExtractField(addSubdiv, "node_id");
+
+            server.HandleRequest(
+                $"{{ \"action\": \"connect_nodes\", \"graph_id\": \"{graphId}\", " +
+                $"\"output_node_id\": \"{gridId}\", \"output_port\": \"geometry\", " +
+                $"\"input_node_id\": \"{subdivId}\", \"input_port\": \"input\" }}");
+
+            string disconnectResp = server.HandleRequest(
+                $"{{ \"action\": \"disconnect_nodes\", \"graph_id\": \"{graphId}\", " +
+                $"\"output_node_id\": \"{gridId}\", \"output_port\": \"geometry\", " +
+                $"\"input_node_id\": \"{subdivId}\", \"input_port\": \"input\" }}");
+
+            Assert.IsTrue(IsSuccess(disconnectResp),
+                $"disconnect_nodes should succeed, got: {disconnectResp}");
+
+            string infoResp = server.HandleRequest(
+                $"{{ \"action\": \"get_graph_info\", \"graph_id\": \"{graphId}\" }}");
+            Assert.IsTrue(infoResp.Contains("\"edges\": []") || infoResp.Contains("\"edges\":[]"),
+                $"Edges should be empty after disconnect, got: {infoResp}");
+        }
+
+        [Test]
+        public void HandleRequest_DisconnectNodes_NotFound_ReturnsError()
+        {
+            var server = CreateServer();
+
+            string createResp = server.HandleRequest(
+                "{ \"action\": \"create_graph\", \"graph_name\": \"DisconnectTest\" }");
+            string graphId = ExtractField(createResp, "graph_id");
+
+            string disconnectResp = server.HandleRequest(
+                $"{{ \"action\": \"disconnect_nodes\", \"graph_id\": \"{graphId}\", " +
+                $"\"output_node_id\": \"fake1\", \"output_port\": \"geometry\", " +
+                $"\"input_node_id\": \"fake2\", \"input_port\": \"input\" }}");
+
+            Assert.IsTrue(IsFailure(disconnectResp),
+                "Disconnecting non-existent edge should fail");
+        }
+
+        // ---- delete_graph ----
+
+        [Test]
+        public void HandleRequest_DeleteGraph_Success()
+        {
+            var server = CreateServer();
+
+            string createResp = server.HandleRequest(
+                "{ \"action\": \"create_graph\", \"graph_name\": \"ToDelete\" }");
+            string graphId = ExtractField(createResp, "graph_id");
+
+            string deleteResp = server.HandleRequest(
+                $"{{ \"action\": \"delete_graph\", \"graph_id\": \"{graphId}\" }}");
+
+            Assert.IsTrue(IsSuccess(deleteResp),
+                $"delete_graph should succeed, got: {deleteResp}");
+
+            string infoResp = server.HandleRequest(
+                $"{{ \"action\": \"get_graph_info\", \"graph_id\": \"{graphId}\" }}");
+            Assert.IsTrue(IsFailure(infoResp),
+                "Accessing deleted graph should fail");
+        }
+
+        [Test]
+        public void HandleRequest_DeleteGraph_NotFound_ReturnsError()
+        {
+            var server = CreateServer();
+
+            string deleteResp = server.HandleRequest(
+                "{ \"action\": \"delete_graph\", \"graph_id\": \"nonexistent\" }");
+
+            Assert.IsTrue(IsFailure(deleteResp),
+                "Deleting non-existent graph should fail");
+        }
+
+        // ---- list_graphs ----
+
+        [Test]
+        public void HandleRequest_ListGraphs_ReturnsCorrectCount()
+        {
+            var server = CreateServer();
+
+            server.HandleRequest("{ \"action\": \"create_graph\", \"graph_name\": \"Graph1\" }");
+            string createResp2 = server.HandleRequest(
+                "{ \"action\": \"create_graph\", \"graph_name\": \"Graph2\" }");
+            string graphId2 = ExtractField(createResp2, "graph_id");
+
+            string listResp = server.HandleRequest("{ \"action\": \"list_graphs\" }");
+
+            Assert.IsTrue(IsSuccess(listResp),
+                $"list_graphs should succeed, got: {listResp}");
+            Assert.IsTrue(listResp.Contains("Graph1"));
+            Assert.IsTrue(listResp.Contains("Graph2"));
+
+            server.HandleRequest(
+                $"{{ \"action\": \"delete_graph\", \"graph_id\": \"{graphId2}\" }}");
+
+            string listResp2 = server.HandleRequest("{ \"action\": \"list_graphs\" }");
+            Assert.IsTrue(IsSuccess(listResp2));
+            Assert.IsTrue(listResp2.Contains("Graph1"));
+            Assert.IsFalse(listResp2.Contains("Graph2"),
+                $"Deleted graph should not appear in list, got: {listResp2}");
+        }
+
+        // ---- End-to-End flows ----
 
         [Test]
         public void EndToEnd_CreateBuildExecuteGraph()
         {
             var server = CreateServer();
 
-            // 1. Create graph
             string createResp = server.HandleRequest(
                 "{ \"action\": \"create_graph\", \"graph_name\": \"E2E_Test\" }");
             Assert.IsTrue(IsSuccess(createResp));
             string graphId = ExtractField(createResp, "graph_id");
 
-            // 2. Add Grid node
             string addGrid = server.HandleRequest(
                 $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Grid\" }}");
             Assert.IsTrue(IsSuccess(addGrid));
             string gridNodeId = ExtractField(addGrid, "node_id");
 
-            // 3. Add Subdivide node
             string addSubdiv = server.HandleRequest(
                 $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Subdivide\" }}");
             Assert.IsTrue(IsSuccess(addSubdiv));
             string subdivNodeId = ExtractField(addSubdiv, "node_id");
 
-            // 4. Connect Grid -> Subdivide
             string connectResp = server.HandleRequest(
                 $"{{ \"action\": \"connect_nodes\", \"graph_id\": \"{graphId}\", " +
                 $"\"output_node_id\": \"{gridNodeId}\", \"output_port\": \"geometry\", " +
                 $"\"input_node_id\": \"{subdivNodeId}\", \"input_port\": \"input\" }}");
             Assert.IsTrue(IsSuccess(connectResp));
 
-            // 5. Execute graph
             string execResp = server.HandleRequest(
                 $"{{ \"action\": \"execute_graph\", \"graph_id\": \"{graphId}\" }}");
             Assert.IsTrue(IsSuccess(execResp),
                 $"Graph execution should succeed, got: {execResp}");
             Assert.IsTrue(execResp.Contains("nodes_executed"));
 
-            // 6. Verify graph info
             string infoResp = server.HandleRequest(
                 $"{{ \"action\": \"get_graph_info\", \"graph_id\": \"{graphId}\" }}");
             Assert.IsTrue(IsSuccess(infoResp));
             Assert.IsTrue(infoResp.Contains("Grid"));
             Assert.IsTrue(infoResp.Contains("Subdivide"));
+        }
+
+        [Test]
+        public void EndToEnd_GraphBuildWithErrorRecovery()
+        {
+            var server = CreateServer();
+
+            // 1. Create graph
+            string createResp = server.HandleRequest(
+                "{ \"action\": \"create_graph\", \"graph_name\": \"ErrorRecovery\" }");
+            Assert.IsTrue(IsSuccess(createResp));
+            string graphId = ExtractField(createResp, "graph_id");
+
+            // 2. Add Grid
+            string addGrid = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Grid\" }}");
+            Assert.IsTrue(IsSuccess(addGrid));
+            string gridId = ExtractField(addGrid, "node_id");
+
+            // 3. Accidentally add Box (wrong node)
+            string addBox = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Box\" }}");
+            Assert.IsTrue(IsSuccess(addBox));
+            string boxId = ExtractField(addBox, "node_id");
+
+            // 4. Delete the wrong Box
+            string deleteBox = server.HandleRequest(
+                $"{{ \"action\": \"delete_node\", \"graph_id\": \"{graphId}\", \"node_id\": \"{boxId}\" }}");
+            Assert.IsTrue(IsSuccess(deleteBox));
+
+            // 5. Add the correct Subdivide
+            string addSubdiv = server.HandleRequest(
+                $"{{ \"action\": \"add_node\", \"graph_id\": \"{graphId}\", \"node_type\": \"Subdivide\" }}");
+            Assert.IsTrue(IsSuccess(addSubdiv));
+            string subdivId = ExtractField(addSubdiv, "node_id");
+
+            // 6. Connect Grid -> Subdivide
+            string connectResp = server.HandleRequest(
+                $"{{ \"action\": \"connect_nodes\", \"graph_id\": \"{graphId}\", " +
+                $"\"output_node_id\": \"{gridId}\", \"output_port\": \"geometry\", " +
+                $"\"input_node_id\": \"{subdivId}\", \"input_port\": \"input\" }}");
+            Assert.IsTrue(IsSuccess(connectResp));
+
+            // 7. Set params
+            string setResp = server.HandleRequest(
+                $"{{ \"action\": \"set_param\", \"graph_id\": \"{graphId}\", " +
+                $"\"node_id\": \"{gridId}\", \"parameters\": \"{{ \\\"rows\\\": 10, \\\"columns\\\": 10 }}\" }}");
+            Assert.IsTrue(IsSuccess(setResp));
+
+            // 8. Execute
+            string execResp = server.HandleRequest(
+                $"{{ \"action\": \"execute_graph\", \"graph_id\": \"{graphId}\" }}");
+            Assert.IsTrue(IsSuccess(execResp),
+                $"Graph execution should succeed, got: {execResp}");
+
+            // 9. Verify graph info only has Grid + Subdivide
+            string infoResp = server.HandleRequest(
+                $"{{ \"action\": \"get_graph_info\", \"graph_id\": \"{graphId}\" }}");
+            Assert.IsTrue(IsSuccess(infoResp));
+            Assert.IsTrue(infoResp.Contains("Grid"));
+            Assert.IsTrue(infoResp.Contains("Subdivide"));
+            Assert.IsFalse(infoResp.Contains(boxId),
+                "Deleted Box should not appear in graph info");
         }
 
         // ---- Helper ----

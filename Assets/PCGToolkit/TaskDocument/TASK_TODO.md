@@ -1,5 +1,18 @@
 # 第9轮迭代任务计划
 
+## 完成状态总结
+
+| Batch | 标题 | 状态 | 关键变更 |
+|-------|------|------|----------|
+| B1 | Graph API CRUD 闭环 | **已完成** | AgentServer 新增 delete_node/disconnect_nodes/delete_graph/list_graphs + connect_nodes 端口校验 |
+| B2 | LODGenerateNode g3 集成 | **已完成** | DecimateGeometry() 从约 130 行自研算法替换为 g3 Reducer（约 15 行） |
+| B3 | 代码重复消除 | **已完成** | 提取 JsonHelper.cs 共享工具类 + HandleExecuteGraph 输出键名改用 NodeId 去重 |
+| B4 | 示例 SubGraph | **已完成** | ExampleSubGraphGenerator.cs 编辑器脚本 + Examples/README.md |
+| B5 | 文档收尾 | **已完成** | HandBook/AI_AGENT_GUIDE/OUTLINE 全部更新 |
+| B6 | Agent 端到端测试加固 | **已完成** | AgentIntegrationTests 新增 10 个测试方法 |
+
+---
+
 ## 当前状态快照
 
 经过代码审查确认，第8轮迭代后的实际状态：

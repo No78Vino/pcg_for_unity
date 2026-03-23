@@ -485,11 +485,15 @@ server.Start(); // 监听 http://localhost:8765/
 |--------|------|----------|
 | `create_graph` | 创建空图 | `graph_name` |
 | `add_node` | 向图中添加节点 | `graph_id`, `node_type`, `position_x`, `position_y` |
-| `connect_nodes` | 连接两个节点 | `graph_id`, `output_node_id`, `output_port`, `input_node_id`, `input_port` |
+| `connect_nodes` | 连接两个节点（含端口存在性校验） | `graph_id`, `output_node_id`, `output_port`, `input_node_id`, `input_port` |
 | `set_param` | 设置节点参数 | `graph_id`, `node_id`, `parameters` (JSON) |
 | `execute_graph` | 执行图 | `graph_id` |
 | `save_graph` | 保存图为 .asset | `graph_id`, `asset_path` |
 | `get_graph_info` | 查询图的完整状态 | `graph_id` |
+| `delete_node` | 删除节点及其关联边 | `graph_id`, `node_id` |
+| `disconnect_nodes` | 断开两个节点的连线 | `graph_id`, `output_node_id`, `output_port`, `input_node_id`, `input_port` |
+| `delete_graph` | 删除内存中的图 | `graph_id` |
+| `list_graphs` | 列出所有活跃图 | — |
 
 ### 端到端示例：通过 API 构建 SubGraph
 
@@ -529,4 +533,26 @@ connect_nodes × N → 建立数据流
 set_param × N → 配置参数
 execute_graph → 验证结果
 save_graph → 持久化为 .asset
+```
+
+### 错误恢复示例
+
+当 AI Agent 发现操作错误时，可以使用删除/断开操作纠正：
+
+```bash
+# 发现添加了错误的节点类型
+curl http://localhost:8765/ -d '{"action":"delete_node","graph_id":"abc-123","node_id":"wrong-node-id"}'
+# → {"Success":true,"Data":"{\"deleted\": true, \"edges_removed\": 1}"}
+
+# 重新添加正确的节点
+curl http://localhost:8765/ -d '{"action":"add_node","graph_id":"abc-123","node_type":"Subdivide"}'
+
+# 发现连线错误，断开后重连
+curl http://localhost:8765/ -d '{"action":"disconnect_nodes","graph_id":"abc-123","output_node_id":"node-001","output_port":"geometry","input_node_id":"node-002","input_port":"input"}'
+
+# 查看当前所有活跃图
+curl http://localhost:8765/ -d '{"action":"list_graphs"}'
+
+# 清理不需要的图
+curl http://localhost:8765/ -d '{"action":"delete_graph","graph_id":"abc-123"}'
 ```

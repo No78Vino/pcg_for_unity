@@ -319,6 +319,18 @@ namespace PCGToolkit.Communication
                 case "get_graph_info":
                     return HandleGetGraphInfo(request);
 
+                case "delete_node":
+                    return HandleDeleteNode(request);
+
+                case "disconnect_nodes":
+                    return HandleDisconnectNodes(request);
+
+                case "delete_graph":
+                    return HandleDeleteGraph(request);
+
+                case "list_graphs":
+                    return HandleListGraphs(request);
+
                 default:
                     return AgentProtocol.CreateErrorResponse($"Unknown action: {request.Action}", request.RequestId);
             }
@@ -339,8 +351,8 @@ namespace PCGToolkit.Communication
 
                 var sb = new StringBuilder();
                 sb.Append("{ ");
-                sb.Append($"\"name\": \"{Esc(node.Name)}\", ");
-                sb.Append($"\"description\": \"{Esc(node.Description)}\", ");
+                sb.Append($"\"name\": \"{JsonHelper.Esc(node.Name)}\", ");
+                sb.Append($"\"description\": \"{JsonHelper.Esc(node.Description)}\", ");
 
                 // inputs
                 sb.Append("\"inputs\": [");
@@ -350,7 +362,7 @@ namespace PCGToolkit.Communication
                     {
                         if (i > 0) sb.Append(", ");
                         var inp = node.Inputs[i];
-                        sb.Append($"{{ \"name\": \"{Esc(inp.Name)}\", \"type\": \"{inp.PortType}\" }}");
+                        sb.Append($"{{ \"name\": \"{JsonHelper.Esc(inp.Name)}\", \"type\": \"{inp.PortType}\" }}");
                     }
                 }
                 sb.Append("], ");
@@ -363,7 +375,7 @@ namespace PCGToolkit.Communication
                     {
                         if (i > 0) sb.Append(", ");
                         var outp = node.Outputs[i];
-                        sb.Append($"{{ \"name\": \"{Esc(outp.Name)}\", \"type\": \"{outp.PortType}\" }}");
+                        sb.Append($"{{ \"name\": \"{JsonHelper.Esc(outp.Name)}\", \"type\": \"{outp.PortType}\" }}");
                     }
                 }
                 sb.Append("] }");
@@ -390,7 +402,7 @@ namespace PCGToolkit.Communication
             string graphName = request.GraphName;
             if (string.IsNullOrEmpty(graphName) && !string.IsNullOrEmpty(request.Parameters))
             {
-                var p = ParseSimpleJson(request.Parameters);
+                var p = JsonHelper.ParseSimpleJson(request.Parameters);
                 if (p.ContainsKey("graph_name"))
                     graphName = p["graph_name"].ToString();
             }
@@ -398,7 +410,7 @@ namespace PCGToolkit.Communication
             string graphId = session.CreateGraph(graphName);
 
             return AgentProtocol.CreateSuccessResponse(
-                $"{{ \"graph_id\": \"{graphId}\", \"graph_name\": \"{Esc(graphName ?? "Untitled")}\" }}",
+                $"{{ \"graph_id\": \"{graphId}\", \"graph_name\": \"{JsonHelper.Esc(graphName ?? "Untitled")}\" }}",
                 request.RequestId);
         }
 
@@ -424,7 +436,7 @@ namespace PCGToolkit.Communication
             var nodeData = graph.AddNode(nodeType, position);
 
             return AgentProtocol.CreateSuccessResponse(
-                $"{{ \"node_id\": \"{nodeData.NodeId}\", \"node_type\": \"{Esc(nodeType)}\" }}",
+                $"{{ \"node_id\": \"{nodeData.NodeId}\", \"node_type\": \"{JsonHelper.Esc(nodeType)}\" }}",
                 request.RequestId);
         }
 
@@ -442,6 +454,45 @@ namespace PCGToolkit.Communication
 
             string outPort = string.IsNullOrEmpty(request.OutputPort) ? "geometry" : request.OutputPort;
             string inPort = string.IsNullOrEmpty(request.InputPort) ? "input" : request.InputPort;
+
+            // Port existence validation
+            var outNodeData = graph.Nodes.Find(n => n.NodeId == request.OutputNodeId);
+            var inNodeData = graph.Nodes.Find(n => n.NodeId == request.InputNodeId);
+
+            if (outNodeData == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Output node not found: {request.OutputNodeId}", request.RequestId);
+            if (inNodeData == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Input node not found: {request.InputNodeId}", request.RequestId);
+
+            PCGNodeRegistry.EnsureInitialized();
+            var outTemplate = PCGNodeRegistry.GetNode(outNodeData.NodeType);
+            var inTemplate = PCGNodeRegistry.GetNode(inNodeData.NodeType);
+
+            if (outTemplate != null && outTemplate.Outputs != null)
+            {
+                bool hasOutPort = false;
+                foreach (var o in outTemplate.Outputs)
+                {
+                    if (o.Name == outPort) { hasOutPort = true; break; }
+                }
+                if (!hasOutPort)
+                    return AgentProtocol.CreateErrorResponse(
+                        $"Port '{outPort}' not found on output node type '{outNodeData.NodeType}'", request.RequestId);
+            }
+
+            if (inTemplate != null && inTemplate.Inputs != null)
+            {
+                bool hasInPort = false;
+                foreach (var inp in inTemplate.Inputs)
+                {
+                    if (inp.Name == inPort) { hasInPort = true; break; }
+                }
+                if (!hasInPort)
+                    return AgentProtocol.CreateErrorResponse(
+                        $"Port '{inPort}' not found on input node type '{inNodeData.NodeType}'", request.RequestId);
+            }
 
             graph.AddEdge(request.OutputNodeId, outPort, request.InputNodeId, inPort);
 
@@ -470,7 +521,7 @@ namespace PCGToolkit.Communication
                 return AgentProtocol.CreateErrorResponse(
                     "Missing parameters", request.RequestId);
 
-            var paramDict = ParseSimpleJson(request.Parameters);
+            var paramDict = JsonHelper.ParseSimpleJson(request.Parameters);
             int setCount = 0;
             foreach (var kvp in paramDict)
             {
@@ -505,7 +556,7 @@ namespace PCGToolkit.Communication
             {
                 PCGGraphSerializer.SaveAsAsset(graph, assetPath);
                 return AgentProtocol.CreateSuccessResponse(
-                    $"{{ \"asset_path\": \"{Esc(assetPath)}\" }}", request.RequestId);
+                    $"{{ \"asset_path\": \"{JsonHelper.Esc(assetPath)}\" }}", request.RequestId);
             }
             catch (Exception e)
             {
@@ -543,7 +594,8 @@ namespace PCGToolkit.Communication
                         first = false;
 
                         var geo = kvp.Value;
-                        sb.Append($"\"{Esc(nodeData.NodeType)}_{Esc(kvp.Key)}\": {{ ");
+                        sb.Append($"\"{JsonHelper.Esc(nodeData.NodeId)}_{JsonHelper.Esc(kvp.Key)}\": {{ ");
+                        sb.Append($"\"node_type\": \"{JsonHelper.Esc(nodeData.NodeType)}\", ");
                         sb.Append($"\"pointCount\": {geo?.Points.Count ?? 0}, ");
                         sb.Append($"\"primCount\": {geo?.Primitives.Count ?? 0}");
                         sb.Append(" }");
@@ -570,7 +622,7 @@ namespace PCGToolkit.Communication
 
             var sb = new StringBuilder();
             sb.Append("{ ");
-            sb.Append($"\"graph_name\": \"{Esc(graph.GraphName)}\", ");
+            sb.Append($"\"graph_name\": \"{JsonHelper.Esc(graph.GraphName)}\", ");
 
             // nodes
             sb.Append("\"nodes\": [");
@@ -578,13 +630,13 @@ namespace PCGToolkit.Communication
             {
                 if (i > 0) sb.Append(", ");
                 var n = graph.Nodes[i];
-                sb.Append($"{{ \"id\": \"{n.NodeId}\", \"type\": \"{Esc(n.NodeType)}\", ");
-                sb.Append($"\"position\": [{F(n.Position.x)}, {F(n.Position.y)}], ");
+                sb.Append($"{{ \"id\": \"{n.NodeId}\", \"type\": \"{JsonHelper.Esc(n.NodeType)}\", ");
+                sb.Append($"\"position\": [{JsonHelper.F(n.Position.x)}, {JsonHelper.F(n.Position.y)}], ");
                 sb.Append("\"parameters\": { ");
                 for (int p = 0; p < n.Parameters.Count; p++)
                 {
                     if (p > 0) sb.Append(", ");
-                    sb.Append($"\"{Esc(n.Parameters[p].Key)}\": \"{Esc(n.Parameters[p].ValueJson)}\"");
+                    sb.Append($"\"{JsonHelper.Esc(n.Parameters[p].Key)}\": \"{JsonHelper.Esc(n.Parameters[p].ValueJson)}\"");
                 }
                 sb.Append(" } }");
             }
@@ -596,72 +648,103 @@ namespace PCGToolkit.Communication
             {
                 if (i > 0) sb.Append(", ");
                 var e = graph.Edges[i];
-                sb.Append($"{{ \"output_node\": \"{e.OutputNodeId}\", \"output_port\": \"{Esc(e.OutputPort)}\", ");
-                sb.Append($"\"input_node\": \"{e.InputNodeId}\", \"input_port\": \"{Esc(e.InputPort)}\" }}");
+                sb.Append($"{{ \"output_node\": \"{e.OutputNodeId}\", \"output_port\": \"{JsonHelper.Esc(e.OutputPort)}\", ");
+                sb.Append($"\"input_node\": \"{e.InputNodeId}\", \"input_port\": \"{JsonHelper.Esc(e.InputPort)}\" }}");
             }
             sb.Append("] }");
 
             return AgentProtocol.CreateSuccessResponse(sb.ToString(), request.RequestId);
         }
 
-        // ---- Helpers ----
-
-        private static string Esc(string s)
+        private string HandleDeleteNode(AgentProtocol.AgentRequest request)
         {
-            if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"")
-                    .Replace("\n", "\\n").Replace("\r", "\\r");
+            var graph = session.GetGraph(request.GraphId);
+            if (graph == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph not found: {request.GraphId}", request.RequestId);
+
+            string nodeId = request.NodeId;
+            if (string.IsNullOrEmpty(nodeId))
+                return AgentProtocol.CreateErrorResponse(
+                    "Missing node_id", request.RequestId);
+
+            var nodeData = graph.Nodes.Find(n => n.NodeId == nodeId);
+            if (nodeData == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Node not found: {nodeId}", request.RequestId);
+
+            int edgesBefore = graph.Edges.Count;
+            graph.RemoveNode(nodeId);
+            int edgesRemoved = edgesBefore - graph.Edges.Count;
+
+            return AgentProtocol.CreateSuccessResponse(
+                $"{{ \"deleted\": true, \"edges_removed\": {edgesRemoved} }}", request.RequestId);
         }
 
-        private static string F(float v) => v.ToString(CultureInfo.InvariantCulture);
-
-        private static Dictionary<string, object> ParseSimpleJson(string json)
+        private string HandleDisconnectNodes(AgentProtocol.AgentRequest request)
         {
-            var dict = new Dictionary<string, object>();
-            if (string.IsNullOrEmpty(json) || json.Trim() == "{}") return dict;
+            var graph = session.GetGraph(request.GraphId);
+            if (graph == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph not found: {request.GraphId}", request.RequestId);
 
-            json = json.Trim();
-            if (json.StartsWith("{")) json = json.Substring(1);
-            if (json.EndsWith("}")) json = json.Substring(0, json.Length - 1);
+            if (string.IsNullOrEmpty(request.OutputNodeId) ||
+                string.IsNullOrEmpty(request.InputNodeId))
+                return AgentProtocol.CreateErrorResponse(
+                    "Missing output_node_id or input_node_id", request.RequestId);
 
-            int depth = 0;
-            int start = 0;
-            bool inString = false;
-            var pairs = new List<string>();
+            string outPort = string.IsNullOrEmpty(request.OutputPort) ? "geometry" : request.OutputPort;
+            string inPort = string.IsNullOrEmpty(request.InputPort) ? "input" : request.InputPort;
 
-            for (int i = 0; i < json.Length; i++)
+            int removed = graph.Edges.RemoveAll(e =>
+                e.OutputNodeId == request.OutputNodeId &&
+                e.OutputPort == outPort &&
+                e.InputNodeId == request.InputNodeId &&
+                e.InputPort == inPort);
+
+            if (removed == 0)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Edge not found: {request.OutputNodeId}:{outPort} -> {request.InputNodeId}:{inPort}",
+                    request.RequestId);
+
+            return AgentProtocol.CreateSuccessResponse(
+                "{ \"disconnected\": true }", request.RequestId);
+        }
+
+        private string HandleDeleteGraph(AgentProtocol.AgentRequest request)
+        {
+            if (string.IsNullOrEmpty(request.GraphId))
+                return AgentProtocol.CreateErrorResponse(
+                    "Missing graph_id", request.RequestId);
+
+            var graph = session.GetGraph(request.GraphId);
+            if (graph == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph not found: {request.GraphId}", request.RequestId);
+
+            session.RemoveGraph(request.GraphId);
+
+            return AgentProtocol.CreateSuccessResponse(
+                "{ \"deleted\": true }", request.RequestId);
+        }
+
+        private string HandleListGraphs(AgentProtocol.AgentRequest request)
+        {
+            var summaries = session.ListGraphSummaries();
+
+            var sb = new StringBuilder();
+            sb.Append("{ \"graphs\": [");
+            for (int i = 0; i < summaries.Count; i++)
             {
-                char c = json[i];
-                if (c == '"' && (i == 0 || json[i - 1] != '\\')) inString = !inString;
-                if (inString) continue;
-                if (c == '{' || c == '[') depth++;
-                else if (c == '}' || c == ']') depth--;
-                else if (c == ',' && depth == 0)
-                {
-                    pairs.Add(json.Substring(start, i - start));
-                    start = i + 1;
-                }
+                if (i > 0) sb.Append(", ");
+                var s = summaries[i];
+                sb.Append($"{{ \"graph_id\": \"{JsonHelper.Esc(s.id)}\", ");
+                sb.Append($"\"graph_name\": \"{JsonHelper.Esc(s.name)}\", ");
+                sb.Append($"\"node_count\": {s.nodeCount} }}");
             }
-            if (start < json.Length) pairs.Add(json.Substring(start));
+            sb.Append("] }");
 
-            foreach (var pair in pairs)
-            {
-                var colonIdx = pair.IndexOf(':');
-                if (colonIdx < 0) continue;
-                var key = pair.Substring(0, colonIdx).Trim().Trim('"');
-                var value = pair.Substring(colonIdx + 1).Trim();
-
-                if (value.StartsWith("\"") && value.EndsWith("\""))
-                    dict[key] = value.Trim('"');
-                else if (value == "true") dict[key] = true;
-                else if (value == "false") dict[key] = false;
-                else if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float f))
-                    dict[key] = f;
-                else
-                    dict[key] = value;
-            }
-
-            return dict;
+            return AgentProtocol.CreateSuccessResponse(sb.ToString(), request.RequestId);
         }
     }
 }

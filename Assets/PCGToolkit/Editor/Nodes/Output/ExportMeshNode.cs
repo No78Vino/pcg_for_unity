@@ -65,7 +65,9 @@ namespace PCGToolkit.Nodes.Output
 
             // 保存 Mesh 资产
             string meshAssetPath = Path.ChangeExtension(savePath, ".asset");
-            AssetDatabase.CreateAsset(mesh, meshAssetPath);
+            var cachedMeshPath = PCGCacheManager.CacheUnityAsset(mesh, mesh.name, "asset");
+            AssetDatabase.CopyAsset(cachedMeshPath, meshAssetPath);
+            mesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshAssetPath);
             ctx.Log($"ExportMesh: Mesh 已保存到 {meshAssetPath}");
 
             if (createRenderer)

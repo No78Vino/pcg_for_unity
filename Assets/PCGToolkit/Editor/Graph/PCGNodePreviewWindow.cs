@@ -32,13 +32,15 @@ namespace PCGToolkit.Graph
             _geometry = geometry;  
             _executionTimeMs = executionTimeMs;  
   
-            if (_previewMesh != null)  
-                DestroyImmediate(_previewMesh);  
-  
             if (geometry != null && geometry.Points.Count > 0)  
-                _previewMesh = PCGGeometryToMesh.Convert(geometry);  
+            {  
+                string cacheKey = "preview_" + nodeId + "_" + PCGGeometrySerializer.ComputeHash(geometry);  
+                _previewMesh = PCGCacheManager.GetOrCreateMesh(cacheKey, geometry);  
+            }  
             else  
+            {  
                 _previewMesh = null;  
+            }  
   
             Repaint();  
         }  

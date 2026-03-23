@@ -26,7 +26,10 @@ namespace PCGToolkit.Graph
         public void Execute(bool continueOnError = false)
         {
             _nodeOutputs.Clear();
-            context.ClearCache();
+            context.NodeOutputCache.Clear();
+            context.NodeCacheKeys.Clear();
+            context.Logs.Clear();
+            context.Errors.Clear();
             context.ContinueOnError = continueOnError;
 
             var sortedNodes = PCGGraphHelper.TopologicalSort(graphData);
@@ -204,6 +207,20 @@ namespace PCGToolkit.Graph
             }
 
             context.CurrentNodeId = nodeData.NodeId;
+
+            // Cache query
+            string cacheKey = PCGCacheManager.ComputeCacheKey(nodeData.NodeType, parameters, inputGeometries);
+            context.NodeCacheKeys[nodeData.NodeId] = cacheKey;
+
+            if (context.UseDiskCache && PCGCacheManager.TryGetGeometry(cacheKey, out var cachedGeo))
+            {
+                var cachedResult = new Dictionary<string, PCGGeometry> { { "geometry", cachedGeo } };
+                _nodeOutputs[nodeData.NodeId] = cachedResult;
+                foreach (var kvp in cachedResult)
+                    context.CacheOutput($"{nodeData.NodeId}.{kvp.Key}", kvp.Value);
+                return;
+            }
+
             try
             {
                 var result = nodeInstance.Execute(context, inputGeometries, parameters);
@@ -214,6 +231,17 @@ namespace PCGToolkit.Graph
                     foreach (var kvp in result)
                     {
                         context.CacheOutput($"{nodeData.NodeId}.{kvp.Key}", kvp.Value);
+                    }
+
+                    // Write to disk cache
+                    if (context.UseDiskCache)
+                    {
+                        foreach (var kvp in result)
+                        {
+                            if (kvp.Value != null && kvp.Value.Points.Count > 0)
+                                PCGCacheManager.PutGeometry(cacheKey, kvp.Value, CachePersistence.Disk,
+                                    nodeData.NodeType, graphData?.GraphName, nodeData.NodeId);
+                        }
                     }
                 }
             }

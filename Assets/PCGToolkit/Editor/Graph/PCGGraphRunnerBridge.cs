@@ -60,7 +60,8 @@ namespace PCGToolkit.Graph
 
         private static void ApplyOutputToScene(PCGGraphRunner runner, PCGGeometry geo)
         {
-            var mesh = PCGGeometryToMesh.Convert(geo);
+            string cacheKey = "runner_" + runner.GetInstanceID() + "_" + PCGGeometrySerializer.ComputeHash(geo);
+            var mesh = PCGCacheManager.GetOrCreateMesh(cacheKey, geo);
             var target = runner.OutputTarget != null
                 ? runner.OutputTarget
                 : new GameObject("PCG_Output");

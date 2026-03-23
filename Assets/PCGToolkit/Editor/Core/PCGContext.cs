@@ -24,6 +24,8 @@ namespace PCGToolkit.Core
 
         public List<PCGError> Errors = new List<PCGError>();
         public bool ContinueOnError { get; set; } = false;
+        public bool UseDiskCache { get; set; } = true;
+        public Dictionary<string, string> NodeCacheKeys = new Dictionary<string, string>();
 
         public bool HasError => Errors.Any(e => e.Level >= PCGErrorLevel.Error);
         public bool HasFatal => Errors.Any(e => e.Level == PCGErrorLevel.Fatal);
@@ -90,8 +92,15 @@ namespace PCGToolkit.Core
         public void ClearCache()
         {
             NodeOutputCache.Clear();
+            NodeCacheKeys.Clear();
             Logs.Clear();
             Errors.Clear();
+        }
+
+        public void ClearAllCaches()
+        {
+            ClearCache();
+            PCGCacheManager.ClearAll();
         }
 
         public void SetExternalInput(string key, PCGGeometry geometry)

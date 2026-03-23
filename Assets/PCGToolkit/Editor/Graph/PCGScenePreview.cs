@@ -21,6 +21,7 @@ namespace PCGToolkit.Graph
 
         // 注入场景的临时对象（Inject to Scene）
         private static List<GameObject> _injectedObjects = new List<GameObject>();
+        private static List<Mesh> _injectedMeshes = new List<Mesh>();
 
         static PCGScenePreview()
         {
@@ -41,6 +42,9 @@ namespace PCGToolkit.Graph
         {
             _previewGeo = null;
             _active = false;
+            foreach (var m in _injectedMeshes)
+                if (m != null) Object.DestroyImmediate(m);
+            _injectedMeshes.Clear();
             SceneView.RepaintAll();
         }
 
@@ -49,16 +53,22 @@ namespace PCGToolkit.Graph
         /// </summary>
         public static void InjectToScene(PCGGeometry geo, string label = "PCG_Preview")
         {
-            // 删除之前注入的对象
+            // 清理旧对象和旧 Mesh
+            foreach (var m in _injectedMeshes)
+                if (m != null) Object.DestroyImmediate(m);
+            _injectedMeshes.Clear();
             foreach (var old in _injectedObjects)
                 if (old != null) Object.DestroyImmediate(old);
             _injectedObjects.Clear();
 
             if (geo == null || geo.Points.Count == 0) return;
 
-            var mesh = PCGGeometryToMesh.Convert(geo);
+            string cacheKey = "scene_preview_" + PCGGeometrySerializer.ComputeHash(geo);
+            var mesh = PCGCacheManager.GetOrCreateMesh(cacheKey, geo);
+            _injectedMeshes.Add(mesh);
+
             var go = new GameObject(label);
-            go.hideFlags = HideFlags.DontSave; // 不随场景保存
+            go.hideFlags = HideFlags.DontSave;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial =
                 AssetDatabase.GetBuiltinExtraResource<Material>("Default-Material.mat");
@@ -66,7 +76,6 @@ namespace PCGToolkit.Graph
             _injectedObjects.Add(go);
             Selection.activeGameObject = go;
             SceneView.FrameLastActiveSceneView();
-
             Debug.Log($"[PCGScenePreview] Injected '{label}' to scene (verts:{mesh.vertexCount} tris:{mesh.triangles.Length / 3})");
         }
 

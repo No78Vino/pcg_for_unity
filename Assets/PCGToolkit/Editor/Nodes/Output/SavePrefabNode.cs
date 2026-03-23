@@ -135,7 +135,12 @@ namespace PCGToolkit.Nodes.Output
             string meshAssetPath = Path.Combine(
                 Path.GetDirectoryName(savePath),
                 Path.GetFileNameWithoutExtension(savePath) + "_Mesh.asset");
-            AssetDatabase.CreateAsset(mesh, meshAssetPath);
+
+            // 通过 CacheManager 注册中间 Mesh 资产
+            var cachedMeshPath = PCGCacheManager.CacheUnityAsset(mesh, prefabName + "_Mesh", "asset");
+            AssetDatabase.CopyAsset(cachedMeshPath, meshAssetPath);
+            mesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshAssetPath);
+            meshFilter.sharedMesh = mesh;
 
             // 保存为 Prefab
             PrefabUtility.SaveAsPrefabAsset(go, savePath);

@@ -356,6 +356,21 @@ namespace PCGToolkit.Graph
 
             // 执行并计时  
             _context.CurrentNodeId = nodeData.NodeId;
+
+            // Cache query
+            string cacheKey = PCGCacheManager.ComputeCacheKey(nodeData.NodeType, parameters, inputGeometries);
+
+            if (_context.UseDiskCache && PCGCacheManager.TryGetGeometry(cacheKey, out var cachedGeo))
+            {
+                result.ElapsedMs = 0;
+                result.Success = true;
+                result.Outputs = new Dictionary<string, PCGGeometry> { { "geometry", cachedGeo } };
+                _nodeOutputs[nodeData.NodeId] = result.Outputs;
+                foreach (var kvp in result.Outputs)
+                    _context.CacheOutput($"{nodeData.NodeId}.{kvp.Key}", kvp.Value);
+                return result;
+            }
+
             _nodeStopwatch.Restart();
 
             try
@@ -373,6 +388,17 @@ namespace PCGToolkit.Graph
                     foreach (var kvp in outputs)
                     {
                         _context.CacheOutput($"{nodeData.NodeId}.{kvp.Key}", kvp.Value);
+                    }
+
+                    // Write to disk cache
+                    if (_context.UseDiskCache)
+                    {
+                        foreach (var kvp in outputs)
+                        {
+                            if (kvp.Value != null && kvp.Value.Points.Count > 0)
+                                PCGCacheManager.PutGeometry(cacheKey, kvp.Value, CachePersistence.Disk,
+                                    nodeData.NodeType, null, nodeData.NodeId);
+                        }
                     }
                 }
             }

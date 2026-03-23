@@ -139,7 +139,12 @@ namespace PCGToolkit.Nodes.Output
             string meshAssetPath = Path.Combine(
                 Path.GetDirectoryName(scenePath),
                 Path.GetFileNameWithoutExtension(scenePath) + "_Mesh.asset");
-            AssetDatabase.CreateAsset(mesh, meshAssetPath);
+
+            // 通过 CacheManager 注册中间 Mesh 资产
+            var cachedMeshPath = PCGCacheManager.CacheUnityAsset(mesh, objectName + "_Mesh", "asset");
+            AssetDatabase.CopyAsset(cachedMeshPath, meshAssetPath);
+            mesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshAssetPath);
+            meshFilter.sharedMesh = mesh;
 
             // 保存场景
             EditorSceneManager.SaveScene(targetScene, scenePath);

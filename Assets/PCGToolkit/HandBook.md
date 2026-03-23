@@ -556,3 +556,53 @@ curl http://localhost:8765/ -d '{"action":"list_graphs"}'
 # 清理不需要的图
 curl http://localhost:8765/ -d '{"action":"delete_graph","graph_id":"abc-123"}'
 ```
+
+---
+
+## 缓存机制
+
+PCG Toolkit 实现了三层缓存架构，用于加速重复执行和管理中间资源。
+
+### 三层缓存架构
+
+| 层级 | 存储位置 | 生命周期 | 说明 |
+|------|----------|----------|------|
+| L1 内存缓存 | 进程内存 | Domain Reload 后丢失 | 最快访问，PCGGeometry 对象直接缓存 |
+| L2 磁盘缓存 | `Library/PCGToolkit/Cache/` | 跨 Session 持久化，Library 重建时丢失 | 二进制序列化 .pcgcache 文件，不进版本控制 |
+| L3 资产缓存 | `Assets/PCGToolkit/.cache/` | 手动清理前持久化 | Unity 资产（Mesh, Material 等），需加入 .gitignore |
+
+### 缓存键（Content-Addressable）
+
+缓存键由节点类型 + 排序后的参数键值对 + 输入几何体哈希拼接后取 SHA256 前16位十六进制字符串生成。相同输入产生相同的缓存键，修改任何参数或上游数据会导致缓存失效。
+
+### CacheNode 节点
+
+CacheNode 对标 Houdini 的 File Cache / Cache SOP，可以在节点图中手动插入缓存点。
+
+**参数：**
+- `mode`：缓存模式
+  - `auto`：先查缓存，命中则返回，未命中则写入缓存
+  - `always_write`：总是执行上游并写入缓存
+  - `always_read`：总是从缓存读取，缓存不存在则报错
+  - `bypass`：直通不缓存
+- `cacheName`：自定义缓存名称（留空则自动生成）
+
+### Editor 菜单操作
+
+通过菜单 **PCG Toolkit > Cache** 可以执行以下操作：
+- Clear Memory Cache：清空内存缓存
+- Clear Disk Cache：清空磁盘缓存
+- Clear Asset Cache：清空资产缓存目录
+- Clear All Caches：清空所有缓存
+- Purge Expired：清理超过7天未访问的磁盘缓存
+- Show Statistics：显示缓存统计信息（条目数、大小、命中率）
+
+### .gitignore 配置
+
+项目根目录的 `.gitignore` 已包含：
+```
+Assets/PCGToolkit/.cache/
+Assets/PCGToolkit/.cache.meta
+```
+
+磁盘缓存位于 `Library/` 下，Unity 默认已排除。

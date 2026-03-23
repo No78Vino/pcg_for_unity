@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
 using UnityEditor;
 using UnityEngine;
+using PCGToolkit.Core;
+using PCGToolkit.Graph;
 using PCGToolkit.Skill;
 
 namespace PCGToolkit.Communication
@@ -23,11 +28,17 @@ namespace PCGToolkit.Communication
         private int port;
         private bool isRunning;
         private SkillExecutor skillExecutor;
+        private AgentSession session;
 
         private HttpListener _listener;
         private Thread _listenThread;
         private ConcurrentQueue<HttpListenerContext> _pendingRequests
             = new ConcurrentQueue<HttpListenerContext>();
+
+        // WebSocket state
+        private Thread _wsListenThread;
+        private System.Net.WebSockets.WebSocket _activeWebSocket;
+        private ConcurrentQueue<string> _wsIncoming = new ConcurrentQueue<string>();
 
         public bool IsRunning => isRunning;
 
@@ -36,13 +47,14 @@ namespace PCGToolkit.Communication
             this.protocol = protocol;
             this.port = port;
             this.skillExecutor = new SkillExecutor();
+            this.session = new AgentSession();
         }
 
         public void Start()
         {
-            if (protocol != ProtocolType.Http)
+            if (protocol == ProtocolType.StdInOut)
             {
-                Debug.LogWarning($"AgentServer: Only HTTP protocol is currently supported, got {protocol}");
+                Debug.LogWarning("AgentServer: StdInOut protocol is not supported");
                 return;
             }
 
@@ -66,7 +78,8 @@ namespace PCGToolkit.Communication
 
             EditorApplication.update += PollAndProcessRequests;
 
-            Debug.Log($"AgentServer: HTTP server started, listening on http://localhost:{port}/");
+            string protoName = protocol == ProtocolType.WebSocket ? "HTTP+WebSocket" : "HTTP";
+            Debug.Log($"AgentServer: {protoName} server started, listening on http://localhost:{port}/");
         }
 
         private void ListenLoop()
@@ -79,6 +92,14 @@ namespace PCGToolkit.Communication
                     if (asyncResult.AsyncWaitHandle.WaitOne(500))
                     {
                         var ctx = _listener.EndGetContext(asyncResult);
+
+                        // WebSocket upgrade
+                        if (protocol == ProtocolType.WebSocket && ctx.Request.IsWebSocketRequest)
+                        {
+                            HandleWebSocketUpgrade(ctx);
+                            continue;
+                        }
+
                         _pendingRequests.Enqueue(ctx);
                     }
                 }
@@ -87,8 +108,54 @@ namespace PCGToolkit.Communication
             }
         }
 
+        private void HandleWebSocketUpgrade(HttpListenerContext httpCtx)
+        {
+            try
+            {
+                var wsCtx = httpCtx.AcceptWebSocketAsync("pcg-agent").Result;
+                _activeWebSocket = wsCtx.WebSocket;
+
+                _wsListenThread = new Thread(() => WebSocketReadLoop(_activeWebSocket)) { IsBackground = true };
+                _wsListenThread.Start();
+
+                Debug.Log("AgentServer: WebSocket client connected");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"AgentServer: WebSocket upgrade failed - {e.Message}");
+            }
+        }
+
+        private void WebSocketReadLoop(System.Net.WebSockets.WebSocket ws)
+        {
+            var buffer = new byte[8192];
+            while (isRunning && ws.State == System.Net.WebSockets.WebSocketState.Open)
+            {
+                try
+                {
+                    var segment = new ArraySegment<byte>(buffer);
+                    var result = ws.ReceiveAsync(segment, CancellationToken.None).Result;
+
+                    if (result.MessageType == System.Net.WebSockets.WebSocketMessageType.Close)
+                    {
+                        ws.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus.NormalClosure,
+                            "Closing", CancellationToken.None).Wait();
+                        break;
+                    }
+
+                    if (result.MessageType == System.Net.WebSockets.WebSocketMessageType.Text)
+                    {
+                        string msg = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                        _wsIncoming.Enqueue(msg);
+                    }
+                }
+                catch { break; }
+            }
+        }
+
         private void PollAndProcessRequests()
         {
+            // Process HTTP requests
             int processed = 0;
             while (processed < 5 && _pendingRequests.TryDequeue(out var httpCtx))
             {
@@ -104,6 +171,40 @@ namespace PCGToolkit.Communication
                         AgentProtocol.CreateErrorResponse($"Internal error: {e.Message}"));
                 }
                 processed++;
+            }
+
+            // Process WebSocket messages
+            while (_wsIncoming.TryDequeue(out var wsMsg))
+            {
+                try
+                {
+                    string responseJson = HandleRequest(wsMsg);
+                    SendWebSocketMessage(responseJson);
+                }
+                catch (Exception e)
+                {
+                    SendWebSocketMessage(
+                        AgentProtocol.CreateErrorResponse($"Internal error: {e.Message}"));
+                }
+            }
+        }
+
+        private void SendWebSocketMessage(string json)
+        {
+            if (_activeWebSocket == null ||
+                _activeWebSocket.State != System.Net.WebSockets.WebSocketState.Open)
+                return;
+
+            try
+            {
+                var bytes = Encoding.UTF8.GetBytes(json);
+                _activeWebSocket.SendAsync(new ArraySegment<byte>(bytes),
+                    System.Net.WebSockets.WebSocketMessageType.Text, true,
+                    CancellationToken.None).Wait();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"AgentServer: WebSocket send failed - {e.Message}");
             }
         }
 
@@ -135,10 +236,23 @@ namespace PCGToolkit.Communication
             isRunning = false;
             EditorApplication.update -= PollAndProcessRequests;
 
+            try
+            {
+                if (_activeWebSocket != null &&
+                    _activeWebSocket.State == System.Net.WebSockets.WebSocketState.Open)
+                {
+                    _activeWebSocket.CloseAsync(
+                        System.Net.WebSockets.WebSocketCloseStatus.NormalClosure,
+                        "Server stopping", CancellationToken.None).Wait(2000);
+                }
+            }
+            catch { }
+
             try { _listener?.Stop(); } catch { }
             try { _listener?.Close(); } catch { }
 
             _listenThread?.Join(2000);
+            _wsListenThread?.Join(2000);
             Debug.Log("AgentServer: Stopped");
         }
 
@@ -181,9 +295,373 @@ namespace PCGToolkit.Communication
                     return AgentProtocol.CreateSuccessResponse(
                         SkillSchemaExporter.ExportAll(), request.RequestId);
 
+                case "list_nodes":
+                    return HandleListNodes(request);
+
+                case "create_graph":
+                    return HandleCreateGraph(request);
+
+                case "add_node":
+                    return HandleAddNode(request);
+
+                case "connect_nodes":
+                    return HandleConnectNodes(request);
+
+                case "set_param":
+                    return HandleSetParam(request);
+
+                case "save_graph":
+                    return HandleSaveGraph(request);
+
+                case "execute_graph":
+                    return HandleExecuteGraph(request);
+
+                case "get_graph_info":
+                    return HandleGetGraphInfo(request);
+
                 default:
                     return AgentProtocol.CreateErrorResponse($"Unknown action: {request.Action}", request.RequestId);
             }
+        }
+
+        // ---- Graph Operation Handlers ----
+
+        private string HandleListNodes(AgentProtocol.AgentRequest request)
+        {
+            PCGNodeRegistry.EnsureInitialized();
+
+            var categories = new Dictionary<string, List<string>>();
+            foreach (var node in PCGNodeRegistry.GetAllNodes())
+            {
+                string cat = node.Category.ToString();
+                if (!categories.ContainsKey(cat))
+                    categories[cat] = new List<string>();
+
+                var sb = new StringBuilder();
+                sb.Append("{ ");
+                sb.Append($"\"name\": \"{Esc(node.Name)}\", ");
+                sb.Append($"\"description\": \"{Esc(node.Description)}\", ");
+
+                // inputs
+                sb.Append("\"inputs\": [");
+                if (node.Inputs != null)
+                {
+                    for (int i = 0; i < node.Inputs.Length; i++)
+                    {
+                        if (i > 0) sb.Append(", ");
+                        var inp = node.Inputs[i];
+                        sb.Append($"{{ \"name\": \"{Esc(inp.Name)}\", \"type\": \"{inp.PortType}\" }}");
+                    }
+                }
+                sb.Append("], ");
+
+                // outputs
+                sb.Append("\"outputs\": [");
+                if (node.Outputs != null)
+                {
+                    for (int i = 0; i < node.Outputs.Length; i++)
+                    {
+                        if (i > 0) sb.Append(", ");
+                        var outp = node.Outputs[i];
+                        sb.Append($"{{ \"name\": \"{Esc(outp.Name)}\", \"type\": \"{outp.PortType}\" }}");
+                    }
+                }
+                sb.Append("] }");
+
+                categories[cat].Add(sb.ToString());
+            }
+
+            var result = new StringBuilder();
+            result.Append("{ \"categories\": { ");
+            bool firstCat = true;
+            foreach (var kvp in categories)
+            {
+                if (!firstCat) result.Append(", ");
+                firstCat = false;
+                result.Append($"\"{kvp.Key}\": [{string.Join(", ", kvp.Value)}]");
+            }
+            result.Append(" } }");
+
+            return AgentProtocol.CreateSuccessResponse(result.ToString(), request.RequestId);
+        }
+
+        private string HandleCreateGraph(AgentProtocol.AgentRequest request)
+        {
+            string graphName = request.GraphName;
+            if (string.IsNullOrEmpty(graphName) && !string.IsNullOrEmpty(request.Parameters))
+            {
+                var p = ParseSimpleJson(request.Parameters);
+                if (p.ContainsKey("graph_name"))
+                    graphName = p["graph_name"].ToString();
+            }
+
+            string graphId = session.CreateGraph(graphName);
+
+            return AgentProtocol.CreateSuccessResponse(
+                $"{{ \"graph_id\": \"{graphId}\", \"graph_name\": \"{Esc(graphName ?? "Untitled")}\" }}",
+                request.RequestId);
+        }
+
+        private string HandleAddNode(AgentProtocol.AgentRequest request)
+        {
+            var graph = session.GetGraph(request.GraphId);
+            if (graph == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph not found: {request.GraphId}", request.RequestId);
+
+            string nodeType = request.NodeType;
+            if (string.IsNullOrEmpty(nodeType))
+                return AgentProtocol.CreateErrorResponse(
+                    "Missing node_type", request.RequestId);
+
+            PCGNodeRegistry.EnsureInitialized();
+            var template = PCGNodeRegistry.GetNode(nodeType);
+            if (template == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Unknown node type: {nodeType}", request.RequestId);
+
+            var position = new Vector2(request.position_x, request.position_y);
+            var nodeData = graph.AddNode(nodeType, position);
+
+            return AgentProtocol.CreateSuccessResponse(
+                $"{{ \"node_id\": \"{nodeData.NodeId}\", \"node_type\": \"{Esc(nodeType)}\" }}",
+                request.RequestId);
+        }
+
+        private string HandleConnectNodes(AgentProtocol.AgentRequest request)
+        {
+            var graph = session.GetGraph(request.GraphId);
+            if (graph == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph not found: {request.GraphId}", request.RequestId);
+
+            if (string.IsNullOrEmpty(request.OutputNodeId) ||
+                string.IsNullOrEmpty(request.InputNodeId))
+                return AgentProtocol.CreateErrorResponse(
+                    "Missing output_node_id or input_node_id", request.RequestId);
+
+            string outPort = string.IsNullOrEmpty(request.OutputPort) ? "geometry" : request.OutputPort;
+            string inPort = string.IsNullOrEmpty(request.InputPort) ? "input" : request.InputPort;
+
+            graph.AddEdge(request.OutputNodeId, outPort, request.InputNodeId, inPort);
+
+            return AgentProtocol.CreateSuccessResponse(
+                "{ \"edge_created\": true }", request.RequestId);
+        }
+
+        private string HandleSetParam(AgentProtocol.AgentRequest request)
+        {
+            var graph = session.GetGraph(request.GraphId);
+            if (graph == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph not found: {request.GraphId}", request.RequestId);
+
+            string nodeId = request.NodeId;
+            if (string.IsNullOrEmpty(nodeId))
+                return AgentProtocol.CreateErrorResponse(
+                    "Missing node_id", request.RequestId);
+
+            var nodeData = graph.Nodes.Find(n => n.NodeId == nodeId);
+            if (nodeData == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Node not found: {nodeId}", request.RequestId);
+
+            if (string.IsNullOrEmpty(request.Parameters))
+                return AgentProtocol.CreateErrorResponse(
+                    "Missing parameters", request.RequestId);
+
+            var paramDict = ParseSimpleJson(request.Parameters);
+            int setCount = 0;
+            foreach (var kvp in paramDict)
+            {
+                nodeData.SetParameter(kvp.Key, kvp.Value);
+                setCount++;
+            }
+
+            return AgentProtocol.CreateSuccessResponse(
+                $"{{ \"params_set\": {setCount} }}", request.RequestId);
+        }
+
+        private string HandleSaveGraph(AgentProtocol.AgentRequest request)
+        {
+            var graph = session.GetGraph(request.GraphId);
+            if (graph == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph not found: {request.GraphId}", request.RequestId);
+
+            string assetPath = request.AssetPath;
+            if (string.IsNullOrEmpty(assetPath))
+                return AgentProtocol.CreateErrorResponse(
+                    "Missing asset_path", request.RequestId);
+
+            if (!assetPath.EndsWith(".asset"))
+                assetPath += ".asset";
+
+            string directory = Path.GetDirectoryName(assetPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            try
+            {
+                PCGGraphSerializer.SaveAsAsset(graph, assetPath);
+                return AgentProtocol.CreateSuccessResponse(
+                    $"{{ \"asset_path\": \"{Esc(assetPath)}\" }}", request.RequestId);
+            }
+            catch (Exception e)
+            {
+                return AgentProtocol.CreateErrorResponse(
+                    $"Failed to save graph: {e.Message}", request.RequestId);
+            }
+        }
+
+        private string HandleExecuteGraph(AgentProtocol.AgentRequest request)
+        {
+            var graph = session.GetGraph(request.GraphId);
+            if (graph == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph not found: {request.GraphId}", request.RequestId);
+
+            try
+            {
+                var executor = new PCGGraphExecutor(graph);
+                executor.Execute(continueOnError: true);
+
+                var sb = new StringBuilder();
+                sb.Append("{ ");
+                sb.Append($"\"nodes_executed\": {graph.Nodes.Count}, ");
+                sb.Append("\"outputs\": { ");
+
+                bool first = true;
+                foreach (var nodeData in graph.Nodes)
+                {
+                    var outputs = executor.GetNodeAllOutputs(nodeData.NodeId);
+                    if (outputs == null) continue;
+
+                    foreach (var kvp in outputs)
+                    {
+                        if (!first) sb.Append(", ");
+                        first = false;
+
+                        var geo = kvp.Value;
+                        sb.Append($"\"{Esc(nodeData.NodeType)}_{Esc(kvp.Key)}\": {{ ");
+                        sb.Append($"\"pointCount\": {geo?.Points.Count ?? 0}, ");
+                        sb.Append($"\"primCount\": {geo?.Primitives.Count ?? 0}");
+                        sb.Append(" }");
+                    }
+                }
+
+                sb.Append(" } }");
+
+                return AgentProtocol.CreateSuccessResponse(sb.ToString(), request.RequestId);
+            }
+            catch (Exception e)
+            {
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph execution failed: {e.Message}", request.RequestId);
+            }
+        }
+
+        private string HandleGetGraphInfo(AgentProtocol.AgentRequest request)
+        {
+            var graph = session.GetGraph(request.GraphId);
+            if (graph == null)
+                return AgentProtocol.CreateErrorResponse(
+                    $"Graph not found: {request.GraphId}", request.RequestId);
+
+            var sb = new StringBuilder();
+            sb.Append("{ ");
+            sb.Append($"\"graph_name\": \"{Esc(graph.GraphName)}\", ");
+
+            // nodes
+            sb.Append("\"nodes\": [");
+            for (int i = 0; i < graph.Nodes.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                var n = graph.Nodes[i];
+                sb.Append($"{{ \"id\": \"{n.NodeId}\", \"type\": \"{Esc(n.NodeType)}\", ");
+                sb.Append($"\"position\": [{F(n.Position.x)}, {F(n.Position.y)}], ");
+                sb.Append("\"parameters\": { ");
+                for (int p = 0; p < n.Parameters.Count; p++)
+                {
+                    if (p > 0) sb.Append(", ");
+                    sb.Append($"\"{Esc(n.Parameters[p].Key)}\": \"{Esc(n.Parameters[p].ValueJson)}\"");
+                }
+                sb.Append(" } }");
+            }
+            sb.Append("], ");
+
+            // edges
+            sb.Append("\"edges\": [");
+            for (int i = 0; i < graph.Edges.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                var e = graph.Edges[i];
+                sb.Append($"{{ \"output_node\": \"{e.OutputNodeId}\", \"output_port\": \"{Esc(e.OutputPort)}\", ");
+                sb.Append($"\"input_node\": \"{e.InputNodeId}\", \"input_port\": \"{Esc(e.InputPort)}\" }}");
+            }
+            sb.Append("] }");
+
+            return AgentProtocol.CreateSuccessResponse(sb.ToString(), request.RequestId);
+        }
+
+        // ---- Helpers ----
+
+        private static string Esc(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"")
+                    .Replace("\n", "\\n").Replace("\r", "\\r");
+        }
+
+        private static string F(float v) => v.ToString(CultureInfo.InvariantCulture);
+
+        private static Dictionary<string, object> ParseSimpleJson(string json)
+        {
+            var dict = new Dictionary<string, object>();
+            if (string.IsNullOrEmpty(json) || json.Trim() == "{}") return dict;
+
+            json = json.Trim();
+            if (json.StartsWith("{")) json = json.Substring(1);
+            if (json.EndsWith("}")) json = json.Substring(0, json.Length - 1);
+
+            int depth = 0;
+            int start = 0;
+            bool inString = false;
+            var pairs = new List<string>();
+
+            for (int i = 0; i < json.Length; i++)
+            {
+                char c = json[i];
+                if (c == '"' && (i == 0 || json[i - 1] != '\\')) inString = !inString;
+                if (inString) continue;
+                if (c == '{' || c == '[') depth++;
+                else if (c == '}' || c == ']') depth--;
+                else if (c == ',' && depth == 0)
+                {
+                    pairs.Add(json.Substring(start, i - start));
+                    start = i + 1;
+                }
+            }
+            if (start < json.Length) pairs.Add(json.Substring(start));
+
+            foreach (var pair in pairs)
+            {
+                var colonIdx = pair.IndexOf(':');
+                if (colonIdx < 0) continue;
+                var key = pair.Substring(0, colonIdx).Trim().Trim('"');
+                var value = pair.Substring(colonIdx + 1).Trim();
+
+                if (value.StartsWith("\"") && value.EndsWith("\""))
+                    dict[key] = value.Trim('"');
+                else if (value == "true") dict[key] = true;
+                else if (value == "false") dict[key] = false;
+                else if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float f))
+                    dict[key] = f;
+                else
+                    dict[key] = value;
+            }
+
+            return dict;
         }
     }
 }

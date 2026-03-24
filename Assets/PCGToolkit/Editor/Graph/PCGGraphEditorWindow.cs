@@ -43,11 +43,12 @@ namespace PCGToolkit.Graph
         private bool _showPerfPanel = false;
   
         [MenuItem("PCG Toolkit/Node Editor")]  
-        public static void OpenWindow()  
+        public static PCGGraphEditorWindow OpenWindow()  
         {  
             var window = GetWindow<PCGGraphEditorWindow>();  
             window.titleContent = new GUIContent("PCG Node Editor");  
-            window.minSize = new Vector2(800, 600);  
+            window.minSize = new Vector2(800, 600);
+            return window;
         }
 
         private void OnEnable()
@@ -73,6 +74,8 @@ namespace PCGToolkit.Graph
                     _inspectorWindow.BindGraphView(graphView);
                 }
             };
+
+            PCGHoudiniLayout.ApplyLayoutIfFirstTime();
         }
 
         private void Update()

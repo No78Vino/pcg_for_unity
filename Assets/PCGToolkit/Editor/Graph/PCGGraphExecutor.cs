@@ -166,6 +166,7 @@ namespace PCGToolkit.Graph
             var nodeInstance = (IPCGNode)Activator.CreateInstance(nodeTemplate.GetType());
 
             var inputGeometries = new Dictionary<string, PCGGeometry>();
+            var inputPortCounts = new Dictionary<string, int>();
             foreach (var edge in graphData.Edges)
             {
                 if (edge.InputNodeId == nodeData.NodeId)
@@ -173,7 +174,15 @@ namespace PCGToolkit.Graph
                     if (_nodeOutputs.TryGetValue(edge.OutputNodeId, out var outputs) &&
                         outputs.TryGetValue(edge.OutputPort, out var geo))
                     {
-                        inputGeometries[edge.InputPort] = geo;
+                        string portKey = edge.InputPort;
+                        if (inputGeometries.ContainsKey(portKey))
+                        {
+                            if (!inputPortCounts.ContainsKey(portKey))
+                                inputPortCounts[portKey] = 1;
+                            inputPortCounts[portKey]++;
+                            portKey = $"{edge.InputPort}_{inputPortCounts[portKey] - 1}";
+                        }
+                        inputGeometries[portKey] = geo;
                     }
                 }
             }

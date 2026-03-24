@@ -409,6 +409,62 @@ namespace PCGToolkit.Graph
             statsLabel.style.marginTop = 4;
             foldout.Add(statsLabel);
 
+            var selectUpBtn = new Button(() =>
+            {
+                var tool = UnityEditor.EditorTools.ToolManager.activeTool as Tools.PCGSelectionTool;
+                tool?.SelectByNormal(Vector3.up, 0.7f);
+            })
+            {
+                text = "Select Up Faces",
+                tooltip = "选中所有法线朝上的面",
+                style = { marginTop = 4 }
+            };
+            foldout.Add(selectUpBtn);
+
+            var selectMatBtn = new Button(() =>
+            {
+                var tool = UnityEditor.EditorTools.ToolManager.activeTool as Tools.PCGSelectionTool;
+                if (tool != null && PCGSelectionState.SelectedPrimIndices.Count > 0)
+                {
+                    int primIndex = -1;
+                    foreach (int idx in PCGSelectionState.SelectedPrimIndices) { primIndex = idx; break; }
+                    if (primIndex >= 0) tool.SelectByMaterialId(primIndex);
+                }
+            })
+            {
+                text = "Select Same Material",
+                tooltip = "选中与当前选中面相同材质的所有面",
+                style = { marginTop = 2 }
+            };
+            foldout.Add(selectMatBtn);
+
+            var growShrinkRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 4 } };
+            var growBtn = new Button(() =>
+            {
+                var tool = UnityEditor.EditorTools.ToolManager.activeTool as Tools.PCGSelectionTool;
+                tool?.GrowSelection();
+            }) { text = "Grow Selection", tooltip = "扩展选择" };
+            growBtn.style.flexGrow = 1;
+            var shrinkBtn = new Button(() =>
+            {
+                var tool = UnityEditor.EditorTools.ToolManager.activeTool as Tools.PCGSelectionTool;
+                tool?.ShrinkSelection();
+            }) { text = "Shrink Selection", tooltip = "收缩选择" };
+            shrinkBtn.style.flexGrow = 1;
+            growShrinkRow.Add(growBtn);
+            growShrinkRow.Add(shrinkBtn);
+            foldout.Add(growShrinkRow);
+
+            foldout.schedule.Execute(() =>
+            {
+                bool toolActive = UnityEditor.EditorTools.ToolManager.activeTool is Tools.PCGSelectionTool;
+                selectUpBtn.SetEnabled(toolActive);
+                selectMatBtn.SetEnabled(toolActive);
+                growBtn.SetEnabled(toolActive);
+                shrinkBtn.SetEnabled(toolActive);
+                statsLabel.text = $"Selected: {PCGSelectionState.SelectionCount} ({PCGSelectionState.CurrentMode})";
+            }).Every(200);
+
             _paramContainer.Add(foldout);
         }
 

@@ -62,6 +62,50 @@ namespace PCGToolkit.Tools
             actionRow.Add(applyBtn);
             root.Add(actionRow);
 
+            // Advanced Selection section
+            var advancedFoldout = new Foldout { text = "Advanced Selection", value = false };
+            advancedFoldout.style.marginTop = 4;
+
+            var growShrinkRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 4 } };
+            var growBtn = new Button(() =>
+            {
+                var tool = UnityEditor.EditorTools.ToolManager.activeTool as PCGSelectionTool;
+                tool?.GrowSelection();
+            }) { text = "Grow", tooltip = "Expand selection (Ctrl+Numpad+)" };
+            growBtn.style.flexGrow = 1;
+            var shrinkBtn = new Button(() =>
+            {
+                var tool = UnityEditor.EditorTools.ToolManager.activeTool as PCGSelectionTool;
+                tool?.ShrinkSelection();
+            }) { text = "Shrink", tooltip = "Shrink selection (Ctrl+Numpad-)" };
+            shrinkBtn.style.flexGrow = 1;
+            growShrinkRow.Add(growBtn);
+            growShrinkRow.Add(shrinkBtn);
+            advancedFoldout.Add(growShrinkRow);
+
+            var selectUpBtn = new Button(() =>
+            {
+                var tool = UnityEditor.EditorTools.ToolManager.activeTool as PCGSelectionTool;
+                tool?.SelectByNormal(Vector3.up, 0.7f);
+            }) { text = "Select Up Faces", tooltip = "Select faces with normals pointing upward" };
+            selectUpBtn.style.marginBottom = 2;
+            advancedFoldout.Add(selectUpBtn);
+
+            var selectMatBtn = new Button(() =>
+            {
+                var tool = UnityEditor.EditorTools.ToolManager.activeTool as PCGSelectionTool;
+                if (tool != null && PCGSelectionState.SelectedPrimIndices.Count > 0)
+                {
+                    int primIndex = -1;
+                    foreach (int idx in PCGSelectionState.SelectedPrimIndices) { primIndex = idx; break; }
+                    if (primIndex >= 0) tool.SelectByMaterialId(primIndex);
+                }
+            }) { text = "Select by Material", tooltip = "Select all faces with the same material as the current selection" };
+            selectMatBtn.style.marginBottom = 2;
+            advancedFoldout.Add(selectMatBtn);
+
+            root.Add(advancedFoldout);
+
             // Update loop
             root.schedule.Execute(() =>
             {
@@ -71,6 +115,12 @@ namespace PCGToolkit.Tools
                 UpdateToggleStyle(faceBtn, PCGSelectionState.CurrentMode == PCGSelectMode.Face);
                 UpdateToggleStyle(edgeBtn, PCGSelectionState.CurrentMode == PCGSelectMode.Edge);
                 UpdateToggleStyle(vertBtn, PCGSelectionState.CurrentMode == PCGSelectMode.Vertex);
+
+                bool toolActive = UnityEditor.EditorTools.ToolManager.activeTool is PCGSelectionTool;
+                growBtn.SetEnabled(toolActive);
+                shrinkBtn.SetEnabled(toolActive);
+                selectUpBtn.SetEnabled(toolActive);
+                selectMatBtn.SetEnabled(toolActive);
             }).Every(200);
 
             return root;
@@ -79,6 +129,63 @@ namespace PCGToolkit.Tools
         public OverlayToolbar CreateHorizontalToolbarContent()
         {
             var toolbar = new OverlayToolbar();
+
+            var faceToggle = new EditorToolbarToggle
+            {
+                text = "Face",
+                tooltip = "Face selection mode",
+                value = PCGSelectionState.CurrentMode == PCGSelectMode.Face
+            };
+            faceToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue) PCGSelectionState.SetMode(PCGSelectMode.Face);
+            });
+
+            var edgeToggle = new EditorToolbarToggle
+            {
+                text = "Edge",
+                tooltip = "Edge selection mode",
+                value = PCGSelectionState.CurrentMode == PCGSelectMode.Edge
+            };
+            edgeToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue) PCGSelectionState.SetMode(PCGSelectMode.Edge);
+            });
+
+            var vertToggle = new EditorToolbarToggle
+            {
+                text = "Vertex",
+                tooltip = "Vertex selection mode",
+                value = PCGSelectionState.CurrentMode == PCGSelectMode.Vertex
+            };
+            vertToggle.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue) PCGSelectionState.SetMode(PCGSelectMode.Vertex);
+            });
+
+            var clearBtn = new EditorToolbarButton
+            {
+                text = "Clear",
+                tooltip = "Clear selection"
+            };
+            clearBtn.clicked += () =>
+            {
+                PCGSelectionState.Clear();
+                SceneView.RepaintAll();
+            };
+
+            toolbar.Add(faceToggle);
+            toolbar.Add(edgeToggle);
+            toolbar.Add(vertToggle);
+            toolbar.Add(clearBtn);
+
+            toolbar.schedule.Execute(() =>
+            {
+                faceToggle.SetValueWithoutNotify(PCGSelectionState.CurrentMode == PCGSelectMode.Face);
+                edgeToggle.SetValueWithoutNotify(PCGSelectionState.CurrentMode == PCGSelectMode.Edge);
+                vertToggle.SetValueWithoutNotify(PCGSelectionState.CurrentMode == PCGSelectMode.Vertex);
+            }).Every(200);
+
             return toolbar;
         }
 

@@ -1,706 +1,567 @@
+# 任务1
 ```json
 {
-  "plan_title": "Houdini 风格 Geometry SOP 窗口布局系统",
+  "task_id": "pcg_quick_select_tool",
+  "title": "实现 PCG Selection Tool 三层快捷启动系统",
+  "description": "当前从场景 GameObject 启动 Selection Tool 需要 6 步操作（打开Graph → 创建节点 → 拖GO → 选中节点 → 点Inspector按钮 → 选面）。本任务实现三层快捷入口，将操作简化为 1-2 步，并支持在没有 SceneSelectionInputNode 时自动创建。",
   "repository": "No78Vino/pcg_for_unity",
-  "base_ref": "main",
-  "summary": "实现一套模仿 Houdini Geometry SOP 操作时的经典 Layout 布局，在打开 PCG Node Editor 时自动触发。布局为：左上 SceneView（3D 视口）、左下 PCGGraphEditorWindow（节点编辑器）、右侧 PCGNodeInspectorWindow（参数面板）。",
-  "layout_spec": {
-    "description": "Houdini Geometry SOP 经典三栏布局",
-    "diagram": "+---------------------------+------------------+\n|                           |                  |\n|     SceneView             | PCGInspector     |\n|     (3D Viewport)         | (Parameters)     |\n|                           |                  |\n+---------------------------+                  |\n|                           |                  |\n|  PCGGraphEditorWindow     |                  |\n|  (Network Editor)         |                  |\n|                           |                  |\n+---------------------------+------------------+",
-    "panels": [
-      {
-        "name": "SceneView",
-        "houdini_equivalent": "Scene Viewer",
-        "unity_class": "UnityEditor.SceneView",
-        "position": "top-left",
-        "width_ratio": 0.75,
-        "height_ratio": 0.5
-      },
-      {
-        "name": "PCGGraphEditorWindow",
-        "houdini_equivalent": "Network Editor",
-        "unity_class": "PCGToolkit.Graph.PCGGraphEditorWindow",
-        "position": "bottom-left",
-        "width_ratio": 0.75,
-        "height_ratio": 0.5
-      },
-      {
-        "name": "PCGNodeInspectorWindow",
-        "houdini_equivalent": "Parameter Editor",
-        "unity_class": "PCGToolkit.Graph.PCGNodeInspectorWindow",
-        "position": "right",
-        "width_ratio": 0.25,
-        "height_ratio": 1.0
-      }
-    ]
-  },
-  "tasks": [
-    {
-      "id": "LAYOUT-1",
-      "title": "创建 PCGHoudiniLayout 布局管理器",
-      "priority": "high",
-      "file": "Assets/PCGToolkit/Editor/Graph/PCGHoudiniLayout.cs",
-      "current_state": "项目中不存在任何窗口布局管理逻辑。PCGGraphEditorWindow.OnEnable() 仅自动打开 PCGNodeInspectorWindow，但不控制窗口位置和大小。所有窗口由用户手动拖拽排列。",
-      "target_state": "新建 PCGHoudiniLayout 静态工具类，提供 ApplyLayout() 方法，自动将 SceneView、PCGGraphEditorWindow、PCGNodeInspectorWindow 排列为 Houdini 风格布局。支持反射 Docking（优先）和浮动窗口位置排列（fallback）两种策略。",
-      "changes": [
-        {
-          "action": "新建 PCGHoudiniLayout.cs",
-          "details": [
-            "命名空间 PCGToolkit.Graph",
-            "静态类 PCGHoudiniLayout",
-            "常量 RightPanelWidthRatio = 0.25f（Inspector 占屏幕宽度 25%）",
-            "常量 TopHeightRatio = 0.5f（SceneView 占左栏高度 50%）",
-            "常量 PrefKey = 'PCGToolkit_AutoLayout'（EditorPrefs key，控制是否自动触发）"
-          ]
-        },
-        {
-          "action": "实现 ApplyLayout() 公开方法",
-          "details": [
-            "添加 [MenuItem('PCG Toolkit/Apply Houdini Layout')] 特性，支持菜单手动触发",
-            "内部调用 ApplyLayoutInternal()"
-          ]
-        },
-        {
-          "action": "实现 ApplyLayoutIfFirstTime() 公开方法",
-          "details": [
-            "检查 EditorPrefs.GetBool(PrefKey, false)，若已触发过则跳过",
-            "首次触发时设置 EditorPrefs.SetBool(PrefKey, true)",
-            "使用 EditorApplication.delayCall 延迟调用 ApplyLayoutInternal()，确保 Unity 窗口初始化完成"
-          ]
-        },
-        {
-          "action": "实现 ResetLayoutPreference() 公开方法",
-          "details": [
-            "添加 [MenuItem('PCG Toolkit/Reset Layout Preference')] 特性",
-            "调用 EditorPrefs.DeleteKey(PrefKey) 重置标记",
-            "下次打开 Node Editor 时会重新自动触发布局"
-          ]
-        },
-        {
-          "action": "实现 ApplyLayoutInternal() 私有方法",
-          "details": [
-            "步骤 1：通过 EditorWindow.GetWindow<SceneView>() 获取/打开 SceneView",
-            "步骤 2：通过 EditorWindow.GetWindow<PCGGraphEditorWindow>() 获取/打开节点编辑器",
-            "步骤 3：通过 PCGNodeInspectorWindow.Open() 获取/打开 Inspector",
-            "步骤 4：调用 TryReflectionDocking() 尝试反射 Docking",
-            "步骤 5：若反射失败，调用 ArrangeFloatingWindows() 作为 fallback",
-            "步骤 6：调用 nodeEditor.Focus() 聚焦节点编辑器",
-            "整体包裹在 try-catch 中，失败时 Debug.LogWarning"
-          ]
-        },
-        {
-          "action": "实现 TryReflectionDocking() 私有方法",
-          "details": [
-            "通过 typeof(EditorWindow).Assembly.GetType() 获取 Unity 内部类型：'UnityEditor.DockArea'、'UnityEditor.SplitView'、'UnityEditor.ContainerWindow'",
-            "通过 typeof(EditorWindow).GetField('m_Parent', BindingFlags.NonPublic | BindingFlags.Instance) 获取窗口的父 DockArea",
-            "尝试使用内部 API 将三个窗口 Dock 到同一个 ContainerWindow 中，按 Houdini 布局排列",
-            "如果任何反射步骤失败（类型不存在、字段不存在、API 变更），返回 false 触发 fallback",
-            "需要 using System.Reflection"
-          ]
-        },
-        {
-          "action": "实现 ArrangeFloatingWindows() 私有方法（fallback）",
-          "details": [
-            "获取屏幕分辨率 Screen.currentResolution.width / height",
-            "预留 margin = 40f 给系统任务栏",
-            "计算 rightPanelW = Max(350f, usableW * 0.25f)",
-            "计算 leftW = usableW - rightPanelW",
-            "计算 topH = usableH * 0.5f, bottomH = usableH - topH",
-            "设置 sceneView.position = new Rect(0, margin, leftW, topH)",
-            "设置 nodeEditor.position = new Rect(0, margin + topH, leftW, bottomH)",
-            "设置 inspector.position = new Rect(leftW, margin, rightPanelW, usableH)"
-          ]
-        }
-      ],
-      "acceptance_criteria": [
-        "菜单 'PCG Toolkit > Apply Houdini Layout' 可手动触发布局",
-        "菜单 'PCG Toolkit > Reset Layout Preference' 可重置自动触发标记",
-        "三个窗口按 Houdini 风格排列：SceneView 左上、NodeEditor 左下、Inspector 右侧全高",
-        "反射 Docking 失败时自动 fallback 到浮动窗口排列，不报错",
-        "不同屏幕分辨率下布局比例合理"
-      ]
-    },
-    {
-      "id": "LAYOUT-2",
-      "title": "修改 PCGGraphEditorWindow 自动触发布局",
-      "priority": "high",
-      "file": "Assets/PCGToolkit/Editor/Graph/PCGGraphEditorWindow.cs",
-      "current_state": "OnEnable() 方法（第 53-76 行）在窗口打开时构建 GraphView、Toolbar、Executor，并通过 delayCall 自动打开 Inspector。OpenWindow() 方法（第 45-51 行）返回 void。",
-      "target_state": "OnEnable() 末尾添加 PCGHoudiniLayout.ApplyLayoutIfFirstTime() 调用，首次打开时自动应用 Houdini 布局。OpenWindow() 返回类型改为 PCGGraphEditorWindow，供布局管理器使用。",
-      "changes": [
-        {
-          "action": "修改 OpenWindow() 返回类型",
-          "line_range": "45-51",
-          "details": [
-            "将 public static void OpenWindow() 改为 public static PCGGraphEditorWindow OpenWindow()",
-            "在方法末尾添加 return window;",
-            "MenuItem 特性保持不变"
-          ]
-        },
-        {
-          "action": "在 OnEnable() 末尾添加自动布局调用",
-          "line_range": "53-76",
-          "details": [
-            "在现有 EditorApplication.delayCall（第 68-75 行）之后添加：",
-            "PCGHoudiniLayout.ApplyLayoutIfFirstTime();",
-            "注意：ApplyLayoutIfFirstTime() 内部也使用 delayCall，所以会在 Inspector 打开之后执行"
-          ]
-        }
-      ],
-      "acceptance_criteria": [
-        "首次通过菜单 'PCG Toolkit > Node Editor' 打开时，自动应用 Houdini 布局",
-        "第二次及之后打开不再自动触发（除非通过 Reset Layout Preference 重置）",
-        "OpenWindow() 返回窗口实例，不影响 MenuItem 功能",
-        "现有的 Inspector 自动打开逻辑不受影响"
-      ]
-    }
-  ],
-  "execution_order": [
-    {
-      "step": 1,
-      "task_ids": ["LAYOUT-1"],
-      "reason": "先创建布局管理器，可通过菜单手动测试布局效果"
-    },
-    {
-      "step": 2,
-      "task_ids": ["LAYOUT-2"],
-      "reason": "布局管理器验证通过后，再接入自动触发逻辑"
-    }
-  ],
+
   "files_to_create": [
-    "Assets/PCGToolkit/Editor/Graph/PCGHoudiniLayout.cs"
+    {
+      "path": "Assets/PCGToolkit/Editor/Tools/PCGQuickSelect.cs",
+      "namespace": "PCGToolkit.Tools",
+      "description": "核心调度器静态类，统一处理所有快捷入口的逻辑",
+      "using_directives": [
+        "System",
+        "System.Collections.Generic",
+        "UnityEditor",
+        "UnityEditor.EditorTools",
+        "UnityEngine",
+        "PCGToolkit.Core",
+        "PCGToolkit.Graph"
+      ],
+      "class_definition": {
+        "name": "PCGQuickSelect",
+        "modifiers": "public static"
+      },
+      "menu_items": [
+        {
+          "attribute": "[MenuItem(\"GameObject/PCG Toolkit/Select Faces\", false, 49)]",
+          "method_name": "SelectFacesFromHierarchy",
+          "body_logic": "设置 PCGSelectionState.SetMode(PCGSelectMode.Face)，然后调用 Launch(Selection.activeGameObject)"
+        },
+        {
+          "attribute": "[MenuItem(\"GameObject/PCG Toolkit/Select Faces\", true)]",
+          "method_name": "ValidateSelectFaces",
+          "body_logic": "return Selection.activeGameObject != null && Selection.activeGameObject.GetComponent<MeshFilter>() != null"
+        },
+        {
+          "attribute": "[MenuItem(\"GameObject/PCG Toolkit/Select Edges\", false, 50)]",
+          "method_name": "SelectEdgesFromHierarchy",
+          "body_logic": "设置 PCGSelectionState.SetMode(PCGSelectMode.Edge)，然后调用 Launch(Selection.activeGameObject)"
+        },
+        {
+          "attribute": "[MenuItem(\"GameObject/PCG Toolkit/Select Edges\", true)]",
+          "method_name": "ValidateSelectEdges",
+          "body_logic": "同 ValidateSelectFaces"
+        },
+        {
+          "attribute": "[MenuItem(\"GameObject/PCG Toolkit/Select Vertices\", false, 51)]",
+          "method_name": "SelectVerticesFromHierarchy",
+          "body_logic": "设置 PCGSelectionState.SetMode(PCGSelectMode.Vertex)，然后调用 Launch(Selection.activeGameObject)"
+        },
+        {
+          "attribute": "[MenuItem(\"GameObject/PCG Toolkit/Select Vertices\", true)]",
+          "method_name": "ValidateSelectVertices",
+          "body_logic": "同 ValidateSelectFaces"
+        }
+      ],
+      "methods": [
+        {
+          "name": "Launch",
+          "signature": "public static void Launch(GameObject go)",
+          "description": "主入口方法，完成以下步骤：",
+          "steps": [
+            "1. 验证 go 不为 null",
+            "2. 获取 MeshFilter mf = go.GetComponent<MeshFilter>()，验证 mf != null && mf.sharedMesh != null，否则 Debug.LogWarning 并 return",
+            "3. 调用 var geo = PCGGeometryToMesh.FromMesh(mf.sharedMesh) 转换为 PCGGeometry",
+            "4. 调用 ApplyWorldTransform(geo, go.transform) 烘焙世界变换",
+            "5. 调用 EnsureGraphNode(go) 智能关联 Graph（如果 Graph Editor 打开）",
+            "6. 调用 ToolManager.SetActiveTool<PCGSelectionTool>()",
+            "7. 使用 EditorApplication.delayCall 延迟一帧（等待 OnActivated 设置 ActiveInstance），然后调用 PCGSelectionTool.ActiveInstance?.SetGeometry(geo)",
+            "8. Debug.Log 输出成功信息，包含 go.name、Points.Count、Primitives.Count"
+          ]
+        },
+        {
+          "name": "ApplyWorldTransform",
+          "signature": "public static void ApplyWorldTransform(PCGGeometry geo, Transform transform)",
+          "description": "烘焙世界变换到几何体，复用 SceneSelectionInputNode.Execute 中 lines 84-99 的逻辑",
+          "steps": [
+            "1. var matrix = transform.localToWorldMatrix",
+            "2. 遍历 geo.Points，用 matrix.MultiplyPoint3x4 变换每个点",
+            "3. 获取法线属性 geo.PointAttribs.GetAttribute('N')",
+            "4. 如果法线存在，用 matrix.inverse.transpose 的 MultiplyVector 变换每个法线并 normalized"
+          ],
+          "reference_code": {
+            "file": "Assets/PCGToolkit/Editor/Nodes/Input/SceneSelectionInputNode.cs",
+            "lines": "84-99"
+          }
+        },
+        {
+          "name": "EnsureGraphNode",
+          "signature": "private static void EnsureGraphNode(GameObject go)",
+          "description": "智能 Graph 关联：查找或创建 SceneSelectionInputNode，设置 target 参数",
+          "steps": [
+            "1. 通过 EditorWindow.GetWindow<PCGGraphEditorWindow>(false, null, false) 获取已打开的 Graph Editor（第三个参数 false 表示不强制聚焦，如果没打开则返回 null）",
+            "2. 如果 editorWindow == null，直接 return（工具仍然可以独立工作，不需要 Graph）",
+            "3. 通过新增的 editorWindow.GetGraphView() 方法获取 graphView",
+            "4. 如果 graphView == null，return",
+            "5. 调用 graphView.FindNodeVisualByType('SceneSelectionInput') 查找已有的 SceneSelectionInputNode",
+            "6. 如果找到已有节点 existingNode：",
+            "   a. 创建 var sceneRef = new PCGSceneObjectRef(go)",
+            "   b. 调用 existingNode.SetPortDefaultValues(new Dictionary<string, object> { { 'target', sceneRef } })",
+            "   c. 调用 graphView.ClearSelection()",
+            "   d. 调用 graphView.AddToSelection(existingNode)",
+            "7. 如果没找到已有节点：",
+            "   a. 调用 PCGNodeRegistry.EnsureInitialized()",
+            "   b. 调用 var template = PCGNodeRegistry.GetNode('SceneSelectionInput')",
+            "   c. 如果 template == null，return",
+            "   d. 创建 var newNode = (IPCGNode)Activator.CreateInstance(template.GetType())",
+            "   e. 调用 var visual = graphView.CreateNodeVisual(newNode, new Vector2(100, 100))",
+            "   f. 创建 var sceneRef = new PCGSceneObjectRef(go)",
+            "   g. 调用 visual.SetPortDefaultValues(new Dictionary<string, object> { { 'target', sceneRef } })",
+            "   h. 调用 graphView.ClearSelection()",
+            "   i. 调用 graphView.AddToSelection(visual)",
+            "   j. 调用 graphView.FrameSelection()",
+            "   k. 调用 graphView.NotifyGraphChanged() 标记脏状态"
+          ]
+        }
+      ]
+    }
   ],
+
   "files_to_modify": [
-    "Assets/PCGToolkit/Editor/Graph/PCGGraphEditorWindow.cs"
+    {
+      "path": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
+      "changes": [
+        {
+          "target": "OnActivated() 方法",
+          "current_line_range": [70, 74],
+          "current_code": "public override void OnActivated()\n{\n    ActiveInstance = this;\n    SceneView.RepaintAll();\n}",
+          "description": "在 ActiveInstance = this 之后、SceneView.RepaintAll() 之前，添加自动检测逻辑",
+          "new_code": "public override void OnActivated()\n{\n    ActiveInstance = this;\n\n    // 自动检测：如果没有几何数据，尝试从场景选中物体读取\n    if (!_bridge.IsValid)\n    {\n        var go = Selection.activeGameObject;\n        if (go != null)\n        {\n            var mf = go.GetComponent<MeshFilter>();\n            if (mf != null && mf.sharedMesh != null)\n            {\n                var geo = PCGGeometryToMesh.FromMesh(mf.sharedMesh);\n                PCGQuickSelect.ApplyWorldTransform(geo, go.transform);\n                SetGeometry(geo);\n                Debug.Log($\"[PCGSelectionTool] Auto-loaded geometry from '{go.name}': {geo.Points.Count} points, {geo.Primitives.Count} prims\");\n            }\n        }\n    }\n\n    SceneView.RepaintAll();\n}",
+          "required_using": "using PCGToolkit.Tools; // 如果不在同一命名空间，需要引用 PCGQuickSelect"
+        }
+      ]
+    },
+    {
+      "path": "Assets/PCGToolkit/Editor/Graph/PCGGraphEditorWindow.cs",
+      "changes": [
+        {
+          "target": "添加公开方法 GetGraphView()",
+          "description": "在类中添加一个公开方法，供 PCGQuickSelect.EnsureGraphNode() 访问 graphView 实例",
+          "insert_after_line": 487,
+          "new_code": "/// <summary>\n/// 供外部（如 PCGQuickSelect）访问当前 GraphView 实例\n/// </summary>\npublic PCGGraphView GetGraphView() => graphView;"
+        },
+        {
+          "target": "HandleKeyboardShortcut() 方法",
+          "current_line_range": [489, 503],
+          "description": "在方法末尾（line 503 的 } 之前）添加 Ctrl+Shift+F 快捷键",
+          "insert_before_closing_brace": true,
+          "new_code": "// Ctrl+Shift+F: Quick Select Faces on active scene object\nelse if (evt.keyCode == KeyCode.F && evt.ctrlKey && evt.shiftKey)\n{\n    var go = Selection.activeGameObject;\n    if (go != null)\n        PCGToolkit.Tools.PCGQuickSelect.Launch(go);\n    evt.StopPropagation();\n}"
+        }
+      ]
+    },
+    {
+      "path": "Assets/PCGToolkit/Editor/Graph/PCGGraphView.cs",
+      "changes": [
+        {
+          "target": "添加 FindNodeVisualByType() 辅助方法",
+          "description": "在 FindNodeVisual(string nodeId) 方法（line 609-618）之后添加按节点类型查找的方法",
+          "insert_after_line": 618,
+          "new_code": "/// <summary>\n/// 按节点类型名查找第一个匹配的 PCGNodeVisual\n/// </summary>\npublic PCGNodeVisual FindNodeVisualByType(string nodeTypeName)\n{\n    PCGNodeVisual found = null;\n    nodes.ForEach(node =>\n    {\n        if (found != null) return;\n        if (node is PCGNodeVisual visual && visual.PCGNode.Name == nodeTypeName)\n            found = visual;\n    });\n    return found;\n}"
+        }
+      ]
+    }
   ],
-  "dependencies": {
-    "unity_namespaces": [
-      "UnityEditor",
-      "UnityEngine",
-      "System",
-      "System.Reflection"
-    ],
-    "project_references": [
-      "PCGToolkit.Graph.PCGGraphEditorWindow (第 45-51 行 OpenWindow, 第 53-76 行 OnEnable)",
-      "PCGToolkit.Graph.PCGNodeInspectorWindow (第 37-43 行 Open)"
-    ]
+
+  "key_dependencies": {
+    "PCGSelectionTool": {
+      "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
+      "relevant_members": {
+        "ActiveInstance": { "line": 22, "type": "static property", "note": "在 OnActivated() 中设置，需要 delayCall 等待" },
+        "SetGeometry(PCGGeometry)": { "line": 27, "note": "初始化 bridge，创建临时 MeshCollider，使 IsValid 为 true" },
+        "_bridge.IsValid": { "line": 26, "note": "TempGameObject != null && TempMesh != null && Geometry != null" }
+      }
+    },
+    "PCGGeometryToMesh": {
+      "file": "Assets/PCGToolkit/Editor/Core/PCGGeometryToMesh.cs",
+      "relevant_members": {
+        "FromMesh(Mesh)": { "line": 280, "note": "将 Unity Mesh 转为 PCGGeometry，包含顶点、法线、UV、颜色、Submesh" }
+      }
+    },
+    "PCGSceneObjectRef": {
+      "file": "Assets/PCGToolkit/Editor/Core/PCGParamHelper.cs",
+      "relevant_members": {
+        "constructor(GameObject)": { "line": 18, "note": "记录 instanceID 和 HierarchyPath" },
+        "Resolve()": { "line": 25, "note": "通过 instanceID 或路径解析为 GameObject" }
+      }
+    },
+    "PCGNodeRegistry": {
+      "file": "Assets/PCGToolkit/Editor/Core/PCGNodeRegistry.cs",
+      "relevant_members": {
+        "EnsureInitialized()": { "note": "确保节点注册表已初始化" },
+        "GetNode(string)": { "note": "按节点类型名获取模板实例" }
+      }
+    },
+    "PCGGraphView": {
+      "file": "Assets/PCGToolkit/Editor/Graph/PCGGraphView.cs",
+      "relevant_members": {
+        "CreateNodeVisual(IPCGNode, Vector2)": { "line": 653, "note": "程序化创建节点并添加到画布" },
+        "FindNodeVisual(string)": { "line": 609, "note": "按 nodeId 查找节点" },
+        "NotifyGraphChanged()": { "line": 28, "note": "触发脏状态事件" },
+        "ClearSelection()": { "note": "GraphView 基类方法，清除选中" },
+        "AddToSelection(ISelectable)": { "note": "GraphView 基类方法，添加选中" },
+        "FrameSelection()": { "note": "GraphView 基类方法，聚焦到选中元素" }
+      }
+    },
+    "PCGNodeVisual": {
+      "file": "Assets/PCGToolkit/Editor/Graph/PCGNodeVisual.cs",
+      "relevant_members": {
+        "PCGNode.Name": { "line": 12, "note": "节点类型名，如 'SceneSelectionInput'" },
+        "SetPortDefaultValues(Dictionary)": { "line": 80, "note": "设置端口默认值" },
+        "GetPortDefaultValues()": { "line": 72, "note": "获取端口默认值" }
+      }
+    },
+    "PCGGraphEditorWindow": {
+      "file": "Assets/PCGToolkit/Editor/Graph/PCGGraphEditorWindow.cs",
+      "relevant_members": {
+        "graphView": { "line": 11, "type": "private field", "note": "需要通过新增的 GetGraphView() 公开" },
+        "HandleKeyboardShortcut()": { "line": 489, "note": "键盘快捷键处理" }
+      }
+    },
+    "PCGSelectionState": {
+      "note": "静态类，管理选择模式和选中索引",
+      "relevant_members": {
+        "SetMode(PCGSelectMode)": { "note": "设置 Face/Edge/Vertex 模式" },
+        "Clear()": { "note": "清除所有选择" }
+      }
+    }
   },
-  "notes": [
-    "Unity 没有公开的窗口 Docking API，TryReflectionDocking() 依赖内部类型 DockArea/SplitView/ContainerWindow，可能在不同 Unity 版本间不兼容",
-    "ArrangeFloatingWindows() 作为可靠的 fallback，使用 EditorWindow.position 设置浮动窗口位置，所有 Unity 版本均支持",
-    "EditorPrefs 的 PrefKey 是全局的（非项目级），如需项目级隔离可改用 PlayerSettings.productName 作为 key 前缀",
-    "如果用户已有自定义窗口布局，自动触发可能打乱。ApplyLayoutIfFirstTime() 的 EditorPrefs 机制确保只触发一次，降低干扰"
+
+  "testing": {
+    "manual_test_cases": [
+      {
+        "id": "T1",
+        "name": "Hierarchy 右键菜单 - Select Faces",
+        "steps": [
+          "1. 场景中放一个带 MeshFilter 的 Cube",
+          "2. 在 Hierarchy 中右键 Cube",
+          "3. 点击 'PCG Toolkit > Select Faces'",
+          "4. 验证：Selection Tool 自动激活",
+          "5. 验证：Scene View 中左键点击 Cube 的面可以选中（高亮显示）",
+          "6. 验证：Shift+点击追加选择，Ctrl+点击取消选择"
+        ]
+      },
+      {
+        "id": "T2",
+        "name": "自动创建 SceneSelectionInputNode",
+        "steps": [
+          "1. 打开 PCG Graph Editor (PCG Toolkit > Node Editor)",
+          "2. 新建空图",
+          "3. 在 Hierarchy 中右键带 MeshFilter 的 GO → PCG Toolkit > Select Faces",
+          "4. 验证：Graph 中自动创建了 SceneSelectionInputNode",
+          "5. 验证：该节点的 target 参数已设置为右键的 GO",
+          "6. 验证：该节点被选中（Inspector 显示其参数）"
+        ]
+      },
+      {
+        "id": "T3",
+        "name": "复用已有 SceneSelectionInputNode",
+        "steps": [
+          "1. 在 Graph 中已有一个 SceneSelectionInputNode（target 为 CubeA）",
+          "2. 在 Hierarchy 中右键 CubeB → PCG Toolkit > Select Faces",
+          "3. 验证：没有创建新节点，已有节点的 target 更新为 CubeB",
+          "4. 验证：Selection Tool 加载了 CubeB 的几何"
+        ]
+      },
+      {
+        "id": "T4",
+        "name": "无 Graph Editor 时独立工作",
+        "steps": [
+          "1. 关闭 PCG Graph Editor 窗口",
+          "2. 在 Hierarchy 中右键带 MeshFilter 的 GO → PCG Toolkit > Select Faces",
+          "3. 验证：Selection Tool 仍然正常激活并可以选面",
+          "4. 验证：Console 无报错"
+        ]
+      },
+      {
+        "id": "T5",
+        "name": "快捷键 Ctrl+Shift+F",
+        "steps": [
+          "1. 打开 PCG Graph Editor",
+          "2. 在 Hierarchy 中选中一个带 MeshFilter 的 GO",
+          "3. 在 Graph Editor 窗口中按 Ctrl+Shift+F",
+          "4. 验证：Selection Tool 激活，加载了选中 GO 的几何"
+        ]
+      },
+      {
+        "id": "T6",
+        "name": "OnActivated 自动检测",
+        "steps": [
+          "1. 在 Hierarchy 中选中一个带 MeshFilter 的 GO",
+          "2. 通过 Unity 工具栏直接点击 PCG Selection Tool 图标（不通过右键菜单）",
+          "3. 验证：工具自动从 Selection.activeGameObject 读取几何",
+          "4. 验证：Scene View 中可以正常选面"
+        ]
+      },
+      {
+        "id": "T7",
+        "name": "Validate 方法 - 无 MeshFilter 时菜单不可用",
+        "steps": [
+          "1. 在 Hierarchy 中选中一个空 GameObject（无 MeshFilter）",
+          "2. 右键查看菜单",
+          "3. 验证：'PCG Toolkit > Select Faces/Edges/Vertices' 菜单项为灰色不可点击"
+        ]
+      },
+      {
+        "id": "T8",
+        "name": "Select Edges 和 Select Vertices 模式",
+        "steps": [
+          "1. 右键 GO → PCG Toolkit > Select Edges",
+          "2. 验证：工具激活且模式为 Edge",
+          "3. 右键 GO → PCG Toolkit > Select Vertices",
+          "4. 验证：工具激活且模式为 Vertex"
+        ]
+      }
+    ],
+    "existing_test_file": "Assets/PCGToolkit/Editor/Tests/SelectionTests.cs",
+    "note": "修改完成后运行现有测试确保不破坏已有功能"
+  },
+
+  "implementation_notes": [
+    "PCGQuickSelect.Launch() 中的 EditorApplication.delayCall 是必须的，因为 ToolManager.SetActiveTool 是异步的，ActiveInstance 在 OnActivated() 回调中才被设置",
+    "EnsureGraphNode 中使用 EditorWindow.GetWindow<PCGGraphEditorWindow>(false, null, false) 的第三个参数 false 很重要，它表示不强制聚焦窗口，如果窗口未打开则返回 null 而不是创建新窗口",
+    "PCGSceneObjectRef 的构造函数会记录 instanceID 和 HierarchyPath，确保序列化后可以恢复",
+    "ApplyWorldTransform 需要作为 public static 方法，因为 PCGSelectionTool.OnActivated() 中也需要调用它",
+    "PCGSelectionTool.OnActivated() 中的自动检测不需要 delayCall，因为 SetGeometry 是同步调用",
+    "FindNodeVisualByType 只返回第一个匹配的节点，如果图中有多个 SceneSelectionInputNode，只更新第一个"
   ]
 }
 ```
 
+以上 JSON 包含了完整的实现规格。关键引用：
 
-Now I have all the verified node parameter names from the source code. Let me produce the complete JSON, continuing from where the previous message was cut off.
+- `PCGSelectionTool.OnActivated()` 需要添加自动检测逻辑 [4-cite-0](#4-cite-0)
 
-接上一条被截断的 JSON，以下是完整版本：
+- `PCGGraphEditorWindow.HandleKeyboardShortcut()` 需要添加 Ctrl+Shift+F [4-cite-1](#4-cite-1)
+
+- `PCGGraphEditorWindow.graphView` 是 private 字段，需要通过新增 `GetGraphView()` 公开 [4-cite-2](#4-cite-2)
+
+- `PCGGraphView.FindNodeVisual()` 是按 nodeId 查找的模板，新增的 `FindNodeVisualByType()` 按类型名查找 [4-cite-3](#4-cite-3)
+
+- `PCGGraphView.CreateNodeVisual()` 用于程序化创建节点 [4-cite-4](#4-cite-4)
+
+- `PCGSceneObjectRef` 构造函数和 `Resolve()` 方法 [4-cite-5](#4-cite-5)
+
+- `PCGGeometryToMesh.FromMesh()` 转换 Mesh 到 PCGGeometry [4-cite-6](#4-cite-6)
+
+- `SceneSelectionInputNode` 的 transform 烘焙逻辑（需要复用） [4-cite-7](#4-cite-7)
+
+- `PCGNodeVisual.SetPortDefaultValues()` 用于设置节点参数 [4-cite-8](#4-cite-8)
+
+
+--- 
+
+
+# 任务2
+## 问题分析
+
+`PCGNodePreviewWindow` 有两个问题：
+
+**1. 材质丢失（紫红色）**：`OnEnable()` 中使用 `Shader.Find("Standard")` 创建预览材质。如果项目使用 URP 或 HDRP，"Standard" shader 不存在，Unity 回退到紫红色错误 shader。 [5-cite-0](#5-cite-0)
+
+**2. 无渲染模式选项**：当前只有一种渲染方式——`_previewRenderUtility.DrawMesh()` 纯 Shaded 模式，没有 Wireframe 或 Shaded+Wireframe 选项。 [5-cite-1](#5-cite-1)
+
+---
 
 ```json
 {
-  "plan_title": "程序化匕首建模 Example — PCG Graph 构建脚本",
+  "task_id": "pcg_preview_window_material_and_render_modes",
+  "title": "修复预览窗口材质丢失 + 添加渲染模式切换",
+  "description": "PCGNodePreviewWindow 使用 Shader.Find('Standard') 创建预览材质，在 URP/HDRP 项目中 shader 不存在导致紫红色。同时缺少 Wireframe、Shaded+Wireframe 等渲染模式选项。",
   "repository": "No78Vino/pcg_for_unity",
-  "base_ref": "main",
-  "summary": "创建一个 C# Editor 脚本 DaggerExampleBuilder.cs，通过 PCGGraphData API 程序化构建匕首建模节点图（19 个节点），保存为 .asset 文件。匕首由刀身（Box+Subdivide+Taper+Bend）、护手（Box+Transform）、手柄（Box+CatmullClark+Mountain+Transform）三部分组成，合并后生成 UV 和材质，输出为 Prefab。暴露 10 个参数供 PCGGraphRunner 使用。同时创建示例场景脚本 DaggerExampleScene.cs。",
 
-  "dagger_anatomy": {
-    "description": "匕首由三个部分组成，各自独立建模后通过 MergeNode 合并",
-    "diagram": "刀身(Blade): Box → Subdivide(linear,3) → GroupCreate('blade') → Taper → Bend\n护手(Guard): Box → Transform\n手柄(Handle): Box → Subdivide(catmull-clark,2) → Mountain → Transform → GroupCreate('handle')\n合并: Merge(3 inputs) → Fuse → Normal → UVProject → MaterialAssign('blade') → MaterialAssign('handle') → SavePrefab",
-    "parts": [
-      {
-        "name": "刀身 (Blade)",
-        "description": "扁平长方体，线性细分增加几何密度，锥化形成刀尖，弯曲形成弧度",
-        "nodes": ["Box", "Subdivide", "GroupCreate", "Taper", "Bend"]
-      },
-      {
-        "name": "护手 (Guard)",
-        "description": "宽扁长方体，位于刀身与手柄交界处",
-        "nodes": ["Box", "Transform"]
-      },
-      {
-        "name": "手柄 (Handle)",
-        "description": "长方体经 Catmull-Clark 细分圆化，Mountain 噪声生成花纹，随机种子控制花纹形状",
-        "nodes": ["Box", "Subdivide", "Mountain", "Transform", "GroupCreate"]
-      },
-      {
-        "name": "组装 (Assembly)",
-        "description": "合并三部分，融合重叠顶点，重算法线，立方体投影 UV，按分组分配材质，输出 Prefab",
-        "nodes": ["Merge", "Fuse", "Normal", "UVProject", "MaterialAssign", "MaterialAssign", "SavePrefab"]
-      }
-    ]
-  },
-
-  "node_graph": {
-    "total_nodes": 19,
-    "nodes": [
-      {
-        "id": "blade_box",
-        "node_type": "Box",
-        "display_label": "Blade Base",
-        "position": [0, 0],
-        "parameters": {
-          "sizeX": { "value": 0.04, "type": "float", "description": "刀身宽度" },
-          "sizeY": { "value": 0.25, "type": "float", "description": "刀身高度（长度）" },
-          "sizeZ": { "value": 0.005, "type": "float", "description": "刀身厚度" }
-        },
-        "exposed_params": ["sizeX", "sizeY", "sizeZ"]
-      },
-      {
-        "id": "blade_subdiv",
-        "node_type": "Subdivide",
-        "display_label": "Blade Subdivide",
-        "position": [250, 0],
-        "parameters": {
-          "iterations": { "value": 3, "type": "int", "description": "细分次数，增加几何体密度以支持平滑变形" },
-          "algorithm": { "value": "linear", "type": "string", "description": "线性细分保持锐利边缘" }
-        }
-      },
-      {
-        "id": "blade_group",
-        "node_type": "GroupCreate",
-        "display_label": "Blade Group",
-        "position": [500, 0],
-        "parameters": {
-          "groupName": { "value": "blade", "type": "string" },
-          "groupType": { "value": "primitive", "type": "string" },
-          "filter": { "value": "", "type": "string", "description": "留空=全选，将所有面加入 blade 组" }
-        }
-      },
-      {
-        "id": "blade_taper",
-        "node_type": "Taper",
-        "display_label": "Blade Taper (Edge)",
-        "position": [750, 0],
-        "parameters": {
-          "scaleStart": { "value": 1.0, "type": "float", "description": "刀身底部保持原始宽度" },
-          "scaleEnd": { "value": 0.05, "type": "float", "description": "刀尖收窄程度，越小越尖锐。0.05≈近乎尖锐，1.0=无锥化" },
-          "axis": { "value": "y", "type": "string", "description": "沿 Y 轴（刀身长度方向）锥化" }
-        },
-        "exposed_params": ["scaleEnd"],
-        "notes": "scaleEnd 作为'开刃长度'的近似参数：值越小，刀刃越尖锐（开刃越长）。0.0=完全尖锐，1.0=无开刃。TaperNode 对整个几何体沿 Y 轴从 scaleStart 线性插值到 scaleEnd。"
-      },
-      {
-        "id": "blade_bend",
-        "node_type": "Bend",
-        "display_label": "Blade Curvature",
-        "position": [1000, 0],
-        "parameters": {
-          "angle": { "value": 5.0, "type": "float", "description": "弯曲角度（度），正值向前弯，负值向后弯" },
-          "upAxis": { "value": "y", "type": "string", "description": "沿 Y 轴弯曲" },
-          "captureLength": { "value": 0.25, "type": "float", "description": "受弯曲影响的长度范围，应≈刀身高度" }
-        },
-        "exposed_params": ["angle"]
-      },
-      {
-        "id": "guard_box",
-        "node_type": "Box",
-        "display_label": "Guard",
-        "position": [0, 250],
-        "parameters": {
-          "sizeX": { "value": 0.08, "type": "float", "description": "护手宽度（比刀身宽）" },
-          "sizeY": { "value": 0.015, "type": "float", "description": "护手高度（薄片）" },
-          "sizeZ": { "value": 0.02, "type": "float", "description": "护手厚度" }
-        }
-      },
-      {
-        "id": "guard_transform",
-        "node_type": "Transform",
-        "display_label": "Guard Position",
-        "position": [250, 250],
-        "parameters": {
-          "translate": { "value": [0, -0.125, 0], "type": "Vector3", "description": "将护手移到刀身底部（Y = -bladeHeight/2 = -0.125）" }
-        }
-      },
-      {
-        "id": "handle_box",
-        "node_type": "Box",
-        "display_label": "Handle Base",
-        "position": [0, 500],
-        "parameters": {
-          "sizeX": { "value": 0.03, "type": "float", "description": "手柄宽度" },
-          "sizeY": { "value": 0.12, "type": "float", "description": "手柄高度（长度）" },
-          "sizeZ": { "value": 0.03, "type": "float", "description": "手柄深度" }
-        },
-        "exposed_params": ["sizeX", "sizeY", "sizeZ"],
-        "notes": "使用 Box 而非 Tube，配合 Catmull-Clark 细分可圆化为类圆柱形，同时保留三维独立控制"
-      },
-      {
-        "id": "handle_subdiv",
-        "node_type": "Subdivide",
-        "display_label": "Handle Subdivide",
-        "position": [250, 500],
-        "parameters": {
-          "iterations": { "value": 2, "type": "int", "description": "2 次 Catmull-Clark 将方形截面圆化" },
-          "algorithm": { "value": "catmull-clark", "type": "string", "description": "Catmull-Clark 细分使手柄圆润" }
-        }
-      },
-      {
-        "id": "handle_pattern",
-        "node_type": "Mountain",
-        "display_label": "Handle Pattern",
-        "position": [500, 500],
-        "parameters": {
-          "height": { "value": 0.002, "type": "float", "description": "花纹凹凸深度" },
-          "frequency": { "value": 8.0, "type": "float", "description": "花纹频率，越高越密" },
-          "octaves": { "value": 3, "type": "int", "description": "分形叠加层数" },
-          "lacunarity": { "value": 2.0, "type": "float" },
-          "persistence": { "value": 0.5, "type": "float" },
-          "seed": { "value": 42, "type": "int", "description": "随机种子，改变种子产生不同花纹" },
-          "noiseType": { "value": "perlin", "type": "string" }
-        },
-        "exposed_params": ["seed", "height"]
-      },
-      {
-        "id": "handle_transform",
-        "node_type": "Transform",
-        "display_label": "Handle Position",
-        "position": [750, 500],
-        "parameters": {
-          "translate": { "value": [0, -0.19, 0], "type": "Vector3", "description": "将手柄移到护手下方（Y = -(bladeHeight/2 + guardHeight + handleHeight/2) = -(0.125+0.015+0.06) = -0.19）" }
-        }
-      },
-      {
-        "id": "handle_group",
-        "node_type": "GroupCreate",
-        "display_label": "Handle Group",
-        "position": [1000, 500],
-        "parameters": {
-          "groupName": { "value": "handle", "type": "string" },
-          "groupType": { "value": "primitive", "type": "string" },
-          "filter": { "value": "", "type": "string" }
-        }
-      },
-      {
-        "id": "merge_all",
-        "node_type": "Merge",
-        "display_label": "Merge All Parts",
-        "position": [1250, 250],
-        "parameters": {},
-        "notes": "MergeNode 的 input 端口支持 allowMultiple=true，三条分支的 geometry 输出都连接到此节点的 input 端口。MergeNode 会保留各分支的 PrimGroups（blade/handle）。"
-      },
-      {
-        "id": "fuse",
-        "node_type": "Fuse",
-        "display_label": "Fuse Vertices",
-        "position": [1500, 250],
-        "parameters": {
-          "distance": { "value": 0.001, "type": "float", "description": "合并距离阈值" }
-        }
-      },
-      {
-        "id": "normals",
-        "node_type": "Normal",
-        "display_label": "Recalculate Normals",
-        "position": [1750, 250],
-        "parameters": {
-          "type": { "value": "point", "type": "string" },
-          "cuspAngle": { "value": 60.0, "type": "float", "description": "锐角阈值，60° 保留刀刃硬边" },
-          "weightByArea": { "value": true, "type": "bool" }
-        }
-      },
-      {
-        "id": "uv_project",
-        "node_type": "UVProject",
-        "display_label": "UV Projection",
-        "position": [2000, 250],
-        "parameters": {
-          "projectionType": { "value": "cubic", "type": "string", "description": "立方体投影适合匕首的多面体形状" }
-        }
-      },
-      {
-        "id": "mat_blade",
-        "node_type": "MaterialAssign",
-        "display_label": "Blade Material",
-        "position": [2250, 250],
-        "parameters": {
-          "group": { "value": "blade", "type": "string", "description": "仅对 blade 分组的面分配材质" },
-          "materialPath": { "value": "", "type": "string", "description": "留空使用默认 PBR 材质（SavePrefabNode 会 fallback 到 Default-Diffuse.mat）" },
-          "materialId": { "value": 0, "type": "int", "description": "材质 ID 0 = 刀身材质" }
-        }
-      },
-      {
-        "id": "mat_handle",
-        "node_type": "MaterialAssign",
-        "display_label": "Handle Material",
-        "position": [2500, 250],
-        "parameters": {
-          "group": { "value": "handle", "type": "string", "description": "仅对 handle 分组的面分配材质" },
-          "materialPath": { "value": "", "type": "string", "description": "留空使用默认 PBR 材质" },
-          "materialId": { "value": 1, "type": "int", "description": "材质 ID 1 = 手柄材质，与刀身区分" }
-        }
-      },
-      {
-        "id": "save_prefab",
-        "node_type": "SavePrefab",
-        "display_label": "Output Dagger Prefab",
-        "position": [2750, 250],
-        "parameters": {
-          "assetPath": { "value": "Assets/PCGOutput/Dagger.prefab", "type": "string" },
-          "prefabName": { "value": "Dagger", "type": "string" },
-          "addCollider": { "value": true, "type": "bool" },
-          "convexCollider": { "value": true, "type": "bool" }
-        }
-      }
-    ],
-
-    "edges": [
-      { "from": "blade_box",       "output_port": "geometry", "to": "blade_subdiv",    "input_port": "input" },
-      { "from": "blade_subdiv",    "output_port": "geometry", "to": "blade_group",     "input_port": "input" },
-      { "from": "blade_group",     "output_port": "geometry", "to": "blade_taper",     "input_port": "input" },
-      { "from": "blade_taper",     "output_port": "geometry", "to": "blade_bend",      "input_port": "input" },
-      { "from": "guard_box",       "output_port": "geometry", "to": "guard_transform", "input_port": "input" },
-      { "from": "handle_box",      "output_port": "geometry", "to": "handle_subdiv",   "input_port": "input" },
-      { "from": "handle_subdiv",   "output_port": "geometry", "to": "handle_pattern",  "input_port": "input" },
-      { "from": "handle_pattern",  "output_port": "geometry", "to": "handle_transform","input_port": "input" },
-      { "from": "handle_transform","output_port": "geometry", "to": "handle_group",    "input_port": "input" },
-      { "from": "blade_bend",      "output_port": "geometry", "to": "merge_all",       "input_port": "input" },
-      { "from": "guard_transform", "output_port": "geometry", "to": "merge_all",       "input_port": "input" },
-      { "from": "handle_group",    "output_port": "geometry", "to": "merge_all",       "input_port": "input" },
-      { "from": "merge_all",       "output_port": "geometry", "to": "fuse",            "input_port": "input" },
-      { "from": "fuse",            "output_port": "geometry", "to": "normals",         "input_port": "input" },
-      { "from": "normals",         "output_port": "geometry", "to": "uv_project",      "input_port": "input" },
-      { "from": "uv_project",      "output_port": "geometry", "to": "mat_blade",       "input_port": "input" },
-      { "from": "mat_blade",       "output_port": "geometry", "to": "mat_handle",      "input_port": "input" },
-      { "from": "mat_handle",      "output_port": "geometry", "to": "save_prefab",     "input_port": "input" }
-    ],
-
-    "exposed_parameters": [
-      { "node_id": "blade_box",      "param_name": "sizeX",    "display_name": "Blade Width",     "type": "float",  "default": 0.04 },
-      { "node_id": "blade_box",      "param_name": "sizeY",    "display_name": "Blade Height",    "type": "float",  "default": 0.25 },
-      { "node_id": "blade_box",      "param_name": "sizeZ",    "display_name": "Blade Depth",     "type": "float",  "default": 0.005 },
-      { "node_id": "blade_taper",    "param_name": "scaleEnd", "display_name": "Edge Sharpness",  "type": "float",  "default": 0.05 },
-      { "node_id": "handle_box",     "param_name": "sizeX",    "display_name": "Handle Width",    "type": "float",  "default": 0.03 },
-      { "node_id": "handle_box",     "param_name": "sizeY",    "display_name": "Handle Height",   "type": "float",  "default": 0.12 },
-      { "node_id": "handle_box",     "param_name": "sizeZ",    "display_name": "Handle Depth",    "type": "float",  "default": 0.03 },
-      { "node_id": "blade_bend",     "param_name": "angle",    "display_name": "Blade Curvature", "type": "float",  "default": 5.0 },
-      { "node_id": "handle_pattern", "param_name": "seed",     "display_name": "Pattern Seed",    "type": "int",    "default": 42 },
-      { "node_id": "handle_pattern", "param_name": "height",   "display_name": "Pattern Depth",   "type": "float",  "default": 0.002 }
-    ],
-
-    "groups": [
-      {
-        "title": "Blade (刀身)",
-        "node_ids": ["blade_box", "blade_subdiv", "blade_group", "blade_taper", "blade_bend"],
-        "position": [-20, -40],
-        "size": [1100, 200]
-      },
-      {
-        "title": "Guard (护手)",
-        "node_ids": ["guard_box", "guard_transform"],
-        "position": [-20, 210],
-        "size": [350, 200]
-      },
-      {
-        "title": "Handle (手柄)",
-        "node_ids": ["handle_box", "handle_subdiv", "handle_pattern", "handle_transform", "handle_group"],
-        "position": [-20, 460],
-        "size": [1100, 200]
-      },
-      {
-        "title": "Assembly (组装)",
-        "node_ids": ["merge_all", "fuse", "normals", "uv_project", "mat_blade", "mat_handle", "save_prefab"],
-        "position": [1230, 210],
-        "size": [1600, 200]
-      }
-    ],
-
-    "sticky_notes": [
-      {
-        "title": "Procedural Dagger",
-        "content": "程序化匕首生成器\n\n暴露参数：\n- 刀身尺寸 (3D)\n- 开刃长度 (scaleEnd)\n- 手柄尺寸 (3D)\n- 弯曲弧度\n- 花纹种子\n- 花纹深度\n\n使用方法：\n1. 保存此图为 .asset\n2. 场景中添加 PCGGraphRunner\n3. 拖入 Graph Asset\n4. Sync Exposed Params\n5. 调整参数 → Run Graph",
-        "position": [-300, -100],
-        "size": [260, 400]
-      }
-    ]
-  },
-
-  "tasks": [
+  "files_to_modify": [
     {
-      "id": "DAGGER-1",
-      "title": "创建 DaggerExampleBuilder.cs 图构建脚本",
-      "priority": "high",
-      "file": "Assets/PCGToolkit/Editor/Examples/DaggerExampleBuilder.cs",
-      "current_state": "项目中不存在 Examples 目录和示例脚本。",
-      "target_state": "新建 DaggerExampleBuilder.cs，提供 MenuItem 菜单项，一键生成匕首程序化建模的 PCGGraphData .asset 文件。",
+      "path": "Assets/PCGToolkit/Editor/Graph/PCGNodePreviewWindow.cs",
+      "description": "预览窗口主文件，需要修复材质创建逻辑并添加渲染模式切换",
       "changes": [
         {
-          "action": "新建 DaggerExampleBuilder.cs",
-          "details": [
-            "命名空间 PCGToolkit.Examples",
-            "静态类 DaggerExampleBuilder",
-            "添加 [MenuItem('PCG Toolkit/Examples/Create Dagger Graph')] 特性"
+          "id": "C1",
+          "target": "新增渲染模式枚举",
+          "description": "在类内部定义渲染模式枚举",
+          "insert_before_line": 9,
+          "new_code": "private enum PreviewRenderMode { Shaded, Wireframe, ShadedWireframe }"
+        },
+        {
+          "id": "C2",
+          "target": "新增字段",
+          "description": "添加渲染模式状态字段和线框材质字段",
+          "insert_after_line": 18,
+          "new_fields": [
+            "private PreviewRenderMode _renderMode = PreviewRenderMode.Shaded;",
+            "private Material _wireMaterial;  // 用于绘制线框的纯色材质"
           ]
         },
         {
-          "action": "实现 CreateDaggerGraph() 方法",
-          "details": [
-            "步骤 1：创建 PCGGraphData 实例 — var data = ScriptableObject.CreateInstance<PCGGraphData>(); data.GraphName = 'ProceduralDagger';",
-            "步骤 2：添加 19 个节点 — 使用 data.AddNode(nodeType, position) 方法，nodeType 使用节点的 Name 属性（如 'Box', 'Subdivide', 'Taper' 等），position 使用 node_graph.nodes[].position 中定义的坐标",
-            "步骤 3：设置节点参数 — 对每个 PCGNodeData，通过 nodeData.Parameters.Add(new PCGSerializedParameter { Key=paramName, ValueJson=value, ValueType=type }) 设置参数。注意 ValueJson 的格式：float 用 '0.04'，int 用 '3'，bool 用 'true'/'false'，string 用原始字符串，Vector3 用 '0,0.125,0' 格式",
-            "步骤 4：连接 18 条边 — 使用 data.AddEdge(outputNodeId, 'geometry', inputNodeId, 'input') 方法，按 node_graph.edges[] 中定义的连接关系",
-            "步骤 5：标记暴露参数 — 向 data.ExposedParameters 添加 10 个 PCGExposedParamInfo { NodeId=nodeId, ParamName=paramName }，按 node_graph.exposed_parameters[] 中定义的列表",
-            "步骤 6：添加 4 个 Groups — 向 data.Groups 添加 PCGGroupData，包含 Title、NodeIds、Position、Size",
-            "步骤 7：添加 1 个 StickyNote — 向 data.StickyNotes 添加 PCGStickyNoteData",
-            "步骤 8：保存资产 — AssetDatabase.CreateAsset(data, 'Assets/PCGToolkit/Examples/ProceduralDagger.asset'); AssetDatabase.SaveAssets();"
+          "id": "C3",
+          "target": "OnEnable() 方法 - 修复材质创建",
+          "current_line_range": [60, 69],
+          "current_code": "private void OnEnable()\n{\n    _previewRenderUtility = new PreviewRenderUtility();\n    _previewRenderUtility.camera.fieldOfView = 30f;\n    _previewRenderUtility.camera.nearClipPlane = 0.01f;\n    _previewRenderUtility.camera.farClipPlane = 100f;\n\n    _previewMaterial = new Material(Shader.Find(\"Standard\"));\n    _previewMaterial.color = new Color(0.7f, 0.7f, 0.7f);\n}",
+          "description": "替换 Shader.Find('Standard') 为智能 fallback 链：先尝试 URP Lit，再尝试 HDRP Lit，再尝试 Standard，最后 fallback 到内置 Default-Diffuse.mat。同时创建线框材质。",
+          "new_code": "private void OnEnable()\n{\n    _previewRenderUtility = new PreviewRenderUtility();\n    _previewRenderUtility.camera.fieldOfView = 30f;\n    _previewRenderUtility.camera.nearClipPlane = 0.01f;\n    _previewRenderUtility.camera.farClipPlane = 100f;\n\n    _previewMaterial = CreatePreviewMaterial();\n\n    // 线框材质：使用 Unity 内置的 \"Hidden/Internal-Colored\" shader\n    // 这个 shader 在所有渲染管线中都可用\n    _wireMaterial = new Material(Shader.Find(\"Hidden/Internal-Colored\"));\n    _wireMaterial.SetInt(\"_SrcBlend\", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);\n    _wireMaterial.SetInt(\"_DstBlend\", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);\n    _wireMaterial.SetInt(\"_Cull\", (int)UnityEngine.Rendering.CullMode.Off);\n    _wireMaterial.SetInt(\"_ZWrite\", 0);\n}",
+          "note": "CreatePreviewMaterial 是新增的辅助方法，见下方"
+        },
+        {
+          "id": "C4",
+          "target": "新增 CreatePreviewMaterial() 辅助方法",
+          "description": "智能 shader fallback 链，确保在任何渲染管线下都能正确显示灰色材质",
+          "insert_after": "OnEnable 方法之后",
+          "new_code": "private static Material CreatePreviewMaterial()\n{\n    // 按优先级尝试不同渲染管线的 shader\n    string[] shaderCandidates = new[]\n    {\n        \"Universal Render Pipeline/Lit\",  // URP\n        \"HDRP/Lit\",                        // HDRP\n        \"Standard\",                         // Built-in\n    };\n\n    Shader shader = null;\n    foreach (var name in shaderCandidates)\n    {\n        shader = Shader.Find(name);\n        if (shader != null && !shader.name.Contains(\"Error\")) break;\n        shader = null;\n    }\n\n    Material mat;\n    if (shader != null)\n    {\n        mat = new Material(shader);\n        // 设置基础颜色（兼容不同管线的属性名）\n        if (mat.HasProperty(\"_BaseColor\"))\n            mat.SetColor(\"_BaseColor\", new Color(0.7f, 0.7f, 0.7f));  // URP/HDRP\n        if (mat.HasProperty(\"_Color\"))\n            mat.SetColor(\"_Color\", new Color(0.7f, 0.7f, 0.7f));      // Standard\n    }\n    else\n    {\n        // 终极 fallback：使用 Unity 内置默认材质\n        mat = new Material(AssetDatabase.GetBuiltinExtraResource<Material>(\"Default-Diffuse.mat\"));\n    }\n\n    return mat;\n}"
+        },
+        {
+          "id": "C5",
+          "target": "OnDisable() 方法 - 清理线框材质",
+          "current_line_range": [71, 82],
+          "description": "在 OnDisable 中添加 _wireMaterial 的清理",
+          "add_to_method": "if (_wireMaterial != null)\n    DestroyImmediate(_wireMaterial);"
+        },
+        {
+          "id": "C6",
+          "target": "OnGUI() 方法 - 添加渲染模式工具栏",
+          "current_line_range": [84, 140],
+          "description": "在信息栏和几何体信息之间（或几何体信息之后），添加渲染模式切换工具栏。然后修改渲染逻辑支持三种模式。",
+          "changes_detail": [
+            {
+              "location": "在 line 102（几何体信息 EndHorizontal）之后插入渲染模式工具栏",
+              "new_code": "// 渲染模式工具栏\nEditorGUILayout.BeginHorizontal(EditorStyles.toolbar);\nGUILayout.Label(\"Render:\", EditorStyles.miniLabel, GUILayout.Width(45));\nif (GUILayout.Toggle(_renderMode == PreviewRenderMode.Shaded, \"Shaded\", EditorStyles.toolbarButton))\n    _renderMode = PreviewRenderMode.Shaded;\nif (GUILayout.Toggle(_renderMode == PreviewRenderMode.Wireframe, \"Wire\", EditorStyles.toolbarButton))\n    _renderMode = PreviewRenderMode.Wireframe;\nif (GUILayout.Toggle(_renderMode == PreviewRenderMode.ShadedWireframe, \"Shaded+Wire\", EditorStyles.toolbarButton))\n    _renderMode = PreviewRenderMode.ShadedWireframe;\nEditorGUILayout.EndHorizontal();"
+            },
+            {
+              "location": "替换 line 125-139 的渲染逻辑",
+              "current_code": "_previewRenderUtility.BeginPreview(previewRect, GUIStyle.none);\n\nvar cameraPos = Quaternion.Euler(_rotationX, _rotationY, 0) * new Vector3(0, 0, -_zoom);\n_previewRenderUtility.camera.transform.position = cameraPos;\n_previewRenderUtility.camera.transform.LookAt(Vector3.zero);\n\n_previewRenderUtility.lights[0].intensity = 1.0f;\n_previewRenderUtility.lights[0].transform.rotation = Quaternion.Euler(50f, 50f, 0);\n_previewRenderUtility.lights[1].intensity = 0.5f;\n\n_previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity, _previewMaterial, 0);\n_previewRenderUtility.camera.Render();\n\nvar resultTexture = _previewRenderUtility.EndPreview();\nGUI.DrawTexture(previewRect, resultTexture, ScaleMode.StretchToFill, false);",
+              "new_code": "_previewRenderUtility.BeginPreview(previewRect, GUIStyle.none);\n\nvar cameraPos = Quaternion.Euler(_rotationX, _rotationY, 0) * new Vector3(0, 0, -_zoom);\n_previewRenderUtility.camera.transform.position = cameraPos;\n_previewRenderUtility.camera.transform.LookAt(Vector3.zero);\n\n_previewRenderUtility.lights[0].intensity = 1.0f;\n_previewRenderUtility.lights[0].transform.rotation = Quaternion.Euler(50f, 50f, 0);\n_previewRenderUtility.lights[1].intensity = 0.5f;\n\n// Shaded 渲染（Shaded 和 ShadedWireframe 模式都需要）\nif (_renderMode == PreviewRenderMode.Shaded || _renderMode == PreviewRenderMode.ShadedWireframe)\n{\n    _previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity, _previewMaterial, 0);\n}\n\n// Wireframe 渲染\nif (_renderMode == PreviewRenderMode.Wireframe || _renderMode == PreviewRenderMode.ShadedWireframe)\n{\n    GL.wireframe = true;\n    _previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity, _wireMaterial, 0);\n    // 注意：GL.wireframe 需要在 camera.Render() 之后重置\n}\n\n_previewRenderUtility.camera.Render();\nGL.wireframe = false;  // 确保重置，避免影响其他渲染\n\nvar resultTexture = _previewRenderUtility.EndPreview();\nGUI.DrawTexture(previewRect, resultTexture, ScaleMode.StretchToFill, false);",
+              "note": "GL.wireframe 是 Unity 内置的全局开关，设为 true 后所有后续 DrawMesh 调用都以线框模式渲染。必须在 camera.Render() 之后重置为 false。对于 ShadedWireframe 模式，需要先画一遍 Shaded，再画一遍 Wireframe（两次 DrawMesh），这样线框会叠加在实体上。但由于 PreviewRenderUtility 的限制，更可靠的方式是：Shaded 模式正常渲染，然后设置 GL.wireframe=true 再渲染一次线框 pass。如果 GL.wireframe 在 PreviewRenderUtility 中不生效（某些 Unity 版本有此问题），则改用手动绘制线框的方式（见备选方案）。"
+            }
           ]
         },
         {
-          "action": "参数序列化格式说明",
-          "details": [
-            "PCGSerializedParameter.ValueType 使用以下值：'float', 'int', 'bool', 'string', 'Vector3'",
-            "PCGSerializedParameter.ValueJson 格式：",
-            "  float: '0.04'（使用 InvariantCulture 格式化）",
-            "  int: '3'",
-            "  bool: 'true' 或 'false'",
-            "  string: 直接使用字符串值，如 'blade'",
-            "  Vector3: '0,-0.125,0'（逗号分隔，无空格）",
-            "参考 PCGGraphRunnerBridge.SerializeValue() 的格式（Assets/PCGToolkit/Editor/Graph/PCGGraphRunnerBridge.cs 第 81-99 行）"
-          ]
-        },
-        {
-          "action": "节点 ID 管理",
-          "details": [
-            "data.AddNode() 会自动生成 GUID 作为 NodeId",
-            "需要在代码中保存每个 AddNode() 返回的 PCGNodeData 引用，以便后续 AddEdge() 和 ExposedParameters 使用 NodeId",
-            "建议使用 Dictionary<string, PCGNodeData> 按逻辑名称（如 'blade_box', 'blade_subdiv'）索引"
-          ]
+          "id": "C7",
+          "target": "新增 DrawWireframeManual() 备选方法",
+          "description": "如果 GL.wireframe 在 PreviewRenderUtility 中不生效，使用 GL.Begin/GL.End 手动绘制线框作为备选",
+          "new_code": "/// <summary>\n/// 备选方案：手动绘制线框（当 GL.wireframe 不生效时使用）\n/// 在 _previewRenderUtility.BeginPreview 和 camera.Render 之间调用\n/// </summary>\nprivate void DrawWireframeManual()\n{\n    if (_previewMesh == null || _wireMaterial == null) return;\n\n    _wireMaterial.SetPass(0);\n    GL.PushMatrix();\n    GL.MultMatrix(Matrix4x4.identity);\n    GL.Begin(GL.LINES);\n    GL.Color(new Color(0.0f, 0.0f, 0.0f, 0.6f));  // 半透明黑色线框\n\n    var verts = _previewMesh.vertices;\n    var tris = _previewMesh.triangles;\n    for (int i = 0; i < tris.Length; i += 3)\n    {\n        var v0 = verts[tris[i]];\n        var v1 = verts[tris[i + 1]];\n        var v2 = verts[tris[i + 2]];\n        GL.Vertex(v0); GL.Vertex(v1);\n        GL.Vertex(v1); GL.Vertex(v2);\n        GL.Vertex(v2); GL.Vertex(v0);\n    }\n\n    GL.End();\n    GL.PopMatrix();\n}",
+          "note": "如果 GL.wireframe 方案在测试中正常工作，此方法可以保留但不调用。如果 GL.wireframe 不生效，则在 ShadedWireframe 和 Wireframe 模式中替换为调用此方法。Wireframe-only 模式下，先用深灰色背景清屏，再调用此方法。"
         }
-      ],
-      "acceptance_criteria": [
-        "菜单 'PCG Toolkit > Examples > Create Dagger Graph' 可执行",
-        "生成的 .asset 文件可在 PCG Node Editor 中打开，显示 19 个节点和 18 条连线",
-        "节点按 4 个 Group 分组（Blade/Guard/Handle/Assembly）",
-        "ExposedParameters 包含 10 个暴露参数",
-        "在 PCG Node Editor 中执行图，能生成匕首几何体并输出 Prefab 到 Assets/PCGOutput/Dagger.prefab",
-        "在 PCGGraphRunner 中 Sync Exposed Params 后显示 10 个可调参数"
-      ]
-    },
-    {
-      "id": "DAGGER-2",
-      "title": "创建 DaggerExampleScene.cs 示例场景脚本",
-      "priority": "medium",
-      "file": "Assets/PCGToolkit/Editor/Examples/DaggerExampleScene.cs",
-      "current_state": "项目中不存在示例场景设置脚本。",
-      "target_state": "新建 DaggerExampleScene.cs，提供 MenuItem 菜单项，一键创建包含 PCGGraphRunner 的示例场景。",
-      "changes": [
-        {
-          "action": "新建 DaggerExampleScene.cs",
-          "details": [
-            "命名空间 PCGToolkit.Examples",
-            "静态类 DaggerExampleScene",
-            "添加 [MenuItem('PCG Toolkit/Examples/Setup Dagger Scene')] 特性"
-          ]
-        },
-        {
-          "action": "实现 SetupScene() 方法",
-          "details": [
-            "步骤 1：查找 ProceduralDagger.asset — var graphAsset = AssetDatabase.LoadAssetAtPath<PCGGraphData>('Assets/PCGToolkit/Examples/ProceduralDagger.asset'); 如果不存在，提示用户先执行 'Create Dagger Graph'",
-            "步骤 2：创建 GameObject — var go = new GameObject('Dagger Generator');",
-            "步骤 3：添加 PCGGraphRunner 组件 — var runner = go.AddComponent<PCGGraphRunner>();",
-            "步骤 4：设置 GraphAsset — runner.GraphAsset = graphAsset;",
-            "步骤 5：设置 InstantiateOutput = true",
-            "步骤 6：调用 Undo.RegisterCreatedObjectUndo(go, 'Create Dagger Generator') 支持撤销",
-            "步骤 7：选中新创建的 GameObject — Selection.activeGameObject = go;",
-            "步骤 8：提示用户 — Debug.Log('Dagger Generator created. Click Sync Exposed Params then Run Graph in the Inspector.');"
-          ]
-        }
-      ],
-      "acceptance_criteria": [
-        "菜单 'PCG Toolkit > Examples > Setup Dagger Scene' 可执行",
-        "场景中创建 'Dagger Generator' GameObject，挂载 PCGGraphRunner 组件",
-        "PCGGraphRunner 的 GraphAsset 已指向 ProceduralDagger.asset",
-        "在 Inspector 中点击 'Sync Exposed Params' 后显示 10 个参数",
-        "点击 'Run Graph' 后在场景中生成匕首 Mesh"
       ]
     }
   ],
-  
-  "execution_order": [
-    {
-      "step": 1,
-      "task_ids": ["DAGGER-1"],
-      "reason": "先创建图构建脚本，生成 .asset 文件，可在 Node Editor 中验证节点图正确性"
+
+  "key_dependencies": {
+    "PreviewRenderUtility": {
+      "note": "Unity Editor 内置类，用于在 EditorWindow 中渲染 3D 预览。支持 DrawMesh、camera.Render 等。",
+      "current_usage_line": 62
     },
-    {
-      "step": 2,
-      "task_ids": ["DAGGER-2"],
-      "reason": "图资产验证通过后，再创建示例场景脚本，配置 PCGGraphRunner 和暴露参数"
+    "GL.wireframe": {
+      "note": "Unity 全局渲染开关。设为 true 后，后续所有 mesh 渲染以线框模式显示。必须在使用后重置为 false。在某些 Unity 版本的 PreviewRenderUtility 中可能不生效，需要测试。",
+      "fallback": "如果不生效，使用 GL.Begin(GL.LINES) 手动绘制三角形边"
+    },
+    "Shader.Find": {
+      "note": "在 URP 项目中 Shader.Find('Standard') 返回 null 或返回一个 error shader，导致紫红色。需要按渲染管线选择正确的 shader。",
+      "current_usage_line": 67
+    },
+    "Hidden/Internal-Colored": {
+      "note": "Unity 内置 shader，在所有渲染管线中都可用，适合用于纯色/线框渲染"
+    },
+    "AssetDatabase.GetBuiltinExtraResource<Material>": {
+      "note": "终极 fallback，加载 Unity 内置的 Default-Diffuse.mat，保证不会出现紫红色"
+    },
+    "PCGCacheManager.GetOrCreateMesh": {
+      "file": "Assets/PCGToolkit/Editor/Core/PCGCacheManager.cs",
+      "line": 170,
+      "note": "预览窗口通过此方法获取/缓存 Mesh，内部调用 PCGGeometryToMesh.Convert()"
     }
+  },
+
+  "implementation_notes": [
+    "Shader.Find('Standard') 在 URP 项目中返回 null 是紫红色的根本原因。URP 的等效 shader 是 'Universal Render Pipeline/Lit'，HDRP 是 'HDRP/Lit'。",
+    "CreatePreviewMaterial() 中检查 shader.name.Contains('Error') 是为了排除 Unity 返回的 error shader（某些版本 Shader.Find 不返回 null 而是返回 error shader）。",
+    "URP Lit shader 的颜色属性名是 '_BaseColor'，Standard shader 是 '_Color'，所以两个都要设置。",
+    "GL.wireframe 是最简单的线框渲染方式，但在 PreviewRenderUtility 中可能有兼容性问题。如果测试发现不生效，改用 DrawWireframeManual() 方法。",
+    "ShadedWireframe 模式需要两次 DrawMesh：第一次正常 Shaded，第二次 GL.wireframe=true 叠加线框。线框颜色建议用半透明黑色，在浅色模型上清晰可见。",
+    "渲染模式工具栏使用 EditorStyles.toolbarButton 风格的 Toggle，与 Unity 原生工具栏风格一致。",
+    "_wireMaterial 使用 'Hidden/Internal-Colored' shader，这是 Unity 内置的，在所有管线中都可用，不需要额外依赖。"
   ],
 
-  "files_to_create": [
-    "Assets/PCGToolkit/Editor/Examples/DaggerExampleBuilder.cs",
-    "Assets/PCGToolkit/Editor/Examples/DaggerExampleScene.cs"
-  ],
-
-  "files_to_modify": [],
-
-  "dependencies": {
-    "unity_namespaces": [
-      "UnityEditor",
-      "UnityEngine",
-      "System.Collections.Generic"
-    ],
-    "project_references": [
-      "PCGToolkit.Graph.PCGGraphData (Assets/PCGToolkit/Editor/Graph/PCGGraphData.cs) — AddNode(), AddEdge(), ExposedParameters, Groups, StickyNotes",
-      "PCGToolkit.Graph.PCGNodeData (Assets/PCGToolkit/Editor/Graph/PCGGraphData.cs) — NodeId, NodeType, Parameters, Position",
-      "PCGToolkit.Graph.PCGSerializedParameter (Assets/PCGToolkit/Editor/Graph/PCGGraphData.cs) — Key, ValueJson, ValueType",
-      "PCGToolkit.Graph.PCGExposedParamInfo (Assets/PCGToolkit/Editor/Graph/PCGGraphData.cs) — NodeId, ParamName",
-      "PCGToolkit.Runtime.PCGGraphRunner (Assets/PCGToolkit/Runtime/PCGGraphRunner.cs) — GraphAsset, InstantiateOutput"
-    ],
-    "node_types_used": [
-      "Box (Assets/PCGToolkit/Editor/Nodes/Create/BoxNode.cs)",
-      "Subdivide (Assets/PCGToolkit/Editor/Nodes/Geometry/SubdivideNode.cs)",
-      "GroupCreate (Assets/PCGToolkit/Editor/Nodes/Geometry/GroupCreateNode.cs)",
-      "Taper (Assets/PCGToolkit/Editor/Nodes/Deform/TaperNode.cs)",
-      "Bend (Assets/PCGToolkit/Editor/Nodes/Deform/BendNode.cs)",
-      "Transform (Assets/PCGToolkit/Editor/Nodes/Geometry/TransformNode.cs)",
-      "Mountain (Assets/PCGToolkit/Editor/Nodes/Deform/MountainNode.cs)",
-      "Merge (Assets/PCGToolkit/Editor/Nodes/Geometry/MergeNode.cs)",
-      "Fuse (Assets/PCGToolkit/Editor/Nodes/Geometry/FuseNode.cs)",
-      "Normal (Assets/PCGToolkit/Editor/Nodes/Geometry/NormalNode.cs)",
-      "UVProject (Assets/PCGToolkit/Editor/Nodes/UV/UVProjectNode.cs)",
-      "MaterialAssign (Assets/PCGToolkit/Editor/Nodes/Geometry/MaterialAssignNode.cs)",
-      "SavePrefab (Assets/PCGToolkit/Editor/Nodes/Output/SavePrefabNode.cs)"
+  "testing": {
+    "manual_test_cases": [
+      {
+        "id": "T1",
+        "name": "材质不再紫红色",
+        "steps": [
+          "1. 在 URP 项目中打开 PCG Graph Editor",
+          "2. 创建一个 BoxNode，执行图",
+          "3. 双击 BoxNode 打开预览窗口",
+          "4. 验证：模型显示为灰色，不是紫红色"
+        ]
+      },
+      {
+        "id": "T2",
+        "name": "Built-in 管线兼容",
+        "steps": [
+          "1. 在 Built-in 渲染管线项目中重复 T1",
+          "2. 验证：模型显示为灰色"
+        ]
+      },
+      {
+        "id": "T3",
+        "name": "Shaded 模式（默认）",
+        "steps": [
+          "1. 打开预览窗口",
+          "2. 验证：默认选中 'Shaded' 按钮",
+          "3. 验证：模型以实体灰色渲染，有光照效果"
+        ]
+      },
+      {
+        "id": "T4",
+        "name": "Wireframe 模式",
+        "steps": [
+          "1. 在预览窗口工具栏点击 'Wire' 按钮",
+          "2. 验证：模型以线框模式渲染，只显示三角形边",
+          "3. 验证：可以旋转和缩放查看线框"
+        ]
+      },
+      {
+        "id": "T5",
+        "name": "Shaded+Wireframe 模式",
+        "steps": [
+          "1. 点击 'Shaded+Wire' 按钮",
+          "2. 验证：模型同时显示实体和线框叠加",
+          "3. 验证：线框在实体表面上清晰可见"
+        ]
+      },
+      {
+        "id": "T6",
+        "name": "模式切换不影响旋转/缩放状态",
+        "steps": [
+          "1. 在 Shaded 模式下旋转模型到某个角度",
+          "2. 切换到 Wire 模式",
+          "3. 验证：视角保持不变",
+          "4. 切换到 Shaded+Wire 模式",
+          "5. 验证：视角仍然保持不变"
+        ]
+      },
+      {
+        "id": "T7",
+        "name": "GL.wireframe 兼容性测试",
+        "steps": [
+          "1. 切换到 Wire 模式",
+          "2. 如果线框不显示（GL.wireframe 不生效），需要改用 DrawWireframeManual() 备选方案",
+          "3. 验证修改后线框正常显示"
+        ]
+      }
     ]
-  },
-
-  "parameter_serialization_reference": {
-    "description": "PCGSerializedParameter 的 ValueJson 格式参考，Agent 构建节点参数时必须遵循",
-    "examples": {
-      "float": { "Key": "sizeX", "ValueJson": "0.04", "ValueType": "float" },
-      "int": { "Key": "iterations", "ValueJson": "3", "ValueType": "int" },
-      "bool": { "Key": "addCollider", "ValueJson": "true", "ValueType": "bool" },
-      "string": { "Key": "groupName", "ValueJson": "blade", "ValueType": "string" },
-      "Vector3": { "Key": "translate", "ValueJson": "0,-0.125,0", "ValueType": "Vector3" }
-    },
-    "notes": "float 值使用 InvariantCulture 格式化（小数点用 '.' 不用 ','）。Vector3 用逗号分隔三个分量，无空格。"
-  },
-
-  "validation_checklist": [
-    "菜单 'PCG Toolkit > Examples > Create Dagger Graph' 生成 Assets/PCGToolkit/Examples/ProceduralDagger.asset",
-    "在 PCG Node Editor 中打开 ProceduralDagger.asset，显示 19 个节点、18 条连线、4 个 Group",
-    "执行图后在 Assets/PCGOutput/ 下生成 Dagger.prefab",
-    "Prefab 包含 MeshFilter + MeshRenderer + MeshCollider(convex)",
-    "Mesh 顶点数 > 100（细分后应有足够几何密度）",
-    "菜单 'PCG Toolkit > Examples > Setup Dagger Scene' 在场景中创建 Dagger Generator 对象",
-    "PCGGraphRunner Inspector 中 Sync Exposed Params 后显示 10 个参数",
-    "修改 Pattern Seed 后 Run Graph，手柄花纹发生变化",
-    "修改 Blade Curvature 后 Run Graph，刀身弯曲弧度发生变化",
-    "修改 Handle Width/Height/Depth 后 Run Graph，手柄尺寸相应变化"
-  ],
-
-  "notes": [
-    "所有节点的 node_type 字符串必须与对应 Node 类的 Name 属性完全一致（如 BoxNode.Name = 'Box'，SubdivideNode.Name = 'Subdivide'）",
-    "MergeNode 的 input 端口 allowMultiple=true，三条分支可以同时连接到同一个 'input' 端口",
-    "GroupCreate 必须在 Merge 之前执行，MergeNode 会保留并偏移 PrimGroup 索引",
-    "guard_transform 的 translate.y = -bladeHeight/2 = -0.125，handle_transform 的 translate.y = -(bladeHeight/2 + guardHeight + handleHeight/2) = -0.19，这些值基于默认参数计算，用户修改尺寸后位置不会自动联动（这是当前节点系统的限制，可在后续迭代中通过表达式节点解决）",
-    "MaterialAssign 的 materialPath 留空时，SavePrefabNode 会 fallback 到 Shader.Find('Standard') 创建默认 PBR 材质",
-    "Catmull-Clark 细分会将 Box 的方形截面圆化为近似圆柱形，2 次迭代足够平滑",
-    "Mountain 节点的 seed 参数直接控制 Perlin 噪声的随机偏移，不同 seed 产生完全不同的花纹图案"
-  ]
+  }
 }
 ```
+
+关键代码引用：
+
+当前的材质创建逻辑（问题根源）： [5-cite-2](#5-cite-2)
+
+当前的渲染逻辑（只有 Shaded 模式）： [5-cite-3](#5-cite-3)
+
+信息栏和几何体信息区域（渲染模式工具栏插入位置）： [5-cite-4](#5-cite-4)
+
+OnDisable 清理逻辑（需要添加 _wireMaterial 清理）： [5-cite-5](#5-cite-5)
+
+项目中其他地方使用 `Default-Diffuse.mat` 作为 fallback 的先例： [5-cite-6](#5-cite-6)

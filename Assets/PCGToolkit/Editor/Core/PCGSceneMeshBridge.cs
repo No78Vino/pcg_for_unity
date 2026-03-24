@@ -167,7 +167,9 @@ namespace PCGToolkit.Core
         }
 
         /// <summary>
-        /// Find the closest vertex to a world position among a triangle's vertices.
+        /// Find the closest vertex to a world position.
+        /// First checks the hit triangle, then expands to all triangles sharing its vertices
+        /// to avoid missing closer vertices on adjacent faces.
         /// Returns the PCG Point index.
         /// </summary>
         public int FindClosestVertex(int unityTriIndex, Vector3 worldPos)
@@ -179,20 +181,50 @@ namespace PCGToolkit.Core
             if (baseIdx + 2 >= tris.Length) return -1;
 
             var verts = TempMesh.vertices;
-            float minDist = float.MaxValue;
-            int closestPcgIdx = -1;
 
+            // Collect candidate PCG point indices from the hit triangle and its neighbors
+            var candidatePcgPoints = new HashSet<int>();
+            var seedVerts = new HashSet<int>();
             for (int i = 0; i < 3; i++)
             {
-                int vertIdx = tris[baseIdx + i];
-                if (vertIdx >= verts.Length) continue;
+                int vi = tris[baseIdx + i];
+                if (vi < verts.Length)
+                    seedVerts.Add(vi);
+            }
 
-                float dist = Vector3.Distance(verts[vertIdx], worldPos);
+            // Expand: find all triangles sharing any of the seed vertices
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                bool shares = false;
+                for (int i = 0; i < 3; i++)
+                {
+                    if (seedVerts.Contains(tris[t + i]))
+                    {
+                        shares = true;
+                        break;
+                    }
+                }
+                if (shares)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        int vi = tris[t + i];
+                        if (vi < verts.Length && UnityVertToPcgPoint.TryGetValue(vi, out int pcgIdx))
+                            candidatePcgPoints.Add(pcgIdx);
+                    }
+                }
+            }
+
+            float minDist = float.MaxValue;
+            int closestPcgIdx = -1;
+            foreach (int pcgIdx in candidatePcgPoints)
+            {
+                if (pcgIdx < 0 || pcgIdx >= Geometry.Points.Count) continue;
+                float dist = Vector3.Distance(Geometry.Points[pcgIdx], worldPos);
                 if (dist < minDist)
                 {
                     minDist = dist;
-                    if (UnityVertToPcgPoint.TryGetValue(vertIdx, out int pcgIdx))
-                        closestPcgIdx = pcgIdx;
+                    closestPcgIdx = pcgIdx;
                 }
             }
 
@@ -200,7 +232,9 @@ namespace PCGToolkit.Core
         }
 
         /// <summary>
-        /// Find the closest edge to a world position among a triangle's edges.
+        /// Find the closest edge to a world position.
+        /// Expands search to all triangles sharing vertices with the hit triangle
+        /// to avoid missing edges on adjacent faces.
         /// Returns the PCG Edge index, or -1 if not found.
         /// </summary>
         public int FindClosestEdge(int unityTriIndex, Vector3 worldPos)
@@ -212,39 +246,55 @@ namespace PCGToolkit.Core
             if (baseIdx + 2 >= tris.Length) return -1;
 
             var verts = TempMesh.vertices;
+
+            // Collect candidate PCG point indices from hit triangle + neighbors
+            var seedVerts = new HashSet<int>();
+            for (int i = 0; i < 3; i++)
+            {
+                int vi = tris[baseIdx + i];
+                if (vi < verts.Length)
+                    seedVerts.Add(vi);
+            }
+
+            var candidatePcgPoints = new HashSet<int>();
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                bool shares = false;
+                for (int i = 0; i < 3; i++)
+                {
+                    if (seedVerts.Contains(tris[t + i]))
+                    {
+                        shares = true;
+                        break;
+                    }
+                }
+                if (shares)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        int vi = tris[t + i];
+                        if (vi < verts.Length && UnityVertToPcgPoint.TryGetValue(vi, out int pcgIdx))
+                            candidatePcgPoints.Add(pcgIdx);
+                    }
+                }
+            }
+
+            // Find the closest PCG edge whose both endpoints are in the candidate set
             float minDist = float.MaxValue;
             int closestEdgeIdx = -1;
 
-            // Check 3 edges of the triangle
-            for (int i = 0; i < 3; i++)
+            for (int e = 0; e < Geometry.Edges.Count; e++)
             {
-                int va = tris[baseIdx + i];
-                int vb = tris[baseIdx + (i + 1) % 3];
+                int ea = Geometry.Edges[e][0];
+                int eb = Geometry.Edges[e][1];
+                if (!candidatePcgPoints.Contains(ea) || !candidatePcgPoints.Contains(eb))
+                    continue;
 
-                if (!UnityVertToPcgPoint.TryGetValue(va, out int pcgA)) continue;
-                if (!UnityVertToPcgPoint.TryGetValue(vb, out int pcgB)) continue;
-
-                // Find this edge in PCG Edges
-                int minE = Mathf.Min(pcgA, pcgB);
-                int maxE = Mathf.Max(pcgA, pcgB);
-
-                for (int e = 0; e < Geometry.Edges.Count; e++)
+                float dist = DistanceToSegment(worldPos, Geometry.Points[ea], Geometry.Points[eb]);
+                if (dist < minDist)
                 {
-                    int ea = Mathf.Min(Geometry.Edges[e][0], Geometry.Edges[e][1]);
-                    int eb = Mathf.Max(Geometry.Edges[e][0], Geometry.Edges[e][1]);
-                    if (ea == minE && eb == maxE)
-                    {
-                        // Distance from point to edge segment
-                        Vector3 edgeA = verts[va];
-                        Vector3 edgeB = verts[vb];
-                        float dist = DistanceToSegment(worldPos, edgeA, edgeB);
-                        if (dist < minDist)
-                        {
-                            minDist = dist;
-                            closestEdgeIdx = e;
-                        }
-                        break;
-                    }
+                    minDist = dist;
+                    closestEdgeIdx = e;
                 }
             }
 

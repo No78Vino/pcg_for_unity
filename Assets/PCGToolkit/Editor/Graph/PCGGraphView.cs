@@ -618,6 +618,18 @@ namespace PCGToolkit.Graph
             return found;
         }
 
+        public PCGNodeVisual FindNodeVisualByType(string nodeTypeName)
+        {
+            PCGNodeVisual found = null;
+            nodes.ForEach(node =>
+            {
+                if (found != null) return;
+                if (node is PCGNodeVisual visual && visual.PCGNode.Name == nodeTypeName)
+                    found = visual;
+            });
+            return found;
+        }
+
         public void ClearAllHighlights()
         {
             nodes.ForEach(node =>

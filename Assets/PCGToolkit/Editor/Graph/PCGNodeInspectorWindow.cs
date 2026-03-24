@@ -396,6 +396,59 @@ namespace PCGToolkit.Graph
             var openBtn = new Button(() =>
             {
                 UnityEditor.EditorTools.ToolManager.SetActiveTool<Tools.PCGSelectionTool>();
+                EditorApplication.delayCall += () =>
+                {
+                    var tool = Tools.PCGSelectionTool.ActiveInstance;
+                    if (tool == null) return;
+
+                    var defaults = nodeVisual.GetPortDefaultValues();
+                    GameObject targetGo = null;
+                    if (defaults.TryGetValue("target", out var targetVal))
+                    {
+                        if (targetVal is PCGCore.PCGSceneObjectRef sceneRef)
+                            targetGo = sceneRef.Resolve();
+                        else if (targetVal is GameObject go)
+                            targetGo = go;
+                    }
+
+                    if (targetGo == null)
+                    {
+                        Debug.LogWarning("[PCGSelectionTool] No target GameObject set on SceneSelectionInputNode. Please assign a target first.");
+                        return;
+                    }
+
+                    var mf = targetGo.GetComponent<MeshFilter>();
+                    if (mf == null || mf.sharedMesh == null)
+                    {
+                        Debug.LogWarning($"[PCGSelectionTool] GameObject '{targetGo.name}' has no MeshFilter or mesh is null.");
+                        return;
+                    }
+
+                    var geo = PCGCore.PCGGeometryToMesh.FromMesh(mf.sharedMesh);
+
+                    bool applyTransform = true;
+                    if (defaults.TryGetValue("applyTransform", out var atVal) && atVal is bool at)
+                        applyTransform = at;
+                    if (applyTransform)
+                    {
+                        var matrix = targetGo.transform.localToWorldMatrix;
+                        for (int i = 0; i < geo.Points.Count; i++)
+                            geo.Points[i] = matrix.MultiplyPoint3x4(geo.Points[i]);
+                        var normalAttr = geo.PointAttribs.GetAttribute("N");
+                        if (normalAttr != null)
+                        {
+                            var normalMat = matrix.inverse.transpose;
+                            for (int i = 0; i < normalAttr.Values.Count; i++)
+                            {
+                                if (normalAttr.Values[i] is Vector3 n)
+                                    normalAttr.Values[i] = normalMat.MultiplyVector(n).normalized;
+                            }
+                        }
+                    }
+
+                    tool.SetGeometry(geo);
+                    Debug.Log($"[PCGSelectionTool] Geometry loaded from '{targetGo.name}': {geo.Points.Count} points, {geo.Primitives.Count} prims");
+                };
             })
             {
                 text = "Open Selection Tool",

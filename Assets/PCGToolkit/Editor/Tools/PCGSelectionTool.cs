@@ -70,6 +70,23 @@ namespace PCGToolkit.Tools
         public override void OnActivated()
         {
             ActiveInstance = this;
+
+            if (!_bridge.IsValid)
+            {
+                var go = Selection.activeGameObject;
+                if (go != null)
+                {
+                    var mf = go.GetComponent<MeshFilter>();
+                    if (mf != null && mf.sharedMesh != null)
+                    {
+                        var geo = PCGGeometryToMesh.FromMesh(mf.sharedMesh);
+                        PCGQuickSelect.ApplyWorldTransform(geo, go.transform);
+                        SetGeometry(geo);
+                        Debug.Log($"[PCGSelectionTool] Auto-loaded geometry from '{go.name}': {geo.Points.Count} points, {geo.Primitives.Count} prims");
+                    }
+                }
+            }
+
             SceneView.RepaintAll();
         }
 
@@ -332,11 +349,9 @@ namespace PCGToolkit.Tools
             for (int i = 0; i < _bridge.Geometry.Primitives.Count; i++)
             {
                 Vector3 center = _bridge.GetPrimCenter(i);
-                Vector3 screenPos = cam.WorldToScreenPoint(center);
-                if (screenPos.z < 0) continue;
+                Vector2 guiPos = HandleUtility.WorldToGUIPoint(center);
+                if (cam.WorldToScreenPoint(center).z < 0) continue;
 
-                // Convert to GUI coordinates (flip Y)
-                Vector2 guiPos = new Vector2(screenPos.x, cam.pixelHeight - screenPos.y);
                 if (rect.Contains(guiPos))
                 {
                     if (subtractive)
@@ -353,10 +368,10 @@ namespace PCGToolkit.Tools
 
             for (int i = 0; i < _bridge.Geometry.Points.Count; i++)
             {
-                Vector3 screenPos = cam.WorldToScreenPoint(_bridge.Geometry.Points[i]);
-                if (screenPos.z < 0) continue;
+                Vector3 worldPos = _bridge.Geometry.Points[i];
+                Vector2 guiPos = HandleUtility.WorldToGUIPoint(worldPos);
+                if (cam.WorldToScreenPoint(worldPos).z < 0) continue;
 
-                Vector2 guiPos = new Vector2(screenPos.x, cam.pixelHeight - screenPos.y);
                 if (rect.Contains(guiPos))
                 {
                     if (subtractive)
@@ -375,10 +390,9 @@ namespace PCGToolkit.Tools
             {
                 var edge = _bridge.Geometry.Edges[i];
                 Vector3 midpoint = (_bridge.Geometry.Points[edge[0]] + _bridge.Geometry.Points[edge[1]]) * 0.5f;
-                Vector3 screenPos = cam.WorldToScreenPoint(midpoint);
-                if (screenPos.z < 0) continue;
+                Vector2 guiPos = HandleUtility.WorldToGUIPoint(midpoint);
+                if (cam.WorldToScreenPoint(midpoint).z < 0) continue;
 
-                Vector2 guiPos = new Vector2(screenPos.x, cam.pixelHeight - screenPos.y);
                 if (rect.Contains(guiPos))
                 {
                     if (subtractive)

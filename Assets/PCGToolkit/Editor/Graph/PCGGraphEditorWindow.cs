@@ -486,6 +486,8 @@ namespace PCGToolkit.Graph
             return currentGraph;
         }
 
+        public PCGGraphView GetGraphView() => graphView;
+
         private void HandleKeyboardShortcut(KeyDownEvent evt)
         {
             // Ctrl+S: Save
@@ -498,6 +500,14 @@ namespace PCGToolkit.Graph
             else if (evt.keyCode == KeyCode.S && evt.ctrlKey && evt.shiftKey)
             {
                 SaveAsGraph();
+                evt.StopPropagation();
+            }
+            // Ctrl+Shift+F: Quick Select Faces on active scene object
+            else if (evt.keyCode == KeyCode.F && evt.ctrlKey && evt.shiftKey)
+            {
+                var go = Selection.activeGameObject;
+                if (go != null)
+                    PCGToolkit.Tools.PCGQuickSelect.Launch(go);
                 evt.StopPropagation();
             }
         }

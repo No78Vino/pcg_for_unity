@@ -1,0 +1,1512 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 341b0cd2de4216e4da4ab80431b502d5, type: 3}
+  m_Name: ProceduralGlock
+  m_EditorClassIdentifier: 
+  Version: 7
+  GraphName: ProceduralGlock
+  Nodes:
+  - NodeId: 8966b9a1-45d3-4599-8114-817ad31944c7
+    NodeType: Box
+    Position: {x: 0, y: 0}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.16
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.14
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.62
+      ValueType: float
+  - NodeId: 02a653f9-a1aa-4903-8ba8-a04843adc2c3
+    NodeType: Transform
+    Position: {x: 300, y: 0}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.36,0.12
+      ValueType: Vector3
+  - NodeId: 7eb49ff0-d381-4909-a983-a21de8a63e9b
+    NodeType: Box
+    Position: {x: 0, y: 180}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.12
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.02
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.62
+      ValueType: float
+  - NodeId: 0c0f1ce3-fd9c-4ca9-8544-94164cd0d5ba
+    NodeType: Transform
+    Position: {x: 300, y: 180}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.44,0.12
+      ValueType: Vector3
+  - NodeId: 0106fce8-9c30-4733-8fe4-8f14526a9448
+    NodeType: Box
+    Position: {x: 0, y: 360}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.14
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.12
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.03
+      ValueType: float
+  - NodeId: 4deff1b4-33e2-4b50-be80-d8b9a610baf3
+    NodeType: Transform
+    Position: {x: 300, y: 360}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.35,0.44
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: 5,0,0
+      ValueType: Vector3
+  - NodeId: 121e78c4-8b2a-4ba2-8d72-b731993641e3
+    NodeType: Box
+    Position: {x: 0, y: 540}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.165
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.13
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.1
+      ValueType: float
+  - NodeId: 5dbc7e08-85d2-416f-b475-c9865c62541d
+    NodeType: Transform
+    Position: {x: 300, y: 540}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.36,-0.18
+      ValueType: Vector3
+  - NodeId: 051e944d-248e-40cc-9e6c-d405ea24a191
+    NodeType: Box
+    Position: {x: 0, y: 720}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.08
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.06
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.12
+      ValueType: float
+  - NodeId: 9f0e338b-e29c-4265-9512-50ac48444ae8
+    NodeType: Transform
+    Position: {x: 300, y: 720}
+    Parameters:
+    - Key: translate
+      ValueJson: 0.04,0.38,0.05
+      ValueType: Vector3
+  - NodeId: 94f777ea-cd86-48c4-b4d3-e9b6a41ea28f
+    NodeType: Box
+    Position: {x: 0, y: 900}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.04
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.03
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.02
+      ValueType: float
+  - NodeId: ad1a7745-67fa-42fe-afbf-048155944ce9
+    NodeType: Transform
+    Position: {x: 300, y: 900}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.46,0.38
+      ValueType: Vector3
+  - NodeId: 0c2582e4-54be-4699-91fb-f5e3c8e56e19
+    NodeType: Box
+    Position: {x: 0, y: 1080}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.06
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.035
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.025
+      ValueType: float
+  - NodeId: a4dcae59-d2fc-4340-a319-45d792ef53c6
+    NodeType: Transform
+    Position: {x: 300, y: 1080}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.46,-0.15
+      ValueType: Vector3
+  - NodeId: 6403aa19-fd14-4a01-8a00-aca519d65ec9
+    NodeType: Box
+    Position: {x: 0, y: 1260}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.015
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.035
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.025
+      ValueType: float
+  - NodeId: 6db5690a-985d-4131-a4a9-bf32e55e8a9f
+    NodeType: Transform
+    Position: {x: 300, y: 1260}
+    Parameters:
+    - Key: translate
+      ValueJson: -0.025,0.46,-0.15
+      ValueType: Vector3
+  - NodeId: 3d65ddfc-c468-4261-a2b2-fad32c45b7f7
+    NodeType: Box
+    Position: {x: 0, y: 1440}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.015
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.035
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.025
+      ValueType: float
+  - NodeId: dc6e7321-33b7-480f-bb53-a5a353a28526
+    NodeType: Transform
+    Position: {x: 300, y: 1440}
+    Parameters:
+    - Key: translate
+      ValueJson: 0.025,0.46,-0.15
+      ValueType: Vector3
+  - NodeId: d12db336-7460-460a-833e-111e148874f3
+    NodeType: Merge
+    Position: {x: 600, y: 720}
+    Parameters: []
+  - NodeId: 56c39a23-5875-47f2-ac92-c66b53579e54
+    NodeType: Tube
+    Position: {x: 0, y: 1800}
+    Parameters:
+    - Key: radiusOuter
+      ValueJson: 0.04
+      ValueType: float
+    - Key: radiusInner
+      ValueJson: 0
+      ValueType: float
+    - Key: height
+      ValueJson: 0.15
+      ValueType: float
+    - Key: columns
+      ValueJson: 16
+      ValueType: int
+    - Key: endCaps
+      ValueJson: true
+      ValueType: bool
+  - NodeId: 82b0aeea-16f6-4eb2-a139-8352c7a692ba
+    NodeType: Transform
+    Position: {x: 300, y: 1800}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.33,0.50
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: 90,0,0
+      ValueType: Vector3
+  - NodeId: 75322dce-cf0d-4395-9717-5d73d893d9e7
+    NodeType: Tube
+    Position: {x: 0, y: 1980}
+    Parameters:
+    - Key: radiusOuter
+      ValueJson: 0.025
+      ValueType: float
+    - Key: radiusInner
+      ValueJson: 0
+      ValueType: float
+    - Key: height
+      ValueJson: 0.16
+      ValueType: float
+    - Key: columns
+      ValueJson: 16
+      ValueType: int
+    - Key: endCaps
+      ValueJson: true
+      ValueType: bool
+  - NodeId: b984fec0-1a41-4c21-83d8-26c832a9e45e
+    NodeType: Transform
+    Position: {x: 300, y: 1980}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.33,0.50
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: 90,0,0
+      ValueType: Vector3
+  - NodeId: 2bd4271a-4cb4-47c2-ad10-d22cb78df253
+    NodeType: Merge
+    Position: {x: 600, y: 1890}
+    Parameters: []
+  - NodeId: cf868aef-6bc6-4c1c-842c-7d0c44beeac1
+    NodeType: Box
+    Position: {x: 0, y: 2300}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.16
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.1
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.52
+      ValueType: float
+  - NodeId: 820d9b3f-91ee-44c7-a94c-28c903e1d522
+    NodeType: Transform
+    Position: {x: 300, y: 2300}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.24,0.1
+      ValueType: Vector3
+  - NodeId: 157bbb74-04cf-497b-bef0-c55e63f674ae
+    NodeType: Box
+    Position: {x: 0, y: 2480}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.16
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.08
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.12
+      ValueType: float
+  - NodeId: be153db0-2951-4e45-9d1d-98f7e000d05e
+    NodeType: Transform
+    Position: {x: 300, y: 2480}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.22,0.38
+      ValueType: Vector3
+  - NodeId: b807bc06-9cf0-4310-bea9-f7cc833628eb
+    NodeType: Box
+    Position: {x: 0, y: 2660}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.17
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.012
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.04
+      ValueType: float
+  - NodeId: ef5b6258-651c-476f-977c-f2b11f183051
+    NodeType: Transform
+    Position: {x: 300, y: 2660}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.195,0.36
+      ValueType: Vector3
+  - NodeId: f7aab092-505c-4853-8957-7dda3cee5abc
+    NodeType: Box
+    Position: {x: 0, y: 2840}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.17
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.012
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.04
+      ValueType: float
+  - NodeId: ba871310-ff02-4d6b-956e-355a6f58a9a4
+    NodeType: Transform
+    Position: {x: 300, y: 2840}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.175,0.36
+      ValueType: Vector3
+  - NodeId: e8c1a6e9-c5d6-4f51-89a0-34f2c5427adf
+    NodeType: Box
+    Position: {x: 0, y: 3020}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.15
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.06
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.06
+      ValueType: float
+  - NodeId: 6a748de9-4c0f-4133-a399-d62809799a93
+    NodeType: Transform
+    Position: {x: 300, y: 3020}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.27,-0.2
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: 15,0,0
+      ValueType: Vector3
+  - NodeId: 98d565b2-35ca-421e-8b23-f972a1b404f7
+    NodeType: Merge
+    Position: {x: 600, y: 2660}
+    Parameters: []
+  - NodeId: c8cf3d1a-f423-4445-ab52-7a0a9f3d45da
+    NodeType: Box
+    Position: {x: 0, y: 3300}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.12
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.015
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.08
+      ValueType: float
+  - NodeId: cc9d0127-9f9a-4581-bdc5-75dae696a9aa
+    NodeType: Transform
+    Position: {x: 300, y: 3300}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.12,0.22
+      ValueType: Vector3
+  - NodeId: 88f053f5-bc65-46d4-96a4-d4d10b1e2bc7
+    NodeType: Box
+    Position: {x: 0, y: 3480}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.12
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.015
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.14
+      ValueType: float
+  - NodeId: a9c3d72b-4b17-4b5e-9f2f-b2a856771454
+    NodeType: Transform
+    Position: {x: 300, y: 3480}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.08,0.15
+      ValueType: Vector3
+  - NodeId: dc089c60-c888-4a02-9950-66f1ce9abf5c
+    NodeType: Box
+    Position: {x: 0, y: 3660}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.12
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.04
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.015
+      ValueType: float
+  - NodeId: b44081ab-8b05-4e8e-8a04-fb48e386f663
+    NodeType: Transform
+    Position: {x: 300, y: 3660}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.1,0.26
+      ValueType: Vector3
+  - NodeId: 71830dbf-ea28-42f4-85f2-c8b9e8700c11
+    NodeType: Box
+    Position: {x: 0, y: 3840}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.12
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.04
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.015
+      ValueType: float
+  - NodeId: 39181aa9-43a8-4b83-b5e9-8920d5740566
+    NodeType: Transform
+    Position: {x: 300, y: 3840}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.1,0.08
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: 15,0,0
+      ValueType: Vector3
+  - NodeId: cc2ed166-dfcd-468c-a428-526cc1d43071
+    NodeType: Merge
+    Position: {x: 600, y: 3570}
+    Parameters: []
+  - NodeId: 65451e6f-c5b3-4ca8-9a5b-5535c0f0d57a
+    NodeType: Box
+    Position: {x: 0, y: 4100}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.03
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.06
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.015
+      ValueType: float
+  - NodeId: ceb18366-f13e-40db-abd8-4694f488d2d9
+    NodeType: Transform
+    Position: {x: 300, y: 4100}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.14,0.15
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -10,0,0
+      ValueType: Vector3
+  - NodeId: a78f7c55-3899-45ee-b648-fd2c4337d978
+    NodeType: Box
+    Position: {x: 0, y: 4280}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.025
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.025
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.008
+      ValueType: float
+  - NodeId: 45d742e3-42f1-49cb-a70c-d4fb141bf2e3
+    NodeType: Transform
+    Position: {x: 300, y: 4280}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.12,0.155
+      ValueType: Vector3
+  - NodeId: 24ece289-f3ca-4028-9cfe-688fcb2ba885
+    NodeType: Tube
+    Position: {x: 0, y: 4460}
+    Parameters:
+    - Key: radiusOuter
+      ValueJson: 0.005
+      ValueType: float
+    - Key: radiusInner
+      ValueJson: 0
+      ValueType: float
+    - Key: height
+      ValueJson: 0.16
+      ValueType: float
+    - Key: columns
+      ValueJson: 8
+      ValueType: int
+    - Key: endCaps
+      ValueJson: true
+      ValueType: bool
+  - NodeId: 820fc6b2-ca9c-45f9-a5a8-a93c15ab1d21
+    NodeType: Transform
+    Position: {x: 300, y: 4460}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.17,0.15
+      ValueType: Vector3
+  - NodeId: 9e219710-6ce0-4597-b26e-31493938f8b7
+    NodeType: Merge
+    Position: {x: 600, y: 4280}
+    Parameters: []
+  - NodeId: cf069de7-4929-4268-8230-f27ee35c2271
+    NodeType: Box
+    Position: {x: 0, y: 4700}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.15
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.32
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.1
+      ValueType: float
+  - NodeId: 3bb1f511-00df-45f5-9180-33bbd389a7ee
+    NodeType: Transform
+    Position: {x: 300, y: 4700}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,-0.02,-0.05
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -18,0,0
+      ValueType: Vector3
+  - NodeId: 1562e0c2-451b-4c7f-a57d-bb386ee394b9
+    NodeType: Box
+    Position: {x: 0, y: 4880}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.14
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.28
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.02
+      ValueType: float
+  - NodeId: 7aae169c-78c5-4db7-adcd-a1ee38c7d495
+    NodeType: Transform
+    Position: {x: 300, y: 4880}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,-0.01,0.01
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -15,0,0
+      ValueType: Vector3
+  - NodeId: 87936cbe-b6f8-488f-8bef-67f3da79380b
+    NodeType: Box
+    Position: {x: 0, y: 5060}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.14
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.28
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.02
+      ValueType: float
+  - NodeId: 222daf04-4041-4e20-88c1-35f6c7d6dde5
+    NodeType: Transform
+    Position: {x: 300, y: 5060}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,-0.03,-0.1
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -20,0,0
+      ValueType: Vector3
+  - NodeId: 0e994641-1ff3-47cd-a2fe-3b5c1a3b59ce
+    NodeType: Box
+    Position: {x: 0, y: 5240}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.015
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.22
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.08
+      ValueType: float
+  - NodeId: 2abac420-0c6c-4bae-bd11-10add6f6bf59
+    NodeType: Transform
+    Position: {x: 300, y: 5240}
+    Parameters:
+    - Key: translate
+      ValueJson: -0.075,-0.02,-0.05
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -18,0,0
+      ValueType: Vector3
+  - NodeId: 8c049aca-cd0c-4fc8-b18a-608aa0816cf7
+    NodeType: Box
+    Position: {x: 0, y: 5420}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.015
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.22
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.08
+      ValueType: float
+  - NodeId: 712a9abb-db2e-42b7-8bc2-13ba6e11d3c2
+    NodeType: Transform
+    Position: {x: 300, y: 5420}
+    Parameters:
+    - Key: translate
+      ValueJson: 0.075,-0.02,-0.05
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -18,0,0
+      ValueType: Vector3
+  - NodeId: 7b7c9265-bd4c-4f9e-8336-ebbf00f7be21
+    NodeType: Box
+    Position: {x: 0, y: 5600}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.16
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.04
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.11
+      ValueType: float
+  - NodeId: 2ae05725-8749-4937-a4d7-d848a83c1e35
+    NodeType: Transform
+    Position: {x: 300, y: 5600}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,-0.17,-0.12
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -18,0,0
+      ValueType: Vector3
+  - NodeId: 895dbb00-09be-4b73-8b1d-afdf0814af28
+    NodeType: Merge
+    Position: {x: 600, y: 5150}
+    Parameters: []
+  - NodeId: 1b1f9681-9bda-442e-93bf-5c3e5198055d
+    NodeType: Box
+    Position: {x: 0, y: 5900}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.12
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.3
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.08
+      ValueType: float
+  - NodeId: b5a5a760-0dd3-4ce4-9661-121987f50840
+    NodeType: Transform
+    Position: {x: 300, y: 5900}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,-0.04,-0.05
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -18,0,0
+      ValueType: Vector3
+  - NodeId: c5f46810-094c-48e9-8932-e70623212cb5
+    NodeType: Box
+    Position: {x: 0, y: 6080}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.14
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.025
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.1
+      ValueType: float
+  - NodeId: 3200c093-98a9-430c-a68f-b2984fda5ba8
+    NodeType: Transform
+    Position: {x: 300, y: 6080}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,-0.22,-0.16
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -18,0,0
+      ValueType: Vector3
+  - NodeId: 16fe924a-8cdd-4ae2-9e65-73f58d6dd23e
+    NodeType: Box
+    Position: {x: 0, y: 6260}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.14
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.015
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.015
+      ValueType: float
+  - NodeId: 54a3b0d8-734d-4480-89d5-bfeb4ae470ed
+    NodeType: Transform
+    Position: {x: 300, y: 6260}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,-0.23,-0.11
+      ValueType: Vector3
+    - Key: rotate
+      ValueJson: -18,0,0
+      ValueType: Vector3
+  - NodeId: 5727c39a-f6de-4d44-8ba8-12e77e7d9d75
+    NodeType: Merge
+    Position: {x: 600, y: 6080}
+    Parameters: []
+  - NodeId: 9e5e55d0-a1e9-4b34-9771-cb2d1363890f
+    NodeType: Box
+    Position: {x: 0, y: 6500}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.02
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.025
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.04
+      ValueType: float
+  - NodeId: 4f3fe74e-2caa-4fc2-8ad6-49ac390f376f
+    NodeType: Transform
+    Position: {x: 300, y: 6500}
+    Parameters:
+    - Key: translate
+      ValueJson: -0.09,0.3,0.1
+      ValueType: Vector3
+  - NodeId: cfc12729-be72-415a-b5d6-a1b946f76cba
+    NodeType: Box
+    Position: {x: 0, y: 6680}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.015
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.015
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.025
+      ValueType: float
+  - NodeId: 9802d39b-3afe-454e-8ceb-49f65d5995af
+    NodeType: Transform
+    Position: {x: 300, y: 6680}
+    Parameters:
+    - Key: translate
+      ValueJson: -0.095,0.31,0.08
+      ValueType: Vector3
+  - NodeId: c5e4d5bc-a51f-41b0-a920-4c50d5983b30
+    NodeType: Box
+    Position: {x: 0, y: 6860}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.025
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.02
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.03
+      ValueType: float
+  - NodeId: 1ac8cc9c-1b1f-4687-a3b6-68ed44a97dd3
+    NodeType: Transform
+    Position: {x: 300, y: 6860}
+    Parameters:
+    - Key: translate
+      ValueJson: -0.09,0.24,0.18
+      ValueType: Vector3
+  - NodeId: 8ef16451-057b-439a-9cec-54f330a3cd8c
+    NodeType: Box
+    Position: {x: 0, y: 7040}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.02
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.02
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.02
+      ValueType: float
+  - NodeId: ea687c6b-2f9e-4c15-8d24-c3fa65275f0e
+    NodeType: Transform
+    Position: {x: 300, y: 7040}
+    Parameters:
+    - Key: translate
+      ValueJson: -0.085,0.2,0.06
+      ValueType: Vector3
+  - NodeId: 371b16c8-4e7b-48ec-b7e9-8cb85dbea11d
+    NodeType: Tube
+    Position: {x: 0, y: 7220}
+    Parameters:
+    - Key: radiusOuter
+      ValueJson: 0.004
+      ValueType: float
+    - Key: radiusInner
+      ValueJson: 0
+      ValueType: float
+    - Key: height
+      ValueJson: 0.17
+      ValueType: float
+    - Key: columns
+      ValueJson: 8
+      ValueType: int
+    - Key: endCaps
+      ValueJson: true
+      ValueType: bool
+  - NodeId: 048716c5-715f-487d-aeee-52b3358d6a99
+    NodeType: Transform
+    Position: {x: 300, y: 7220}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.22,0.22
+      ValueType: Vector3
+  - NodeId: 01a3686a-c5f6-45f2-8133-a434f686ee7a
+    NodeType: Tube
+    Position: {x: 0, y: 7400}
+    Parameters:
+    - Key: radiusOuter
+      ValueJson: 0.004
+      ValueType: float
+    - Key: radiusInner
+      ValueJson: 0
+      ValueType: float
+    - Key: height
+      ValueJson: 0.17
+      ValueType: float
+    - Key: columns
+      ValueJson: 8
+      ValueType: int
+    - Key: endCaps
+      ValueJson: true
+      ValueType: bool
+  - NodeId: 267dd41e-cd5c-4afc-b809-ccb223dad64b
+    NodeType: Transform
+    Position: {x: 300, y: 7400}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.22,0.02
+      ValueType: Vector3
+  - NodeId: 7d705e78-71b4-49cd-9876-5e80bc6d3c3b
+    NodeType: Merge
+    Position: {x: 600, y: 6950}
+    Parameters: []
+  - NodeId: 2c160124-aa0b-4c23-b77e-5a176ca1faa4
+    NodeType: Box
+    Position: {x: 0, y: 7700}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.01
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.02
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.4
+      ValueType: float
+  - NodeId: af6476f9-5134-45d3-a789-f509466e32cc
+    NodeType: Transform
+    Position: {x: 300, y: 7700}
+    Parameters:
+    - Key: translate
+      ValueJson: -0.08,0.32,0.12
+      ValueType: Vector3
+  - NodeId: 7718ddc7-8264-4784-998d-98d901cb343e
+    NodeType: Box
+    Position: {x: 0, y: 7880}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.01
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.02
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.4
+      ValueType: float
+  - NodeId: b59f1174-e187-4c23-8ecc-a0773a67ff4b
+    NodeType: Transform
+    Position: {x: 300, y: 7880}
+    Parameters:
+    - Key: translate
+      ValueJson: 0.08,0.32,0.12
+      ValueType: Vector3
+  - NodeId: 78b9b8c1-c1a1-40c7-9def-a411e3b96659
+    NodeType: Box
+    Position: {x: 0, y: 8060}
+    Parameters:
+    - Key: sizeX
+      ValueJson: 0.005
+      ValueType: float
+    - Key: sizeY
+      ValueJson: 0.03
+      ValueType: float
+    - Key: sizeZ
+      ValueJson: 0.1
+      ValueType: float
+  - NodeId: 3d2d56ac-3c2a-45d8-955f-42b8db6b1913
+    NodeType: Transform
+    Position: {x: 300, y: 8060}
+    Parameters:
+    - Key: translate
+      ValueJson: -0.083,0.36,0.05
+      ValueType: Vector3
+  - NodeId: cec03c83-6ff3-472a-9007-2a94a1f1b98d
+    NodeType: Merge
+    Position: {x: 600, y: 7880}
+    Parameters: []
+  - NodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    NodeType: Merge
+    Position: {x: 900, y: 3600}
+    Parameters: []
+  - NodeId: 1aa2eaf8-e65c-4c2c-b602-4190b00ad377
+    NodeType: Fuse
+    Position: {x: 1150, y: 3600}
+    Parameters:
+    - Key: distance
+      ValueJson: 0.001
+      ValueType: float
+  - NodeId: 8a5d65eb-edad-4bd4-87af-604323c3d790
+    NodeType: Normal
+    Position: {x: 1400, y: 3600}
+    Parameters:
+    - Key: type
+      ValueJson: point
+      ValueType: string
+    - Key: cuspAngle
+      ValueJson: 60
+      ValueType: float
+    - Key: weightByArea
+      ValueJson: true
+      ValueType: bool
+  - NodeId: 86de651c-f650-465e-868e-86393b5055f5
+    NodeType: UVProject
+    Position: {x: 1650, y: 3600}
+    Parameters:
+    - Key: projectionType
+      ValueJson: cubic
+      ValueType: string
+  - NodeId: 27d8deb4-5ba6-4d66-8d15-4dd9908951e2
+    NodeType: SavePrefab
+    Position: {x: 1900, y: 3600}
+    Parameters:
+    - Key: assetPath
+      ValueJson: Assets/PCGOutput/Glock.prefab
+      ValueType: string
+    - Key: prefabName
+      ValueJson: Glock
+      ValueType: string
+    - Key: addCollider
+      ValueJson: true
+      ValueType: bool
+    - Key: convexCollider
+      ValueJson: true
+      ValueType: bool
+  Edges:
+  - OutputNodeId: 8966b9a1-45d3-4599-8114-817ad31944c7
+    OutputPort: geometry
+    InputNodeId: 02a653f9-a1aa-4903-8ba8-a04843adc2c3
+    InputPort: input
+  - OutputNodeId: 7eb49ff0-d381-4909-a983-a21de8a63e9b
+    OutputPort: geometry
+    InputNodeId: 0c0f1ce3-fd9c-4ca9-8544-94164cd0d5ba
+    InputPort: input
+  - OutputNodeId: 0106fce8-9c30-4733-8fe4-8f14526a9448
+    OutputPort: geometry
+    InputNodeId: 4deff1b4-33e2-4b50-be80-d8b9a610baf3
+    InputPort: input
+  - OutputNodeId: 121e78c4-8b2a-4ba2-8d72-b731993641e3
+    OutputPort: geometry
+    InputNodeId: 5dbc7e08-85d2-416f-b475-c9865c62541d
+    InputPort: input
+  - OutputNodeId: 051e944d-248e-40cc-9e6c-d405ea24a191
+    OutputPort: geometry
+    InputNodeId: 9f0e338b-e29c-4265-9512-50ac48444ae8
+    InputPort: input
+  - OutputNodeId: 94f777ea-cd86-48c4-b4d3-e9b6a41ea28f
+    OutputPort: geometry
+    InputNodeId: ad1a7745-67fa-42fe-afbf-048155944ce9
+    InputPort: input
+  - OutputNodeId: 0c2582e4-54be-4699-91fb-f5e3c8e56e19
+    OutputPort: geometry
+    InputNodeId: a4dcae59-d2fc-4340-a319-45d792ef53c6
+    InputPort: input
+  - OutputNodeId: 6403aa19-fd14-4a01-8a00-aca519d65ec9
+    OutputPort: geometry
+    InputNodeId: 6db5690a-985d-4131-a4a9-bf32e55e8a9f
+    InputPort: input
+  - OutputNodeId: 3d65ddfc-c468-4261-a2b2-fad32c45b7f7
+    OutputPort: geometry
+    InputNodeId: dc6e7321-33b7-480f-bb53-a5a353a28526
+    InputPort: input
+  - OutputNodeId: 02a653f9-a1aa-4903-8ba8-a04843adc2c3
+    OutputPort: geometry
+    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputPort: input
+  - OutputNodeId: 0c0f1ce3-fd9c-4ca9-8544-94164cd0d5ba
+    OutputPort: geometry
+    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputPort: input
+  - OutputNodeId: 4deff1b4-33e2-4b50-be80-d8b9a610baf3
+    OutputPort: geometry
+    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputPort: input
+  - OutputNodeId: 5dbc7e08-85d2-416f-b475-c9865c62541d
+    OutputPort: geometry
+    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputPort: input
+  - OutputNodeId: 9f0e338b-e29c-4265-9512-50ac48444ae8
+    OutputPort: geometry
+    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputPort: input
+  - OutputNodeId: ad1a7745-67fa-42fe-afbf-048155944ce9
+    OutputPort: geometry
+    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputPort: input
+  - OutputNodeId: a4dcae59-d2fc-4340-a319-45d792ef53c6
+    OutputPort: geometry
+    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputPort: input
+  - OutputNodeId: 6db5690a-985d-4131-a4a9-bf32e55e8a9f
+    OutputPort: geometry
+    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputPort: input
+  - OutputNodeId: dc6e7321-33b7-480f-bb53-a5a353a28526
+    OutputPort: geometry
+    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputPort: input
+  - OutputNodeId: 56c39a23-5875-47f2-ac92-c66b53579e54
+    OutputPort: geometry
+    InputNodeId: 82b0aeea-16f6-4eb2-a139-8352c7a692ba
+    InputPort: input
+  - OutputNodeId: 75322dce-cf0d-4395-9717-5d73d893d9e7
+    OutputPort: geometry
+    InputNodeId: b984fec0-1a41-4c21-83d8-26c832a9e45e
+    InputPort: input
+  - OutputNodeId: 82b0aeea-16f6-4eb2-a139-8352c7a692ba
+    OutputPort: geometry
+    InputNodeId: 2bd4271a-4cb4-47c2-ad10-d22cb78df253
+    InputPort: input
+  - OutputNodeId: b984fec0-1a41-4c21-83d8-26c832a9e45e
+    OutputPort: geometry
+    InputNodeId: 2bd4271a-4cb4-47c2-ad10-d22cb78df253
+    InputPort: input
+  - OutputNodeId: cf868aef-6bc6-4c1c-842c-7d0c44beeac1
+    OutputPort: geometry
+    InputNodeId: 820d9b3f-91ee-44c7-a94c-28c903e1d522
+    InputPort: input
+  - OutputNodeId: 157bbb74-04cf-497b-bef0-c55e63f674ae
+    OutputPort: geometry
+    InputNodeId: be153db0-2951-4e45-9d1d-98f7e000d05e
+    InputPort: input
+  - OutputNodeId: b807bc06-9cf0-4310-bea9-f7cc833628eb
+    OutputPort: geometry
+    InputNodeId: ef5b6258-651c-476f-977c-f2b11f183051
+    InputPort: input
+  - OutputNodeId: f7aab092-505c-4853-8957-7dda3cee5abc
+    OutputPort: geometry
+    InputNodeId: ba871310-ff02-4d6b-956e-355a6f58a9a4
+    InputPort: input
+  - OutputNodeId: e8c1a6e9-c5d6-4f51-89a0-34f2c5427adf
+    OutputPort: geometry
+    InputNodeId: 6a748de9-4c0f-4133-a399-d62809799a93
+    InputPort: input
+  - OutputNodeId: 820d9b3f-91ee-44c7-a94c-28c903e1d522
+    OutputPort: geometry
+    InputNodeId: 98d565b2-35ca-421e-8b23-f972a1b404f7
+    InputPort: input
+  - OutputNodeId: be153db0-2951-4e45-9d1d-98f7e000d05e
+    OutputPort: geometry
+    InputNodeId: 98d565b2-35ca-421e-8b23-f972a1b404f7
+    InputPort: input
+  - OutputNodeId: ef5b6258-651c-476f-977c-f2b11f183051
+    OutputPort: geometry
+    InputNodeId: 98d565b2-35ca-421e-8b23-f972a1b404f7
+    InputPort: input
+  - OutputNodeId: ba871310-ff02-4d6b-956e-355a6f58a9a4
+    OutputPort: geometry
+    InputNodeId: 98d565b2-35ca-421e-8b23-f972a1b404f7
+    InputPort: input
+  - OutputNodeId: 6a748de9-4c0f-4133-a399-d62809799a93
+    OutputPort: geometry
+    InputNodeId: 98d565b2-35ca-421e-8b23-f972a1b404f7
+    InputPort: input
+  - OutputNodeId: c8cf3d1a-f423-4445-ab52-7a0a9f3d45da
+    OutputPort: geometry
+    InputNodeId: cc9d0127-9f9a-4581-bdc5-75dae696a9aa
+    InputPort: input
+  - OutputNodeId: 88f053f5-bc65-46d4-96a4-d4d10b1e2bc7
+    OutputPort: geometry
+    InputNodeId: a9c3d72b-4b17-4b5e-9f2f-b2a856771454
+    InputPort: input
+  - OutputNodeId: dc089c60-c888-4a02-9950-66f1ce9abf5c
+    OutputPort: geometry
+    InputNodeId: b44081ab-8b05-4e8e-8a04-fb48e386f663
+    InputPort: input
+  - OutputNodeId: 71830dbf-ea28-42f4-85f2-c8b9e8700c11
+    OutputPort: geometry
+    InputNodeId: 39181aa9-43a8-4b83-b5e9-8920d5740566
+    InputPort: input
+  - OutputNodeId: cc9d0127-9f9a-4581-bdc5-75dae696a9aa
+    OutputPort: geometry
+    InputNodeId: cc2ed166-dfcd-468c-a428-526cc1d43071
+    InputPort: input
+  - OutputNodeId: a9c3d72b-4b17-4b5e-9f2f-b2a856771454
+    OutputPort: geometry
+    InputNodeId: cc2ed166-dfcd-468c-a428-526cc1d43071
+    InputPort: input
+  - OutputNodeId: b44081ab-8b05-4e8e-8a04-fb48e386f663
+    OutputPort: geometry
+    InputNodeId: cc2ed166-dfcd-468c-a428-526cc1d43071
+    InputPort: input
+  - OutputNodeId: 39181aa9-43a8-4b83-b5e9-8920d5740566
+    OutputPort: geometry
+    InputNodeId: cc2ed166-dfcd-468c-a428-526cc1d43071
+    InputPort: input
+  - OutputNodeId: 65451e6f-c5b3-4ca8-9a5b-5535c0f0d57a
+    OutputPort: geometry
+    InputNodeId: ceb18366-f13e-40db-abd8-4694f488d2d9
+    InputPort: input
+  - OutputNodeId: a78f7c55-3899-45ee-b648-fd2c4337d978
+    OutputPort: geometry
+    InputNodeId: 45d742e3-42f1-49cb-a70c-d4fb141bf2e3
+    InputPort: input
+  - OutputNodeId: 24ece289-f3ca-4028-9cfe-688fcb2ba885
+    OutputPort: geometry
+    InputNodeId: 820fc6b2-ca9c-45f9-a5a8-a93c15ab1d21
+    InputPort: input
+  - OutputNodeId: ceb18366-f13e-40db-abd8-4694f488d2d9
+    OutputPort: geometry
+    InputNodeId: 9e219710-6ce0-4597-b26e-31493938f8b7
+    InputPort: input
+  - OutputNodeId: 45d742e3-42f1-49cb-a70c-d4fb141bf2e3
+    OutputPort: geometry
+    InputNodeId: 9e219710-6ce0-4597-b26e-31493938f8b7
+    InputPort: input
+  - OutputNodeId: 820fc6b2-ca9c-45f9-a5a8-a93c15ab1d21
+    OutputPort: geometry
+    InputNodeId: 9e219710-6ce0-4597-b26e-31493938f8b7
+    InputPort: input
+  - OutputNodeId: cf069de7-4929-4268-8230-f27ee35c2271
+    OutputPort: geometry
+    InputNodeId: 3bb1f511-00df-45f5-9180-33bbd389a7ee
+    InputPort: input
+  - OutputNodeId: 1562e0c2-451b-4c7f-a57d-bb386ee394b9
+    OutputPort: geometry
+    InputNodeId: 7aae169c-78c5-4db7-adcd-a1ee38c7d495
+    InputPort: input
+  - OutputNodeId: 87936cbe-b6f8-488f-8bef-67f3da79380b
+    OutputPort: geometry
+    InputNodeId: 222daf04-4041-4e20-88c1-35f6c7d6dde5
+    InputPort: input
+  - OutputNodeId: 0e994641-1ff3-47cd-a2fe-3b5c1a3b59ce
+    OutputPort: geometry
+    InputNodeId: 2abac420-0c6c-4bae-bd11-10add6f6bf59
+    InputPort: input
+  - OutputNodeId: 8c049aca-cd0c-4fc8-b18a-608aa0816cf7
+    OutputPort: geometry
+    InputNodeId: 712a9abb-db2e-42b7-8bc2-13ba6e11d3c2
+    InputPort: input
+  - OutputNodeId: 7b7c9265-bd4c-4f9e-8336-ebbf00f7be21
+    OutputPort: geometry
+    InputNodeId: 2ae05725-8749-4937-a4d7-d848a83c1e35
+    InputPort: input
+  - OutputNodeId: 3bb1f511-00df-45f5-9180-33bbd389a7ee
+    OutputPort: geometry
+    InputNodeId: 895dbb00-09be-4b73-8b1d-afdf0814af28
+    InputPort: input
+  - OutputNodeId: 7aae169c-78c5-4db7-adcd-a1ee38c7d495
+    OutputPort: geometry
+    InputNodeId: 895dbb00-09be-4b73-8b1d-afdf0814af28
+    InputPort: input
+  - OutputNodeId: 222daf04-4041-4e20-88c1-35f6c7d6dde5
+    OutputPort: geometry
+    InputNodeId: 895dbb00-09be-4b73-8b1d-afdf0814af28
+    InputPort: input
+  - OutputNodeId: 2abac420-0c6c-4bae-bd11-10add6f6bf59
+    OutputPort: geometry
+    InputNodeId: 895dbb00-09be-4b73-8b1d-afdf0814af28
+    InputPort: input
+  - OutputNodeId: 712a9abb-db2e-42b7-8bc2-13ba6e11d3c2
+    OutputPort: geometry
+    InputNodeId: 895dbb00-09be-4b73-8b1d-afdf0814af28
+    InputPort: input
+  - OutputNodeId: 2ae05725-8749-4937-a4d7-d848a83c1e35
+    OutputPort: geometry
+    InputNodeId: 895dbb00-09be-4b73-8b1d-afdf0814af28
+    InputPort: input
+  - OutputNodeId: 1b1f9681-9bda-442e-93bf-5c3e5198055d
+    OutputPort: geometry
+    InputNodeId: b5a5a760-0dd3-4ce4-9661-121987f50840
+    InputPort: input
+  - OutputNodeId: c5f46810-094c-48e9-8932-e70623212cb5
+    OutputPort: geometry
+    InputNodeId: 3200c093-98a9-430c-a68f-b2984fda5ba8
+    InputPort: input
+  - OutputNodeId: 16fe924a-8cdd-4ae2-9e65-73f58d6dd23e
+    OutputPort: geometry
+    InputNodeId: 54a3b0d8-734d-4480-89d5-bfeb4ae470ed
+    InputPort: input
+  - OutputNodeId: b5a5a760-0dd3-4ce4-9661-121987f50840
+    OutputPort: geometry
+    InputNodeId: 5727c39a-f6de-4d44-8ba8-12e77e7d9d75
+    InputPort: input
+  - OutputNodeId: 3200c093-98a9-430c-a68f-b2984fda5ba8
+    OutputPort: geometry
+    InputNodeId: 5727c39a-f6de-4d44-8ba8-12e77e7d9d75
+    InputPort: input
+  - OutputNodeId: 54a3b0d8-734d-4480-89d5-bfeb4ae470ed
+    OutputPort: geometry
+    InputNodeId: 5727c39a-f6de-4d44-8ba8-12e77e7d9d75
+    InputPort: input
+  - OutputNodeId: 9e5e55d0-a1e9-4b34-9771-cb2d1363890f
+    OutputPort: geometry
+    InputNodeId: 4f3fe74e-2caa-4fc2-8ad6-49ac390f376f
+    InputPort: input
+  - OutputNodeId: cfc12729-be72-415a-b5d6-a1b946f76cba
+    OutputPort: geometry
+    InputNodeId: 9802d39b-3afe-454e-8ceb-49f65d5995af
+    InputPort: input
+  - OutputNodeId: c5e4d5bc-a51f-41b0-a920-4c50d5983b30
+    OutputPort: geometry
+    InputNodeId: 1ac8cc9c-1b1f-4687-a3b6-68ed44a97dd3
+    InputPort: input
+  - OutputNodeId: 8ef16451-057b-439a-9cec-54f330a3cd8c
+    OutputPort: geometry
+    InputNodeId: ea687c6b-2f9e-4c15-8d24-c3fa65275f0e
+    InputPort: input
+  - OutputNodeId: 371b16c8-4e7b-48ec-b7e9-8cb85dbea11d
+    OutputPort: geometry
+    InputNodeId: 048716c5-715f-487d-aeee-52b3358d6a99
+    InputPort: input
+  - OutputNodeId: 01a3686a-c5f6-45f2-8133-a434f686ee7a
+    OutputPort: geometry
+    InputNodeId: 267dd41e-cd5c-4afc-b809-ccb223dad64b
+    InputPort: input
+  - OutputNodeId: 4f3fe74e-2caa-4fc2-8ad6-49ac390f376f
+    OutputPort: geometry
+    InputNodeId: 7d705e78-71b4-49cd-9876-5e80bc6d3c3b
+    InputPort: input
+  - OutputNodeId: 9802d39b-3afe-454e-8ceb-49f65d5995af
+    OutputPort: geometry
+    InputNodeId: 7d705e78-71b4-49cd-9876-5e80bc6d3c3b
+    InputPort: input
+  - OutputNodeId: 1ac8cc9c-1b1f-4687-a3b6-68ed44a97dd3
+    OutputPort: geometry
+    InputNodeId: 7d705e78-71b4-49cd-9876-5e80bc6d3c3b
+    InputPort: input
+  - OutputNodeId: ea687c6b-2f9e-4c15-8d24-c3fa65275f0e
+    OutputPort: geometry
+    InputNodeId: 7d705e78-71b4-49cd-9876-5e80bc6d3c3b
+    InputPort: input
+  - OutputNodeId: 048716c5-715f-487d-aeee-52b3358d6a99
+    OutputPort: geometry
+    InputNodeId: 7d705e78-71b4-49cd-9876-5e80bc6d3c3b
+    InputPort: input
+  - OutputNodeId: 267dd41e-cd5c-4afc-b809-ccb223dad64b
+    OutputPort: geometry
+    InputNodeId: 7d705e78-71b4-49cd-9876-5e80bc6d3c3b
+    InputPort: input
+  - OutputNodeId: 2c160124-aa0b-4c23-b77e-5a176ca1faa4
+    OutputPort: geometry
+    InputNodeId: af6476f9-5134-45d3-a789-f509466e32cc
+    InputPort: input
+  - OutputNodeId: 7718ddc7-8264-4784-998d-98d901cb343e
+    OutputPort: geometry
+    InputNodeId: b59f1174-e187-4c23-8ecc-a0773a67ff4b
+    InputPort: input
+  - OutputNodeId: 78b9b8c1-c1a1-40c7-9def-a411e3b96659
+    OutputPort: geometry
+    InputNodeId: 3d2d56ac-3c2a-45d8-955f-42b8db6b1913
+    InputPort: input
+  - OutputNodeId: af6476f9-5134-45d3-a789-f509466e32cc
+    OutputPort: geometry
+    InputNodeId: cec03c83-6ff3-472a-9007-2a94a1f1b98d
+    InputPort: input
+  - OutputNodeId: b59f1174-e187-4c23-8ecc-a0773a67ff4b
+    OutputPort: geometry
+    InputNodeId: cec03c83-6ff3-472a-9007-2a94a1f1b98d
+    InputPort: input
+  - OutputNodeId: 3d2d56ac-3c2a-45d8-955f-42b8db6b1913
+    OutputPort: geometry
+    InputNodeId: cec03c83-6ff3-472a-9007-2a94a1f1b98d
+    InputPort: input
+  - OutputNodeId: d12db336-7460-460a-833e-111e148874f3
+    OutputPort: geometry
+    InputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    InputPort: input
+  - OutputNodeId: 2bd4271a-4cb4-47c2-ad10-d22cb78df253
+    OutputPort: geometry
+    InputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    InputPort: input
+  - OutputNodeId: 98d565b2-35ca-421e-8b23-f972a1b404f7
+    OutputPort: geometry
+    InputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    InputPort: input
+  - OutputNodeId: cc2ed166-dfcd-468c-a428-526cc1d43071
+    OutputPort: geometry
+    InputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    InputPort: input
+  - OutputNodeId: 9e219710-6ce0-4597-b26e-31493938f8b7
+    OutputPort: geometry
+    InputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    InputPort: input
+  - OutputNodeId: 895dbb00-09be-4b73-8b1d-afdf0814af28
+    OutputPort: geometry
+    InputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    InputPort: input
+  - OutputNodeId: 5727c39a-f6de-4d44-8ba8-12e77e7d9d75
+    OutputPort: geometry
+    InputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    InputPort: input
+  - OutputNodeId: 7d705e78-71b4-49cd-9876-5e80bc6d3c3b
+    OutputPort: geometry
+    InputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    InputPort: input
+  - OutputNodeId: cec03c83-6ff3-472a-9007-2a94a1f1b98d
+    OutputPort: geometry
+    InputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    InputPort: input
+  - OutputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+    OutputPort: geometry
+    InputNodeId: 1aa2eaf8-e65c-4c2c-b602-4190b00ad377
+    InputPort: input
+  - OutputNodeId: 1aa2eaf8-e65c-4c2c-b602-4190b00ad377
+    OutputPort: geometry
+    InputNodeId: 8a5d65eb-edad-4bd4-87af-604323c3d790
+    InputPort: input
+  - OutputNodeId: 8a5d65eb-edad-4bd4-87af-604323c3d790
+    OutputPort: geometry
+    InputNodeId: 86de651c-f650-465e-868e-86393b5055f5
+    InputPort: input
+  - OutputNodeId: 86de651c-f650-465e-868e-86393b5055f5
+    OutputPort: geometry
+    InputNodeId: 27d8deb4-5ba6-4d66-8d15-4dd9908951e2
+    InputPort: input
+  Groups:
+  - GroupId: c815f515-957c-4016-b419-4cbc09b3381a
+    Title: "Slide (\u5957\u7B52)"
+    NodeIds:
+    - 8966b9a1-45d3-4599-8114-817ad31944c7
+    - 02a653f9-a1aa-4903-8ba8-a04843adc2c3
+    - 7eb49ff0-d381-4909-a983-a21de8a63e9b
+    - 0c0f1ce3-fd9c-4ca9-8544-94164cd0d5ba
+    - 0106fce8-9c30-4733-8fe4-8f14526a9448
+    - 4deff1b4-33e2-4b50-be80-d8b9a610baf3
+    - 121e78c4-8b2a-4ba2-8d72-b731993641e3
+    - 5dbc7e08-85d2-416f-b475-c9865c62541d
+    - 051e944d-248e-40cc-9e6c-d405ea24a191
+    - 9f0e338b-e29c-4265-9512-50ac48444ae8
+    - 94f777ea-cd86-48c4-b4d3-e9b6a41ea28f
+    - ad1a7745-67fa-42fe-afbf-048155944ce9
+    - 0c2582e4-54be-4699-91fb-f5e3c8e56e19
+    - a4dcae59-d2fc-4340-a319-45d792ef53c6
+    - 6403aa19-fd14-4a01-8a00-aca519d65ec9
+    - 6db5690a-985d-4131-a4a9-bf32e55e8a9f
+    - 3d65ddfc-c468-4261-a2b2-fad32c45b7f7
+    - dc6e7321-33b7-480f-bb53-a5a353a28526
+    Position: {x: -20, y: -40}
+    Size: {x: 700, y: 1700}
+  - GroupId: e0a92a0d-16ed-435f-b780-aaadeb3c6121
+    Title: "Barrel (\u67AA\u7BA1)"
+    NodeIds:
+    - 56c39a23-5875-47f2-ac92-c66b53579e54
+    - 82b0aeea-16f6-4eb2-a139-8352c7a692ba
+    - 75322dce-cf0d-4395-9717-5d73d893d9e7
+    - b984fec0-1a41-4c21-83d8-26c832a9e45e
+    Position: {x: -20, y: 1760}
+    Size: {x: 700, y: 420}
+  - GroupId: 0246e570-7e94-4de3-bf6b-a269cb7e6c8f
+    Title: "Frame (\u673A\u5323)"
+    NodeIds:
+    - cf868aef-6bc6-4c1c-842c-7d0c44beeac1
+    - 820d9b3f-91ee-44c7-a94c-28c903e1d522
+    - 157bbb74-04cf-497b-bef0-c55e63f674ae
+    - be153db0-2951-4e45-9d1d-98f7e000d05e
+    - b807bc06-9cf0-4310-bea9-f7cc833628eb
+    - ef5b6258-651c-476f-977c-f2b11f183051
+    - f7aab092-505c-4853-8957-7dda3cee5abc
+    - ba871310-ff02-4d6b-956e-355a6f58a9a4
+    - e8c1a6e9-c5d6-4f51-89a0-34f2c5427adf
+    - 6a748de9-4c0f-4133-a399-d62809799a93
+    Position: {x: -20, y: 2260}
+    Size: {x: 700, y: 960}
+  - GroupId: acba2408-7a2e-447f-982d-f64d80d4e1ab
+    Title: "Trigger Guard (\u6273\u673A\u62A4\u5708)"
+    NodeIds:
+    - c8cf3d1a-f423-4445-ab52-7a0a9f3d45da
+    - cc9d0127-9f9a-4581-bdc5-75dae696a9aa
+    - 88f053f5-bc65-46d4-96a4-d4d10b1e2bc7
+    - a9c3d72b-4b17-4b5e-9f2f-b2a856771454
+    - dc089c60-c888-4a02-9950-66f1ce9abf5c
+    - b44081ab-8b05-4e8e-8a04-fb48e386f663
+    - 71830dbf-ea28-42f4-85f2-c8b9e8700c11
+    - 39181aa9-43a8-4b83-b5e9-8920d5740566
+    Position: {x: -20, y: 3260}
+    Size: {x: 700, y: 780}
+  - GroupId: 096e1137-36b4-43fa-be6f-08921e3d1ab2
+    Title: "Trigger (\u6273\u673A)"
+    NodeIds:
+    - 65451e6f-c5b3-4ca8-9a5b-5535c0f0d57a
+    - ceb18366-f13e-40db-abd8-4694f488d2d9
+    - a78f7c55-3899-45ee-b648-fd2c4337d978
+    - 45d742e3-42f1-49cb-a70c-d4fb141bf2e3
+    Position: {x: -20, y: 4060}
+    Size: {x: 700, y: 600}
+  - GroupId: 64f84dac-ee72-465f-956b-2af225139d70
+    Title: "Grip (\u63E1\u628A)"
+    NodeIds:
+    - cf069de7-4929-4268-8230-f27ee35c2271
+    - 3bb1f511-00df-45f5-9180-33bbd389a7ee
+    - 1562e0c2-451b-4c7f-a57d-bb386ee394b9
+    - 7aae169c-78c5-4db7-adcd-a1ee38c7d495
+    - 87936cbe-b6f8-488f-8bef-67f3da79380b
+    - 222daf04-4041-4e20-88c1-35f6c7d6dde5
+    - 0e994641-1ff3-47cd-a2fe-3b5c1a3b59ce
+    - 2abac420-0c6c-4bae-bd11-10add6f6bf59
+    - 8c049aca-cd0c-4fc8-b18a-608aa0816cf7
+    - 712a9abb-db2e-42b7-8bc2-13ba6e11d3c2
+    - 7b7c9265-bd4c-4f9e-8336-ebbf00f7be21
+    - 2ae05725-8749-4937-a4d7-d848a83c1e35
+    Position: {x: -20, y: 4660}
+    Size: {x: 700, y: 1140}
+  - GroupId: 0b354b6f-c5f5-40e1-9842-ec6ba697b763
+    Title: "Magazine (\u5F39\u5323)"
+    NodeIds:
+    - 1b1f9681-9bda-442e-93bf-5c3e5198055d
+    - b5a5a760-0dd3-4ce4-9661-121987f50840
+    - c5f46810-094c-48e9-8932-e70623212cb5
+    - 3200c093-98a9-430c-a68f-b2984fda5ba8
+    - 16fe924a-8cdd-4ae2-9e65-73f58d6dd23e
+    - 54a3b0d8-734d-4480-89d5-bfeb4ae470ed
+    Position: {x: -20, y: 5860}
+    Size: {x: 700, y: 600}
+  - GroupId: bbb5a857-9d4c-453e-a686-c0a7c96c2faa
+    Title: "Controls (\u64CD\u63A7\u90E8\u4EF6)"
+    NodeIds:
+    - 9e5e55d0-a1e9-4b34-9771-cb2d1363890f
+    - 4f3fe74e-2caa-4fc2-8ad6-49ac390f376f
+    - cfc12729-be72-415a-b5d6-a1b946f76cba
+    - 9802d39b-3afe-454e-8ceb-49f65d5995af
+    - c5e4d5bc-a51f-41b0-a920-4c50d5983b30
+    - 1ac8cc9c-1b1f-4687-a3b6-68ed44a97dd3
+    - 8ef16451-057b-439a-9cec-54f330a3cd8c
+    - ea687c6b-2f9e-4c15-8d24-c3fa65275f0e
+    Position: {x: -20, y: 6460}
+    Size: {x: 700, y: 1140}
+  - GroupId: f84d0da5-2954-4059-b739-b978c92e6949
+    Title: "Slide Details (\u5957\u7B52\u7EC6\u8282)"
+    NodeIds:
+    - 2c160124-aa0b-4c23-b77e-5a176ca1faa4
+    - af6476f9-5134-45d3-a789-f509466e32cc
+    - 7718ddc7-8264-4784-998d-98d901cb343e
+    - b59f1174-e187-4c23-8ecc-a0773a67ff4b
+    - 78b9b8c1-c1a1-40c7-9def-a411e3b96659
+    - 3d2d56ac-3c2a-45d8-955f-42b8db6b1913
+    Position: {x: -20, y: 7660}
+    Size: {x: 700, y: 600}
+  StickyNotes:
+  - NoteId: cdef77d8-fdc0-4795-9c54-817f9846540a
+    Title: Procedural Glock
+    Content: "Glock \u624B\u67AA\u7A0B\u5E8F\u5316\u767D\u6A21\n\n35 \u4E2A\u57FA\u7840\u591A\u9762\u4F53
+      (Box+Tube)\n9 \u4E2A\u90E8\u4EF6\u7EC4\n\n\u7ED3\u6784\uFF1A\n- Slide (\u5957\u7B52)
+      9 \u4EF6\n- Barrel (\u67AA\u7BA1) 2 \u4EF6\n- Frame (\u673A\u5323) 5 \u4EF6\n-
+      Trigger Guard 4 \u4EF6\n- Trigger 3 \u4EF6\n- Grip (\u63E1\u628A) 6 \u4EF6\n-
+      Magazine 3 \u4EF6\n- Controls 6 \u4EF6\n- Slide Details 3 \u4EF6\n\n\u4F7F\u7528\u65B9\u6CD5\uFF1A\n1.
+      \u83DC\u5355 PCG Toolkit > Examples > Create Glock Graph\n2. \u5728 Node Editor
+      \u4E2D\u6253\u5F00\u751F\u6210\u7684 asset\n3. \u6267\u884C\u56FE\u751F\u6210
+      Prefab"
+    Position: {x: -350, y: -100}
+    Size: {x: 300, y: 500}
+  ExposedParameters: []

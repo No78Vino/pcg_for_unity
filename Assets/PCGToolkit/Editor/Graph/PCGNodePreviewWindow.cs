@@ -6,10 +6,14 @@ namespace PCGToolkit.Graph
 {  
     public class PCGNodePreviewWindow : EditorWindow  
     {  
+        private enum PreviewRenderMode { Shaded, Wireframe, ShadedWireframe }
+
         private PCGGeometry _geometry;  
         private Mesh _previewMesh;  
         private PreviewRenderUtility _previewRenderUtility;  
         private Material _previewMaterial;  
+        private Material _wireMaterial;
+        private PreviewRenderMode _renderMode = PreviewRenderMode.Shaded;
         private float _rotationX = -30f;  
         private float _rotationY = 45f;  
         private float _zoom = 3f;  
@@ -64,9 +68,52 @@ namespace PCGToolkit.Graph
             _previewRenderUtility.camera.nearClipPlane = 0.01f;  
             _previewRenderUtility.camera.farClipPlane = 100f;  
   
-            _previewMaterial = new Material(Shader.Find("Standard"));  
-            _previewMaterial.color = new Color(0.7f, 0.7f, 0.7f);  
-        }  
+            _previewMaterial = CreatePreviewMaterial();
+
+            var wireShader = Shader.Find("Hidden/Internal-Colored");
+            if (wireShader != null)
+            {
+                _wireMaterial = new Material(wireShader);
+                _wireMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                _wireMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                _wireMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+                _wireMaterial.SetInt("_ZWrite", 0);
+            }
+        }
+
+        private static Material CreatePreviewMaterial()
+        {
+            string[] shaderCandidates = new[]
+            {
+                "Universal Render Pipeline/Lit",
+                "HDRP/Lit",
+                "Standard",
+            };
+
+            Shader shader = null;
+            foreach (var name in shaderCandidates)
+            {
+                shader = Shader.Find(name);
+                if (shader != null && !shader.name.Contains("Error")) break;
+                shader = null;
+            }
+
+            Material mat;
+            if (shader != null)
+            {
+                mat = new Material(shader);
+                if (mat.HasProperty("_BaseColor"))
+                    mat.SetColor("_BaseColor", new Color(0.7f, 0.7f, 0.7f));
+                if (mat.HasProperty("_Color"))
+                    mat.SetColor("_Color", new Color(0.7f, 0.7f, 0.7f));
+            }
+            else
+            {
+                mat = new Material(AssetDatabase.GetBuiltinExtraResource<Material>("Default-Diffuse.mat"));
+            }
+
+            return mat;
+        }
   
         private void OnDisable()  
         {  
@@ -76,7 +123,9 @@ namespace PCGToolkit.Graph
                 _previewRenderUtility = null;  
             }  
             if (_previewMaterial != null)  
-                DestroyImmediate(_previewMaterial);  
+                DestroyImmediate(_previewMaterial);
+            if (_wireMaterial != null)
+                DestroyImmediate(_wireMaterial);
             if (_previewMesh != null)  
                 DestroyImmediate(_previewMesh);  
         }  
@@ -99,7 +148,18 @@ namespace PCGToolkit.Graph
                     $"Points: {_geometry.Points.Count}  Prims: {_geometry.Primitives.Count}",  
                     EditorStyles.miniLabel);  
                 EditorGUILayout.EndHorizontal();  
-            }  
+            }
+
+            // 渲染模式工具栏
+            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            GUILayout.Label("Render:", EditorStyles.miniLabel, GUILayout.Width(45));
+            if (GUILayout.Toggle(_renderMode == PreviewRenderMode.Shaded, "Shaded", EditorStyles.toolbarButton))
+                _renderMode = PreviewRenderMode.Shaded;
+            if (GUILayout.Toggle(_renderMode == PreviewRenderMode.Wireframe, "Wire", EditorStyles.toolbarButton))
+                _renderMode = PreviewRenderMode.Wireframe;
+            if (GUILayout.Toggle(_renderMode == PreviewRenderMode.ShadedWireframe, "Shaded+Wire", EditorStyles.toolbarButton))
+                _renderMode = PreviewRenderMode.ShadedWireframe;
+            EditorGUILayout.EndHorizontal();
   
             // 预览区域  
             var previewRect = GUILayoutUtility.GetRect(  
@@ -130,10 +190,22 @@ namespace PCGToolkit.Graph
   
             _previewRenderUtility.lights[0].intensity = 1.0f;  
             _previewRenderUtility.lights[0].transform.rotation = Quaternion.Euler(50f, 50f, 0);  
-            _previewRenderUtility.lights[1].intensity = 0.5f;  
-  
-            _previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity, _previewMaterial, 0);  
-            _previewRenderUtility.camera.Render();  
+            _previewRenderUtility.lights[1].intensity = 0.5f;
+
+            if (_renderMode == PreviewRenderMode.Shaded || _renderMode == PreviewRenderMode.ShadedWireframe)
+            {
+                _previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity, _previewMaterial, 0);
+            }
+
+            if (_renderMode == PreviewRenderMode.Wireframe || _renderMode == PreviewRenderMode.ShadedWireframe)
+            {
+                GL.wireframe = true;
+                _previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity,
+                    _wireMaterial != null ? _wireMaterial : _previewMaterial, 0);
+            }
+
+            _previewRenderUtility.camera.Render();
+            GL.wireframe = false;
   
             var resultTexture = _previewRenderUtility.EndPreview();  
             GUI.DrawTexture(previewRect, resultTexture, ScaleMode.StretchToFill, false);  

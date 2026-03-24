@@ -14,7 +14,12 @@ namespace PCGToolkit.Tools
         private Vector2 _dragStart;
         private static readonly float DragThreshold = 5f;
 
+        private Dictionary<int, HashSet<int>> _vertexToPrims = new Dictionary<int, HashSet<int>>();
+        private Dictionary<int, HashSet<int>> _vertexToEdges = new Dictionary<int, HashSet<int>>();
+
         public PCGSceneMeshBridge Bridge => _bridge;
+
+        public static PCGSelectionTool ActiveInstance { get; private set; }
 
         public override GUIContent toolbarIcon =>
             new GUIContent(EditorGUIUtility.IconContent("EditCollider").image, "PCG Selection Tool");
@@ -24,15 +29,53 @@ namespace PCGToolkit.Tools
             _bridge.Instantiate(geo);
             PCGSelectionState.SourceGeometry = geo;
             PCGSelectionState.Clear();
+            RebuildAdjacency();
+        }
+
+        private void RebuildAdjacency()
+        {
+            _vertexToPrims.Clear();
+            _vertexToEdges.Clear();
+            if (_bridge.Geometry == null) return;
+
+            for (int i = 0; i < _bridge.Geometry.Primitives.Count; i++)
+            {
+                foreach (int v in _bridge.Geometry.Primitives[i])
+                {
+                    if (!_vertexToPrims.TryGetValue(v, out var set))
+                    {
+                        set = new HashSet<int>();
+                        _vertexToPrims[v] = set;
+                    }
+                    set.Add(i);
+                }
+            }
+
+            for (int i = 0; i < _bridge.Geometry.Edges.Count; i++)
+            {
+                var edge = _bridge.Geometry.Edges[i];
+                for (int j = 0; j < 2; j++)
+                {
+                    int v = edge[j];
+                    if (!_vertexToEdges.TryGetValue(v, out var set))
+                    {
+                        set = new HashSet<int>();
+                        _vertexToEdges[v] = set;
+                    }
+                    set.Add(i);
+                }
+            }
         }
 
         public override void OnActivated()
         {
+            ActiveInstance = this;
             SceneView.RepaintAll();
         }
 
         public override void OnWillBeDeactivated()
         {
+            if (ActiveInstance == this) ActiveInstance = null;
             _bridge.Dispose();
         }
 
@@ -368,17 +411,14 @@ namespace PCGToolkit.Tools
                     var toAdd = new HashSet<int>();
                     foreach (int selectedPrim in PCGSelectionState.SelectedPrimIndices)
                     {
-                        var selectedVerts = new HashSet<int>(_bridge.Geometry.Primitives[selectedPrim]);
-                        for (int i = 0; i < _bridge.Geometry.Primitives.Count; i++)
+                        foreach (int v in _bridge.Geometry.Primitives[selectedPrim])
                         {
-                            if (PCGSelectionState.SelectedPrimIndices.Contains(i)) continue;
-                            var prim = _bridge.Geometry.Primitives[i];
-                            foreach (int v in prim)
+                            if (_vertexToPrims.TryGetValue(v, out var adjPrims))
                             {
-                                if (selectedVerts.Contains(v))
+                                foreach (int adj in adjPrims)
                                 {
-                                    toAdd.Add(i);
-                                    break;
+                                    if (!PCGSelectionState.SelectedPrimIndices.Contains(adj))
+                                        toAdd.Add(adj);
                                 }
                             }
                         }
@@ -393,17 +433,11 @@ namespace PCGToolkit.Tools
                     var toAdd = new HashSet<int>();
                     foreach (int selectedVert in PCGSelectionState.SelectedPointIndices)
                     {
-                        for (int i = 0; i < _bridge.Geometry.Primitives.Count; i++)
+                        if (_vertexToPrims.TryGetValue(selectedVert, out var adjPrims))
                         {
-                            var prim = _bridge.Geometry.Primitives[i];
-                            bool containsSelected = false;
-                            foreach (int v in prim)
+                            foreach (int primIdx in adjPrims)
                             {
-                                if (v == selectedVert) { containsSelected = true; break; }
-                            }
-                            if (containsSelected)
-                            {
-                                foreach (int v in prim)
+                                foreach (int v in _bridge.Geometry.Primitives[primIdx])
                                     toAdd.Add(v);
                             }
                         }
@@ -415,22 +449,22 @@ namespace PCGToolkit.Tools
 
                 case PCGSelectMode.Edge:
                 {
-                    var selectedEndpoints = new HashSet<int>();
+                    var toAdd = new HashSet<int>();
                     foreach (int edgeIdx in PCGSelectionState.SelectedEdgeIndices)
                     {
-                        if (edgeIdx >= 0 && edgeIdx < _bridge.Geometry.Edges.Count)
+                        if (edgeIdx < 0 || edgeIdx >= _bridge.Geometry.Edges.Count) continue;
+                        var edge = _bridge.Geometry.Edges[edgeIdx];
+                        for (int j = 0; j < 2; j++)
                         {
-                            selectedEndpoints.Add(_bridge.Geometry.Edges[edgeIdx][0]);
-                            selectedEndpoints.Add(_bridge.Geometry.Edges[edgeIdx][1]);
+                            if (_vertexToEdges.TryGetValue(edge[j], out var adjEdges))
+                            {
+                                foreach (int adj in adjEdges)
+                                {
+                                    if (!PCGSelectionState.SelectedEdgeIndices.Contains(adj))
+                                        toAdd.Add(adj);
+                                }
+                            }
                         }
-                    }
-                    var toAdd = new HashSet<int>();
-                    for (int i = 0; i < _bridge.Geometry.Edges.Count; i++)
-                    {
-                        if (PCGSelectionState.SelectedEdgeIndices.Contains(i)) continue;
-                        var edge = _bridge.Geometry.Edges[i];
-                        if (selectedEndpoints.Contains(edge[0]) || selectedEndpoints.Contains(edge[1]))
-                            toAdd.Add(i);
                     }
                     foreach (int idx in toAdd)
                         PCGSelectionState.SelectedEdgeIndices.Add(idx);
@@ -452,17 +486,18 @@ namespace PCGToolkit.Tools
                     var toRemove = new HashSet<int>();
                     foreach (int selectedPrim in PCGSelectionState.SelectedPrimIndices)
                     {
-                        var primVerts = _bridge.Geometry.Primitives[selectedPrim];
                         bool isBoundary = false;
-                        foreach (int v in primVerts)
+                        foreach (int v in _bridge.Geometry.Primitives[selectedPrim])
                         {
-                            for (int i = 0; i < _bridge.Geometry.Primitives.Count; i++)
+                            if (_vertexToPrims.TryGetValue(v, out var adjPrims))
                             {
-                                if (i == selectedPrim || !SharesVertex(i, v)) continue;
-                                if (!PCGSelectionState.SelectedPrimIndices.Contains(i))
+                                foreach (int adj in adjPrims)
                                 {
-                                    isBoundary = true;
-                                    break;
+                                    if (adj != selectedPrim && !PCGSelectionState.SelectedPrimIndices.Contains(adj))
+                                    {
+                                        isBoundary = true;
+                                        break;
+                                    }
                                 }
                             }
                             if (isBoundary) break;
@@ -480,24 +515,20 @@ namespace PCGToolkit.Tools
                     foreach (int selectedVert in PCGSelectionState.SelectedPointIndices)
                     {
                         bool isBoundary = false;
-                        for (int i = 0; i < _bridge.Geometry.Primitives.Count; i++)
+                        if (_vertexToPrims.TryGetValue(selectedVert, out var adjPrims))
                         {
-                            var prim = _bridge.Geometry.Primitives[i];
-                            bool containsSelected = false;
-                            foreach (int v in prim)
+                            foreach (int primIdx in adjPrims)
                             {
-                                if (v == selectedVert) { containsSelected = true; break; }
-                            }
-                            if (!containsSelected) continue;
-                            foreach (int v in prim)
-                            {
-                                if (v != selectedVert && !PCGSelectionState.SelectedPointIndices.Contains(v))
+                                foreach (int v in _bridge.Geometry.Primitives[primIdx])
                                 {
-                                    isBoundary = true;
-                                    break;
+                                    if (v != selectedVert && !PCGSelectionState.SelectedPointIndices.Contains(v))
+                                    {
+                                        isBoundary = true;
+                                        break;
+                                    }
                                 }
+                                if (isBoundary) break;
                             }
-                            if (isBoundary) break;
                         }
                         if (isBoundary) toRemove.Add(selectedVert);
                     }
@@ -514,15 +545,18 @@ namespace PCGToolkit.Tools
                         if (selectedEdge < 0 || selectedEdge >= _bridge.Geometry.Edges.Count) continue;
                         var edge = _bridge.Geometry.Edges[selectedEdge];
                         bool isBoundary = false;
-                        for (int i = 0; i < _bridge.Geometry.Edges.Count; i++)
+                        for (int j = 0; j < 2 && !isBoundary; j++)
                         {
-                            if (i == selectedEdge || PCGSelectionState.SelectedEdgeIndices.Contains(i)) continue;
-                            var otherEdge = _bridge.Geometry.Edges[i];
-                            if (otherEdge[0] == edge[0] || otherEdge[0] == edge[1] ||
-                                otherEdge[1] == edge[0] || otherEdge[1] == edge[1])
+                            if (_vertexToEdges.TryGetValue(edge[j], out var adjEdges))
                             {
-                                isBoundary = true;
-                                break;
+                                foreach (int adj in adjEdges)
+                                {
+                                    if (adj != selectedEdge && !PCGSelectionState.SelectedEdgeIndices.Contains(adj))
+                                    {
+                                        isBoundary = true;
+                                        break;
+                                    }
+                                }
                             }
                         }
                         if (isBoundary) toRemove.Add(selectedEdge);
@@ -534,14 +568,6 @@ namespace PCGToolkit.Tools
             }
 
             SceneView.RepaintAll();
-        }
-
-        private bool SharesVertex(int primIdx, int vertIdx)
-        {
-            var prim = _bridge.Geometry.Primitives[primIdx];
-            foreach (int v in prim)
-                if (v == vertIdx) return true;
-            return false;
         }
 
         // ---- Select by attribute (Phase C) ----

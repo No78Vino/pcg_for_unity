@@ -365,20 +365,38 @@ namespace PCGToolkit.Tests
         [Test]
         public void ShrinkSelection_Face_RemovesBoundaryFaces()
         {
-            var geo = Create3x3GridGeo();
+            // 3x3 grid: 18 tri prims. Select the center 3x3 block (all 18).
+            // When all faces are selected, no face has an unselected neighbor, so shrink keeps all.
+            // Instead, select inner 6 prims (center quad + 2 adjacent quads) to test meaningful shrink.
+            var geo = CreateQuadGeo(); // 2x2 grid, 8 prims
             var tool = CreateToolWithGeo(geo);
 
             PCGSelectionState.SetMode(PCGSelectMode.Face);
-            // Select all 18 prims
-            for (int i = 0; i < geo.Primitives.Count; i++)
+            // Select all 8 prims in the 2x2 grid
+            for (int i = 0; i < 8; i++)
                 PCGSelectionState.SelectedPrimIndices.Add(i);
 
             tool.ShrinkSelection();
 
-            // After shrink, boundary prims should be removed, only interior prims remain
-            // In a 3x3 grid of quads (18 tri prims), the center quad's 2 triangles (prims 8,9)
-            // should be the only interior ones
-            Assert.Less(PCGSelectionState.SelectedPrimIndices.Count, 18);
+            // In a 2x2 grid (4 quads = 8 tri prims), every triangle shares at least one vertex
+            // with the mesh boundary. Since all prims are selected and there are no unselected
+            // adjacent prims, shrink should NOT remove any faces.
+            // (Boundary detection only considers selected vs unselected prims, not mesh edges.)
+            Assert.AreEqual(8, PCGSelectionState.SelectedPrimIndices.Count);
+
+            // Now deselect the outer ring: remove prims 0,1,2,5 (top-left and bottom-left quads)
+            PCGSelectionState.SelectedPrimIndices.Clear();
+            // Select only center-adjacent prims 3(1,5,4), 4(3,4,7), 6(4,5,8), 7(4,8,7)
+            PCGSelectionState.SelectedPrimIndices.Add(3);
+            PCGSelectionState.SelectedPrimIndices.Add(4);
+            PCGSelectionState.SelectedPrimIndices.Add(6);
+            PCGSelectionState.SelectedPrimIndices.Add(7);
+
+            tool.ShrinkSelection();
+
+            // Prims 3,4,6,7 share vertices with unselected prims 0,1,2,5.
+            // All 4 are boundary prims, so all should be removed.
+            Assert.AreEqual(0, PCGSelectionState.SelectedPrimIndices.Count);
 
             tool.Bridge.Dispose();
             Object.DestroyImmediate(tool);
@@ -436,6 +454,86 @@ namespace PCGToolkit.Tests
                                        edge[1] == endpoint0 || edge[1] == endpoint1;
                 Assert.IsTrue(sharesEndpoint || edgeIdx == 0);
             }
+
+            tool.Bridge.Dispose();
+            Object.DestroyImmediate(tool);
+        }
+
+        [Test]
+        public void ShrinkSelection_Vertex_RemovesBoundaryVertices()
+        {
+            var geo = CreateQuadGeo(); // 9 vertices in a 3x3 grid
+            var tool = CreateToolWithGeo(geo);
+
+            PCGSelectionState.SetMode(PCGSelectMode.Vertex);
+            // Select all 9 vertices
+            for (int i = 0; i < 9; i++)
+                PCGSelectionState.SelectedPointIndices.Add(i);
+
+            tool.ShrinkSelection();
+
+            // Vertex 4 (center) is shared by 6 prims, all its prim-neighbors (0,1,3,5,6,7,8) are selected.
+            // Edge vertices (0,1,2,3,5,6,7,8) share prims with vertices outside the selected set? No - all are selected.
+            // Since all vertices are selected, no vertex has an unselected neighbor via prims => none removed.
+            Assert.AreEqual(9, PCGSelectionState.SelectedPointIndices.Count);
+
+            // Now select only center + 4 direct cardinal neighbors: 1,3,4,5,7
+            PCGSelectionState.SelectedPointIndices.Clear();
+            PCGSelectionState.SelectedPointIndices.Add(1);
+            PCGSelectionState.SelectedPointIndices.Add(3);
+            PCGSelectionState.SelectedPointIndices.Add(4);
+            PCGSelectionState.SelectedPointIndices.Add(5);
+            PCGSelectionState.SelectedPointIndices.Add(7);
+
+            tool.ShrinkSelection();
+
+            // Vertices 1,3,5,7 share primitives with corner vertices 0,2,6,8 which are NOT selected.
+            // So 1,3,5,7 are boundary and should be removed. Vertex 4 shares prims with 0,1,3,5,6,7,8
+            // - vertices 0,6,8 are not selected, so 4 is also boundary.
+            // All 5 vertices are boundary => all removed.
+            Assert.AreEqual(0, PCGSelectionState.SelectedPointIndices.Count);
+
+            tool.Bridge.Dispose();
+            Object.DestroyImmediate(tool);
+        }
+
+        [Test]
+        public void ShrinkSelection_Edge_RemovesBoundaryEdges()
+        {
+            var geo = CreateQuadGeo();
+            geo.BuildEdges();
+            var tool = CreateToolWithGeo(geo);
+
+            PCGSelectionState.SetMode(PCGSelectMode.Edge);
+            int totalEdges = tool.Bridge.Geometry.Edges.Count;
+            Assert.Greater(totalEdges, 0);
+
+            // Select all edges
+            for (int i = 0; i < totalEdges; i++)
+                PCGSelectionState.SelectedEdgeIndices.Add(i);
+
+            tool.ShrinkSelection();
+
+            // All edges selected => no edge has an unselected neighbor => none removed
+            Assert.AreEqual(totalEdges, PCGSelectionState.SelectedEdgeIndices.Count);
+
+            // Now select only a subset: edges that connect to vertex 4 (center)
+            PCGSelectionState.SelectedEdgeIndices.Clear();
+            for (int i = 0; i < totalEdges; i++)
+            {
+                var edge = tool.Bridge.Geometry.Edges[i];
+                if (edge[0] == 4 || edge[1] == 4)
+                    PCGSelectionState.SelectedEdgeIndices.Add(i);
+            }
+            int centerEdgeCount = PCGSelectionState.SelectedEdgeIndices.Count;
+            Assert.Greater(centerEdgeCount, 0);
+
+            tool.ShrinkSelection();
+
+            // Each center edge connects vertex 4 to a boundary vertex.
+            // That boundary vertex also connects to other edges NOT in the selection.
+            // So all center edges are boundary => all removed.
+            Assert.AreEqual(0, PCGSelectionState.SelectedEdgeIndices.Count);
 
             tool.Bridge.Dispose();
             Object.DestroyImmediate(tool);

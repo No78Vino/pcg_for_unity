@@ -1,216 +1,207 @@
-基于上一轮评估中识别的 5 项潜在改进点，以下是 JSON 格式的改进计划：
+Based on the existing task JSON format in `TASK_TODO.md`, here's the implementation plan converted to AI Agent-compatible JSON: [3-cite-0](#3-cite-0)
 
 ```json
 {
-  "plan_title": "Scene 交互选择工具 - 后续改进计划",
+  "plan_title": "Houdini 风格 Geometry SOP 窗口布局系统",
   "repository": "No78Vino/pcg_for_unity",
   "base_ref": "main",
-  "summary": "FIX-1~4 已完成，完成度 100%。以下 5 项为非阻塞性改进，提升性能、可用性和测试覆盖率。",
+  "summary": "实现一套模仿 Houdini Geometry SOP 操作时的经典 Layout 布局，在打开 PCG Node Editor 时自动触发。布局为：左上 SceneView（3D 视口）、左下 PCGGraphEditorWindow（节点编辑器）、右侧 PCGNodeInspectorWindow（参数面板）。",
+  "layout_spec": {
+    "description": "Houdini Geometry SOP 经典三栏布局",
+    "diagram": "+---------------------------+------------------+\n|                           |                  |\n|     SceneView             | PCGInspector     |\n|     (3D Viewport)         | (Parameters)     |\n|                           |                  |\n+---------------------------+                  |\n|                           |                  |\n|  PCGGraphEditorWindow     |                  |\n|  (Network Editor)         |                  |\n|                           |                  |\n+---------------------------+------------------+",
+    "panels": [
+      {
+        "name": "SceneView",
+        "houdini_equivalent": "Scene Viewer",
+        "unity_class": "UnityEditor.SceneView",
+        "position": "top-left",
+        "width_ratio": 0.75,
+        "height_ratio": 0.5
+      },
+      {
+        "name": "PCGGraphEditorWindow",
+        "houdini_equivalent": "Network Editor",
+        "unity_class": "PCGToolkit.Graph.PCGGraphEditorWindow",
+        "position": "bottom-left",
+        "width_ratio": 0.75,
+        "height_ratio": 0.5
+      },
+      {
+        "name": "PCGNodeInspectorWindow",
+        "houdini_equivalent": "Parameter Editor",
+        "unity_class": "PCGToolkit.Graph.PCGNodeInspectorWindow",
+        "position": "right",
+        "width_ratio": 0.25,
+        "height_ratio": 1.0
+      }
+    ]
+  },
   "tasks": [
     {
-      "id": "OPT-1",
-      "title": "构建邻接表缓存，优化 Grow/Shrink 性能",
+      "id": "LAYOUT-1",
+      "title": "创建 PCGHoudiniLayout 布局管理器",
       "priority": "high",
-      "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
-      "current_state": "GrowSelection() 和 ShrinkSelection() 使用 O(n×m) 嵌套循环遍历所有 Primitives，每次调用 SharesVertex() 都做线性扫描。大网格（>10k 面）下会明显卡顿。",
-      "target_state": "在 Geometry 加载时预构建邻接表（vertex→primitives, vertex→edges），Grow/Shrink 操作降为 O(n×k)，k 为平均邻接数。",
+      "file": "Assets/PCGToolkit/Editor/Graph/PCGHoudiniLayout.cs",
+      "current_state": "项目中不存在任何窗口布局管理逻辑。PCGGraphEditorWindow.OnEnable() 仅自动打开 PCGNodeInspectorWindow，但不控制窗口位置和大小。所有窗口由用户手动拖拽排列。",
+      "target_state": "新建 PCGHoudiniLayout 静态工具类，提供 ApplyLayout() 方法，自动将 SceneView、PCGGraphEditorWindow、PCGNodeInspectorWindow 排列为 Houdini 风格布局。支持反射 Docking（优先）和浮动窗口位置排列（fallback）两种策略。",
       "changes": [
         {
-          "action": "新增邻接表数据结构",
+          "action": "新建 PCGHoudiniLayout.cs",
           "details": [
-            "在 PCGSelectionTool 或 PCGSceneMeshBridge 中新增 Dictionary<int, HashSet<int>> _vertexToPrims 字段，key 为顶点索引，value 为包含该顶点的 Primitive 索引集合",
-            "新增 Dictionary<int, HashSet<int>> _vertexToEdges 字段，key 为顶点索引，value 为包含该顶点的 Edge 索引集合",
-            "在 Geometry 加载/更新时（如 SetGeometry() 或 Instantiate()）构建这两个字典"
+            "命名空间 PCGToolkit.Graph",
+            "静态类 PCGHoudiniLayout",
+            "常量 RightPanelWidthRatio = 0.25f（Inspector 占屏幕宽度 25%）",
+            "常量 TopHeightRatio = 0.5f（SceneView 占左栏高度 50%）",
+            "常量 PrefKey = 'PCGToolkit_AutoLayout'（EditorPrefs key，控制是否自动触发）"
           ]
         },
         {
-          "action": "重构 GrowSelection()",
-          "line_range": "360-389",
+          "action": "实现 ApplyLayout() 公开方法",
           "details": [
-            "Face 模式：遍历已选 Primitive 的顶点，通过 _vertexToPrims 直接获取相邻 Primitive，无需遍历全部 Primitives",
-            "Vertex 模式：遍历已选顶点，通过 _vertexToPrims 获取包含该顶点的 Primitive，再收集这些 Primitive 的所有顶点",
-            "Edge 模式：遍历已选边的端点，通过 _vertexToEdges 获取共享端点的相邻边"
+            "添加 [MenuItem('PCG Toolkit/Apply Houdini Layout')] 特性，支持菜单手动触发",
+            "内部调用 ApplyLayoutInternal()"
           ]
         },
         {
-          "action": "重构 ShrinkSelection()",
-          "line_range": "391-423",
+          "action": "实现 ApplyLayoutIfFirstTime() 公开方法",
           "details": [
-            "使用邻接表替代 SharesVertex() 的线性扫描",
-            "删除或标记废弃 SharesVertex() 方法（第 425-431 行）"
+            "检查 EditorPrefs.GetBool(PrefKey, false)，若已触发过则跳过",
+            "首次触发时设置 EditorPrefs.SetBool(PrefKey, true)",
+            "使用 EditorApplication.delayCall 延迟调用 ApplyLayoutInternal()，确保 Unity 窗口初始化完成"
+          ]
+        },
+        {
+          "action": "实现 ResetLayoutPreference() 公开方法",
+          "details": [
+            "添加 [MenuItem('PCG Toolkit/Reset Layout Preference')] 特性",
+            "调用 EditorPrefs.DeleteKey(PrefKey) 重置标记",
+            "下次打开 Node Editor 时会重新自动触发布局"
+          ]
+        },
+        {
+          "action": "实现 ApplyLayoutInternal() 私有方法",
+          "details": [
+            "步骤 1：通过 EditorWindow.GetWindow<SceneView>() 获取/打开 SceneView",
+            "步骤 2：通过 EditorWindow.GetWindow<PCGGraphEditorWindow>() 获取/打开节点编辑器",
+            "步骤 3：通过 PCGNodeInspectorWindow.Open() 获取/打开 Inspector",
+            "步骤 4：调用 TryReflectionDocking() 尝试反射 Docking",
+            "步骤 5：若反射失败，调用 ArrangeFloatingWindows() 作为 fallback",
+            "步骤 6：调用 nodeEditor.Focus() 聚焦节点编辑器",
+            "整体包裹在 try-catch 中，失败时 Debug.LogWarning"
+          ]
+        },
+        {
+          "action": "实现 TryReflectionDocking() 私有方法",
+          "details": [
+            "通过 typeof(EditorWindow).Assembly.GetType() 获取 Unity 内部类型：'UnityEditor.DockArea'、'UnityEditor.SplitView'、'UnityEditor.ContainerWindow'",
+            "通过 typeof(EditorWindow).GetField('m_Parent', BindingFlags.NonPublic | BindingFlags.Instance) 获取窗口的父 DockArea",
+            "尝试使用内部 API 将三个窗口 Dock 到同一个 ContainerWindow 中，按 Houdini 布局排列",
+            "如果任何反射步骤失败（类型不存在、字段不存在、API 变更），返回 false 触发 fallback",
+            "需要 using System.Reflection"
+          ]
+        },
+        {
+          "action": "实现 ArrangeFloatingWindows() 私有方法（fallback）",
+          "details": [
+            "获取屏幕分辨率 Screen.currentResolution.width / height",
+            "预留 margin = 40f 给系统任务栏",
+            "计算 rightPanelW = Max(350f, usableW * 0.25f)",
+            "计算 leftW = usableW - rightPanelW",
+            "计算 topH = usableH * 0.5f, bottomH = usableH - topH",
+            "设置 sceneView.position = new Rect(0, margin, leftW, topH)",
+            "设置 nodeEditor.position = new Rect(0, margin + topH, leftW, bottomH)",
+            "设置 inspector.position = new Rect(leftW, margin, rightPanelW, usableH)"
           ]
         }
       ],
       "acceptance_criteria": [
-        "功能行为与重构前完全一致（现有测试全部通过）",
-        "10k 面网格上 Grow/Shrink 操作无明显卡顿（<50ms）",
-        "邻接表在 Geometry 变更时自动重建"
+        "菜单 'PCG Toolkit > Apply Houdini Layout' 可手动触发布局",
+        "菜单 'PCG Toolkit > Reset Layout Preference' 可重置自动触发标记",
+        "三个窗口按 Houdini 风格排列：SceneView 左上、NodeEditor 左下、Inspector 右侧全高",
+        "反射 Docking 失败时自动 fallback 到浮动窗口排列，不报错",
+        "不同屏幕分辨率下布局比例合理"
       ]
     },
     {
-      "id": "OPT-2",
-      "title": "SelectByNormal 阈值参数化，添加 UI 滑块",
-      "priority": "medium",
-      "files": [
-        "Assets/PCGToolkit/Editor/Tools/PCGSelectionOverlay.cs",
-        "Assets/PCGToolkit/Editor/Graph/PCGNodeInspectorWindow.cs"
-      ],
-      "current_state": "SelectByNormal(Vector3 direction, float threshold = 0.7f) 的 threshold 参数在 UI 按钮中硬编码为 0.7f，用户无法调整角度阈值。",
-      "target_state": "Overlay 和 Inspector 面板中提供 Slider 控件，允许用户在 0.0~1.0 范围内调整法线阈值。",
-      "changes": [
-        {
-          "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionOverlay.cs",
-          "action": "在 'Select Up Faces' 按钮旁添加 Slider",
-          "details": [
-            "添加 Slider normalThresholdSlider = new Slider(0f, 1f) { value = 0.7f, label = 'Threshold' }",
-            "修改 'Select Up Faces' 按钮回调，使用 normalThresholdSlider.value 替代硬编码 0.7f",
-            "可选：添加 FloatField 与 Slider 双向绑定，方便精确输入"
-          ]
-        },
-        {
-          "file": "Assets/PCGToolkit/Editor/Graph/PCGNodeInspectorWindow.cs",
-          "action": "在 BuildSelectionToolSection() 中同样添加 Slider",
-          "details": [
-            "逻辑与 Overlay 中相同"
-          ]
-        }
-      ],
-      "acceptance_criteria": [
-        "Slider 默认值为 0.7",
-        "拖动 Slider 后点击 'Select Up Faces' 使用新阈值",
-        "阈值 = 1.0 时只选中完全朝上的面，阈值 = 0.0 时选中所有面"
-      ]
-    },
-    {
-      "id": "OPT-3",
-      "title": "补全 ShrinkSelection Vertex/Edge 模式的单元测试",
+      "id": "LAYOUT-2",
+      "title": "修改 PCGGraphEditorWindow 自动触发布局",
       "priority": "high",
-      "file": "Assets/PCGToolkit/Editor/Tests/SelectionTests.cs",
-      "current_state": "ShrinkSelection 实现了 Face/Vertex/Edge 三种模式，但测试只覆盖了 Face 模式（ShrinkSelection_Face_RemovesBoundaryFaces）。Vertex 和 Edge 模式的 Shrink 无测试覆盖。",
-      "target_state": "新增 2 个测试方法覆盖 Vertex 和 Edge 模式的 Shrink 操作。",
+      "file": "Assets/PCGToolkit/Editor/Graph/PCGGraphEditorWindow.cs",
+      "current_state": "OnEnable() 方法（第 53-76 行）在窗口打开时构建 GraphView、Toolbar、Executor，并通过 delayCall 自动打开 Inspector。OpenWindow() 方法（第 45-51 行）返回 void。",
+      "target_state": "OnEnable() 末尾添加 PCGHoudiniLayout.ApplyLayoutIfFirstTime() 调用，首次打开时自动应用 Houdini 布局。OpenWindow() 返回类型改为 PCGGraphEditorWindow，供布局管理器使用。",
       "changes": [
         {
-          "action": "新增测试方法",
-          "new_tests": [
-            {
-              "name": "ShrinkSelection_Vertex_RemovesBoundaryVertices",
-              "description": "使用 CreateQuadGeo() 创建 3x3 网格（9 个顶点），选中所有 9 个顶点，切换到 Vertex 模式，调用 ShrinkSelection()，验证边界顶点（0,1,2,3,5,6,7,8）被移除，只保留中心顶点（4）",
-              "assert": "Assert.AreEqual(1, PCGSelectionState.SelectedVertIndices.Count); Assert.IsTrue(PCGSelectionState.SelectedVertIndices.Contains(4))"
-            },
-            {
-              "name": "ShrinkSelection_Edge_RemovesBoundaryEdges",
-              "description": "使用 CreateQuadGeo() 并调用 BuildEdges()，选中所有边，切换到 Edge 模式，调用 ShrinkSelection()，验证与未选中元素相邻的边界边被移除",
-              "assert": "验证剩余边数量小于初始选中数量，且剩余边均为内部边"
-            }
-          ]
-        }
-      ],
-      "acceptance_criteria": [
-        "两个新测试在 Unity Test Runner 中通过",
-        "Vertex Shrink 测试精确验证剩余顶点集合",
-        "Edge Shrink 测试验证边界边被正确移除"
-      ]
-    },
-    {
-      "id": "OPT-4",
-      "title": "抽取 Overlay 和 Inspector 共享的 UI 按钮逻辑",
-      "priority": "low",
-      "files": [
-        "Assets/PCGToolkit/Editor/Tools/PCGSelectionOverlay.cs",
-        "Assets/PCGToolkit/Editor/Graph/PCGNodeInspectorWindow.cs"
-      ],
-      "current_state": "PCGSelectionOverlay.CreatePanelContent() 和 PCGNodeInspectorWindow.BuildSelectionToolSection() 中的 Grow/Shrink/SelectUpFaces/SelectByMaterial 按钮创建逻辑几乎完全相同，存在代码重复。",
-      "target_state": "抽取共享逻辑到一个静态工具类，两处 UI 调用同一方法生成按钮。",
-      "changes": [
-        {
-          "action": "新建共享 UI 工具类",
+          "action": "修改 OpenWindow() 返回类型",
+          "line_range": "45-51",
           "details": [
-            "新建文件 Assets/PCGToolkit/Editor/Tools/PCGSelectionUIHelper.cs",
-            "创建静态类 PCGSelectionUIHelper",
-            "提取方法 static VisualElement CreateAdvancedSelectionButtons()，返回包含 Grow/Shrink/SelectUpFaces/SelectByMaterial 按钮的 VisualElement",
-            "提取方法 static VisualElement CreateModeToggleRow()，返回 Face/Edge/Vertex 模式切换行",
-            "提取方法 static Label CreateStatsLabel()，返回带定时更新的状态标签"
+            "将 public static void OpenWindow() 改为 public static PCGGraphEditorWindow OpenWindow()",
+            "在方法末尾添加 return window;",
+            "MenuItem 特性保持不变"
           ]
         },
         {
-          "action": "重构 PCGSelectionOverlay.CreatePanelContent()",
+          "action": "在 OnEnable() 末尾添加自动布局调用",
+          "line_range": "53-76",
           "details": [
-            "替换内联按钮创建代码为 PCGSelectionUIHelper.CreateAdvancedSelectionButtons() 调用"
-          ]
-        },
-        {
-          "action": "重构 PCGNodeInspectorWindow.BuildSelectionToolSection()",
-          "details": [
-            "替换内联按钮创建代码为 PCGSelectionUIHelper.CreateAdvancedSelectionButtons() 调用"
+            "在现有 EditorApplication.delayCall（第 68-75 行）之后添加：",
+            "PCGHoudiniLayout.ApplyLayoutIfFirstTime();",
+            "注意：ApplyLayoutIfFirstTime() 内部也使用 delayCall，所以会在 Inspector 打开之后执行"
           ]
         }
       ],
       "acceptance_criteria": [
-        "Overlay 和 Inspector 面板功能行为不变",
-        "两处 UI 不再有重复的按钮创建代码",
-        "新增按钮时只需修改 PCGSelectionUIHelper 一处"
-      ]
-    },
-    {
-      "id": "OPT-5",
-      "title": "强化 ShrinkSelection_Face 测试断言",
-      "priority": "low",
-      "file": "Assets/PCGToolkit/Editor/Tests/SelectionTests.cs",
-      "current_state": "ShrinkSelection_Face_RemovesBoundaryFaces 测试仅使用 Assert.Less(count, 18) 做模糊断言，无法精确验证哪些面被保留。",
-      "target_state": "使用精确断言验证 Shrink 后的剩余面集合。",
-      "changes": [
-        {
-          "action": "重写测试断言",
-          "details": [
-            "构造一个 3x3 网格（18 个三角形 = 9 个 quad × 2），选中全部 18 个 prim",
-            "调用 ShrinkSelection() 后，精确计算预期保留的内部面索引",
-            "使用 CollectionAssert.AreEquivalent() 或逐个 Assert.IsTrue() 验证剩余面集合",
-            "如果 2x2 网格（8 个 prim）全部为边界面，则 Shrink 后应为空集，断言 Assert.AreEqual(0, count)"
-          ]
-        }
-      ],
-      "acceptance_criteria": [
-        "测试使用精确断言而非模糊的 Assert.Less",
-        "断言内容与几何拓扑一致（可手动推导验证）",
-        "测试在 Unity Test Runner 中通过"
+        "首次通过菜单 'PCG Toolkit > Node Editor' 打开时，自动应用 Houdini 布局",
+        "第二次及之后打开不再自动触发（除非通过 Reset Layout Preference 重置）",
+        "OpenWindow() 返回窗口实例，不影响 MenuItem 功能",
+        "现有的 Inspector 自动打开逻辑不受影响"
       ]
     }
   ],
   "execution_order": [
     {
       "step": 1,
-      "task_ids": ["OPT-1"],
-      "reason": "性能优化是最高优先级，邻接表是后续优化的基础数据结构"
+      "task_ids": ["LAYOUT-1"],
+      "reason": "先创建布局管理器，可通过菜单手动测试布局效果"
     },
     {
       "step": 2,
-      "task_ids": ["OPT-2", "OPT-4"],
-      "reason": "UI 改进互不依赖，可并行执行。OPT-4 的 UIHelper 抽取可为 OPT-2 的 Slider 提供更好的代码组织"
-    },
-    {
-      "step": 3,
-      "task_ids": ["OPT-3", "OPT-5"],
-      "reason": "测试补全和强化应在功能改动完成后进行，确保测试覆盖最终实现"
+      "task_ids": ["LAYOUT-2"],
+      "reason": "布局管理器验证通过后，再接入自动触发逻辑"
     }
   ],
-  "files_to_modify": [
-    "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
-    "Assets/PCGToolkit/Editor/Tools/PCGSelectionOverlay.cs",
-    "Assets/PCGToolkit/Editor/Graph/PCGNodeInspectorWindow.cs",
-    "Assets/PCGToolkit/Editor/Tests/SelectionTests.cs"
-  ],
   "files_to_create": [
-    "Assets/PCGToolkit/Editor/Tools/PCGSelectionUIHelper.cs"
+    "Assets/PCGToolkit/Editor/Graph/PCGHoudiniLayout.cs"
+  ],
+  "files_to_modify": [
+    "Assets/PCGToolkit/Editor/Graph/PCGGraphEditorWindow.cs"
+  ],
+  "dependencies": {
+    "unity_namespaces": [
+      "UnityEditor",
+      "UnityEngine",
+      "System",
+      "System.Reflection"
+    ],
+    "project_references": [
+      "PCGToolkit.Graph.PCGGraphEditorWindow (第 45-51 行 OpenWindow, 第 53-76 行 OnEnable)",
+      "PCGToolkit.Graph.PCGNodeInspectorWindow (第 37-43 行 Open)"
+    ]
+  },
+  "notes": [
+    "Unity 没有公开的窗口 Docking API，TryReflectionDocking() 依赖内部类型 DockArea/SplitView/ContainerWindow，可能在不同 Unity 版本间不兼容",
+    "ArrangeFloatingWindows() 作为可靠的 fallback，使用 EditorWindow.position 设置浮动窗口位置，所有 Unity 版本均支持",
+    "EditorPrefs 的 PrefKey 是全局的（非项目级），如需项目级隔离可改用 PlayerSettings.productName 作为 key 前缀",
+    "如果用户已有自定义窗口布局，自动触发可能打乱。ApplyLayoutIfFirstTime() 的 EditorPrefs 机制确保只触发一次，降低干扰"
   ]
 }
 ```
 
-各任务对应的代码位置：
+这个 JSON 遵循了项目 `TASK_TODO.md` 中已有的任务格式规范： [3-cite-0](#3-cite-0)
 
-| 任务 | 关键文件 & 行号 | 改动性质 |
-|------|----------------|----------|
-| **OPT-1** | `PCGSelectionTool.cs` L360-431 | 重构 Grow/Shrink + 删除 `SharesVertex()` |
-| **OPT-2** | `PCGSelectionOverlay.cs` + `PCGNodeInspectorWindow.cs` | 新增 Slider 控件 |
-| **OPT-3** | `SelectionTests.cs` | 新增 2 个测试方法 |
-| **OPT-4** | 新建 `PCGSelectionUIHelper.cs` | 抽取共享 UI 逻辑 |
-| **OPT-5** | `SelectionTests.cs` | 重写断言 | [1-cite-0](#1-cite-0) [1-cite-1](#1-cite-1) [1-cite-2](#1-cite-2) [1-cite-3](#1-cite-3) [1-cite-4](#1-cite-4) [1-cite-5](#1-cite-5) [1-cite-6](#1-cite-6)
+关键结构对齐点：
+- `id` / `title` / `priority` / `file` / `current_state` / `target_state` / `changes` / `acceptance_criteria` 与 OPT-1~5 格式一致 [3-cite-1](#3-cite-1)
+- `execution_order` 定义了任务执行顺序和依赖关系 [3-cite-2](#3-cite-2)
+- `files_to_create` / `files_to_modify` 明确列出文件变更范围 [3-cite-3](#3-cite-3)
+- `changes[].line_range` 引用了 `PCGGraphEditorWindow.cs` 中的具体行号 [3-cite-4](#3-cite-4) [3-cite-5](#3-cite-5)
+
+额外增加了 `layout_spec`（布局规格）、`dependencies`（依赖项）和 `notes`（注意事项）字段，为 Agent 提供更完整的上下文。

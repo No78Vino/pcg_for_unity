@@ -1,384 +1,219 @@
+以下是补全实施计划的 JSON 格式输出，包含 4 个待完成任务，每个任务有明确的文件路径、修改内容和验收标准：
+
 ```json
 {
-  "iteration": 10,
-  "title": "交互式选择 + Group 输入混合工作流",
-  "description": "将 ProBuilder 的 Scene View 交互式选面/选边/选点能力移植到 PCG for Unity，将选择结果作为 PointGroups/PrimGroups 输入喂给节点图",
-  "repositories": {
-    "target": "No78Vino/pcg_for_unity",
-    "reference": "No78Vino/com.unity.probuilder"
-  },
-  "phases": [
+  "plan_title": "Scene 交互式选择工具补全计划",
+  "repository": "No78Vino/pcg_for_unity",
+  "base_ref": "main",
+  "gap_summary": "基于 TASK_TODO.md 三阶段评估，当前完成度约 88%，剩余 4 项缺口需补全",
+  "tasks": [
     {
-      "id": "A",
-      "name": "核心功能：桥接层 + 面选择",
-      "tasks": [
+      "id": "FIX-1",
+      "title": "补全 PCGSelectionOverlay.CreateHorizontalToolbarContent",
+      "priority": "medium",
+      "phase": "B5",
+      "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionOverlay.cs",
+      "current_state": "CreateHorizontalToolbarContent() 在第 79-83 行返回空的 OverlayToolbar，无任何工具栏元素",
+      "target_state": "水平工具栏应包含 Face/Edge/Vertex 模式切换按钮，与 CreatePanelContent() 中的面板内容保持功能一致",
+      "changes": [
         {
-          "id": "A1",
-          "title": "创建 PCGSelectMode 枚举",
-          "action": "create",
-          "file": "Assets/PCGToolkit/Editor/Core/PCGSelectMode.cs",
-          "description": "定义选择模式枚举：Face, Edge, Vertex",
-          "details": {
-            "type": "enum",
-            "name": "PCGSelectMode",
-            "values": ["Face", "Edge", "Vertex"]
-          },
-          "dependencies": []
-        },
-        {
-          "id": "A2",
-          "title": "创建 PCGSelectionState 选择状态管理器",
-          "action": "create",
-          "file": "Assets/PCGToolkit/Editor/Core/PCGSelectionState.cs",
-          "description": "存储当前交互选择的状态，使用 ScriptableSingleton<T> 或静态实例，使其在 EditorTool 和 Node 之间共享",
-          "details": {
-            "fields": [
-              { "name": "SelectedPrimIndices", "type": "HashSet<int>", "description": "选中的面索引，对应 PCGGeometry.Primitives" },
-              { "name": "SelectedPointIndices", "type": "HashSet<int>", "description": "选中的点索引，对应 PCGGeometry.Points" },
-              { "name": "SelectedEdgeIndices", "type": "HashSet<int>", "description": "选中的边索引，对应 PCGGeometry.Edges" },
-              { "name": "CurrentMode", "type": "PCGSelectMode", "description": "当前选择模式" },
-              { "name": "SourceGeometry", "type": "PCGGeometry", "description": "当前操作的几何体引用" }
-            ],
-            "methods": [
-              "AddToSelection(int index)",
-              "RemoveFromSelection(int index)",
-              "ToggleSelection(int index)",
-              "Clear()"
-            ],
-            "events": ["event Action SelectionChanged"]
-          },
-          "dependencies": ["A1"]
-        },
-        {
-          "id": "A3",
-          "title": "创建 PCGSceneMeshBridge 桥接层",
-          "action": "create",
-          "file": "Assets/PCGToolkit/Editor/Core/PCGSceneMeshBridge.cs",
-          "description": "将 PCGGeometry 临时实例化为场景中的 Mesh + MeshCollider，维护双向索引映射。参考现有 PCGGeometryToMesh.ConvertWithSubmeshes() 的三角化逻辑，在三角化时记录映射关系",
-          "details": {
-            "key_methods": [
-              {
-                "name": "Instantiate(PCGGeometry geo)",
-                "description": "创建临时 GameObject（HideFlags.DontSave），生成 Unity Mesh，添加 MeshCollider，构建索引映射"
-              },
-              {
-                "name": "Dispose()",
-                "description": "清理临时 GameObject 和所有资源"
-              }
-            ],
-            "key_fields": [
-              { "name": "unityTriToPcgPrim", "type": "Dictionary<int, int>", "description": "Unity triangleIndex → PCGGeometry Primitives 索引。因为 PCGGeometry 支持 N-gon，一个 Primitive 可能对应多个 Unity 三角形" },
-              { "name": "unityVertToPcgPoint", "type": "Dictionary<int, int>", "description": "Unity vertex index → PCGGeometry Points 索引" },
-              { "name": "TempGameObject", "type": "GameObject", "description": "临时场景对象引用" }
-            ],
-            "reference_files": [
-              "Assets/PCGToolkit/Editor/Core/PCGGeometryToMesh.cs",
-              "Assets/PCGToolkit/Editor/Graph/PCGScenePreview.cs"
-            ],
-            "notes": "三角化 N-gon 时，需要记录每个生成的 Unity 三角形对应的原始 Primitive 索引"
-          },
-          "dependencies": []
-        },
-        {
-          "id": "A4",
-          "title": "创建 PCGSelectionTool（面选择 + 点击）",
-          "action": "create",
-          "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
-          "description": "EditorTool 子类，拦截 SceneView 鼠标事件，执行面选择。阶段 A 先只实现面模式的点击选择",
-          "details": {
-            "base_class": "EditorTool",
-            "key_methods": [
-              {
-                "name": "OnToolGUI(EditorWindow window)",
-                "description": "处理鼠标事件入口"
-              },
-              {
-                "name": "HandleFaceClick(Event evt)",
-                "description": "Physics.Raycast 命中临时 Mesh 的 MeshCollider，获取 RaycastHit.triangleIndex，通过 PCGSceneMeshBridge.unityTriToPcgPrim 映射回 PCGGeometry Primitives 索引"
-              }
-            ],
-            "modifier_keys": {
-              "none": "替换选择",
-              "shift": "追加选择",
-              "ctrl": "减去选择"
-            },
-            "reference_files": [
-              "No78Vino/com.unity.probuilder: Editor/EditorCore/EditorSceneViewPicker.cs (DoMouseClick, lines 56-252)"
-            ]
-          },
-          "dependencies": ["A2", "A3"]
-        },
-        {
-          "id": "A5",
-          "title": "创建 PCGSelectionRenderer 选择高亮渲染",
-          "action": "create",
-          "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionRenderer.cs",
-          "description": "在 SceneView 中渲染选择高亮效果",
-          "details": {
-            "callback": "SceneView.duringSceneGui",
-            "rendering": {
-              "face_highlight": "GL 绘制半透明蓝色面片覆盖选中面",
-              "edge_highlight": "Handles.DrawAAPolyLine 绘制亮蓝色线",
-              "point_highlight": "Handles.DotHandleCap 或 Handles.SphereHandleCap 绘制蓝色圆点",
-              "hover_preview": "鼠标悬停时用半透明黄色预览将要选中的元素"
-            },
-            "data_source": "从 PCGSelectionState 读取选中索引，从 PCGSceneMeshBridge 获取世界坐标"
-          },
-          "dependencies": ["A2", "A3"]
-        },
-        {
-          "id": "A6",
-          "title": "创建 SceneSelectionInputNode 节点",
-          "action": "create",
-          "file": "Assets/PCGToolkit/Editor/Nodes/Input/SceneSelectionInputNode.cs",
-          "description": "新的输入节点，读取 PCGSelectionState 并输出带 Group 的 PCGGeometry",
-          "details": {
-            "inputs": [
-              { "name": "target", "type": "SceneObject", "description": "场景中的 GameObject" },
-              { "name": "groupName", "type": "String", "default": "selected", "description": "输出的 Group 名称" },
-              { "name": "applyTransform", "type": "Bool", "default": true, "description": "是否烘焙世界变换" },
-              { "name": "readMaterials", "type": "Bool", "default": true, "description": "是否读取材质" }
-            ],
-            "outputs": [
-              { "name": "geometry", "type": "Geometry", "description": "完整几何体，带 PrimGroups[groupName] 和/或 PointGroups[groupName]" }
-            ],
-            "execute_logic": [
-              "1. 复用 SceneObjectInputNode 的 Mesh 读取逻辑",
-              "2. 从 PCGSelectionState 读取当前选中的索引",
-              "3. Face 模式：将 selectedPrimIndices 写入 geo.PrimGroups[groupName]",
-              "4. Vertex 模式：将 selectedPointIndices 写入 geo.PointGroups[groupName]",
-              "5. Edge 模式：将选中边的两端点写入 geo.PointGroups[groupName]"
-            ],
-            "reference_files": [
-              "Assets/PCGToolkit/Editor/Nodes/Input/SceneObjectInputNode.cs"
-            ]
-          },
-          "dependencies": ["A2"]
-        },
-        {
-          "id": "A7",
-          "title": "注册 SceneSelectionInputNode 到节点注册表",
-          "action": "modify",
-          "file": "Assets/PCGToolkit/Editor/Graph/PCGNodeRegistry.cs",
-          "description": "在 PCGNodeRegistry 中注册 SceneSelectionInputNode，分类为 Create/Input",
-          "dependencies": ["A6"]
-        },
-        {
-          "id": "A8",
-          "title": "阶段 A 联调测试",
-          "action": "test",
-          "description": "验证面选择完整流程：激活 PCGSelectionTool → 点击选面 → SceneSelectionInputNode 输出带 PrimGroups['selected'] 的几何体 → 下游 BlastNode/ExtrudeNode 正确消费 Group",
-          "test_cases": [
-            "点击选中单个面，验证 PrimGroups 包含正确索引",
-            "Shift 点击追加选择多个面",
-            "Ctrl 点击减去已选面",
-            "SceneSelectionInputNode 连接 BlastNode(group='selected')，验证删除选中面",
-            "SceneSelectionInputNode 连接 ExtrudeNode(group='selected')，验证只挤出选中面",
-            "N-gon 几何体的索引映射正确性"
-          ],
-          "dependencies": ["A4", "A5", "A6", "A7"]
+          "method": "CreateHorizontalToolbarContent()",
+          "line_range": "79-83",
+          "action": "在 OverlayToolbar 中添加 3 个 EditorToolbarToggle 或 EditorToolbarButton 元素，分别对应 Face/Edge/Vertex 模式切换",
+          "implementation_notes": [
+            "使用 UnityEditor.Toolbars.EditorToolbarButton 或 EditorToolbarToggle 创建按钮",
+            "每个按钮点击时调用 PCGSelectionState.SetMode(PCGSelectMode.XXX)",
+            "可选：添加一个 Clear 按钮调用 PCGSelectionState.Clear()",
+            "参考 CreatePanelContent() 中第 25-36 行的模式按钮逻辑"
+          ]
         }
+      ],
+      "acceptance_criteria": [
+        "Overlay 在水平模式下显示 Face/Edge/Vertex 按钮",
+        "点击按钮可正确切换选择模式",
+        "当前激活模式的按钮有视觉区分"
       ]
     },
     {
-      "id": "B",
-      "name": "完整选择模式：边/点选择 + 框选 + Overlay",
-      "tasks": [
+      "id": "FIX-2",
+      "title": "GrowSelection/ShrinkSelection 扩展支持 Edge 和 Vertex 模式",
+      "priority": "medium",
+      "phase": "C1",
+      "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
+      "current_state": "GrowSelection() 第 360-389 行和 ShrinkSelection() 第 391-423 行仅处理 PCGSelectMode.Face，Edge 和 Vertex 模式下调用无效果",
+      "target_state": "三种模式均支持 Grow/Shrink 操作",
+      "changes": [
         {
-          "id": "B1",
-          "title": "PCGSelectionTool 添加点选择",
-          "action": "modify",
-          "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
-          "description": "Raycast 命中三角形后，获取命中三角形的三个顶点，找距离鼠标最近的顶点，通过 unityVertToPcgPoint 映射回 PCGGeometry Points 索引",
-          "dependencies": ["A8"]
+          "method": "GrowSelection()",
+          "line_range": "360-389",
+          "action": "在现有 Face 分支后添加 Edge 和 Vertex 分支",
+          "implementation_notes": [
+            "Vertex 模式 Grow：遍历所有 Primitives，如果某个 Primitive 包含已选中的顶点，则将该 Primitive 的所有顶点加入选择",
+            "Edge 模式 Grow：遍历所有 Edges，如果某条边的一个端点属于已选中边的端点集合，则将该边加入选择",
+            "需要从 _bridge.Geometry.Edges 和 _bridge.Geometry.Primitives 获取拓扑关系"
+          ]
         },
         {
-          "id": "B2",
-          "title": "PCGSelectionTool 添加边选择",
-          "action": "modify",
-          "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
-          "description": "Raycast 命中三角形后，获取命中三角形的三条边，找距离鼠标最近的边，通过映射表反查 PCGGeometry Edges 索引。需先调用 geo.BuildEdges()",
-          "dependencies": ["A8"]
-        },
+          "method": "ShrinkSelection()",
+          "line_range": "391-423",
+          "action": "在现有 Face 分支后添加 Edge 和 Vertex 分支",
+          "implementation_notes": [
+            "Vertex 模式 Shrink：移除那些存在未选中邻居顶点的边界顶点（通过共享 Primitive 判断邻接关系）",
+            "Edge 模式 Shrink：移除那些端点连接了未选中边的边界边"
+          ]
+        }
+      ],
+      "acceptance_criteria": [
+        "Vertex 模式下 Ctrl+Numpad+ 可扩展选择到相邻顶点",
+        "Vertex 模式下 Ctrl+Numpad- 可收缩边界顶点",
+        "Edge 模式下 Ctrl+Numpad+ 可扩展选择到相邻边",
+        "Edge 模式下 Ctrl+Numpad- 可收缩边界边",
+        "Face 模式行为不变"
+      ]
+    },
+    {
+      "id": "FIX-3",
+      "title": "为 SelectByNormal 和 SelectByMaterialId 添加 UI 入口",
+      "priority": "medium",
+      "phase": "C2",
+      "files": [
+        "Assets/PCGToolkit/Editor/Tools/PCGSelectionOverlay.cs",
+        "Assets/PCGToolkit/Editor/Graph/PCGNodeInspectorWindow.cs"
+      ],
+      "current_state": "SelectByNormal() 第 435-455 行和 SelectByMaterialId() 第 457-487 行在 PCGSelectionTool.cs 中已实现，但无任何 UI 按钮可触发这些方法",
+      "target_state": "用户可通过 Overlay 面板或 Inspector 面板中的按钮触发按属性选择功能",
+      "changes": [
         {
-          "id": "B3",
-          "title": "PCGSelectionTool 添加矩形框选",
-          "action": "modify",
-          "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
-          "description": "检测鼠标拖拽，计算屏幕空间矩形，遍历所有面/点/边，用 Camera.WorldToScreenPoint 判断是否在矩形内。参考 ProBuilder 的 DoMouseDrag (com.unity.probuilder Editor/EditorCore/EditorSceneViewPicker.cs:255-388)",
-          "details": {
-            "face_rect_select": "遍历所有 Primitive，计算其中心点或所有顶点的屏幕投影，判断是否在矩形内",
-            "vertex_rect_select": "遍历所有 Points，投影到屏幕空间判断",
-            "edge_rect_select": "遍历所有 Edges，投影两端点到屏幕空间判断"
-          },
-          "dependencies": ["A8"]
-        },
-        {
-          "id": "B4",
-          "title": "PCGSelectionRenderer 添加边和点高亮",
-          "action": "modify",
-          "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionRenderer.cs",
-          "description": "扩展渲染器支持边高亮（DrawAAPolyLine）和点高亮（DotHandleCap），根据 PCGSelectionState.CurrentMode 切换渲染模式",
-          "dependencies": ["B1", "B2"]
-        },
-        {
-          "id": "B5",
-          "title": "创建 PCGSelectionOverlay 工具栏",
-          "action": "create",
           "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionOverlay.cs",
-          "description": "SceneView Overlay 工具栏，提供 Face/Edge/Vertex 模式切换按钮",
-          "details": {
-            "base_class": "UnityEditor.Overlays.Overlay, ICreateToolbar",
-            "ui_elements": [
-              { "type": "toggle", "label": "Face", "action": "切换到面选择模式" },
-              { "type": "toggle", "label": "Edge", "action": "切换到边选择模式" },
-              { "type": "toggle", "label": "Vertex", "action": "切换到点选择模式" },
-              { "type": "label", "content": "选中数量统计" },
-              { "type": "button", "label": "Clear Selection", "action": "清空选择" },
-              { "type": "button", "label": "Apply to Graph", "action": "将选择结果写入 PCGSelectionState 并通知节点图刷新" }
-            ],
-            "reference_files": [
-              "No78Vino/com.unity.probuilder: Editor/Overlays/SelectionSettingsButtons.cs"
-            ]
-          },
-          "dependencies": ["A8"]
+          "method": "CreatePanelContent()",
+          "action": "在 actionRow 之后添加一个 'Advanced Selection' 折叠区域",
+          "implementation_notes": [
+            "添加 'Select Up Faces' 按钮：获取当前激活的 PCGSelectionTool 实例，调用 SelectByNormal(Vector3.up, 0.7f)",
+            "添加 'Select by Material' 按钮：获取当前 hover 或最后选中的 prim index，调用 SelectByMaterialId(primIndex)",
+            "添加 'Grow Selection' 和 'Shrink Selection' 按钮作为快捷键的 UI 替代",
+            "获取 PCGSelectionTool 实例：UnityEditor.EditorTools.ToolManager.activeTool as PCGSelectionTool",
+            "按钮仅在 PCGSelectionTool 激活时可用（否则 grayed out）"
+          ]
         },
         {
-          "id": "B6",
-          "title": "修改 PCGNodeInspectorWindow 添加 Selection Tool 入口",
-          "action": "modify",
           "file": "Assets/PCGToolkit/Editor/Graph/PCGNodeInspectorWindow.cs",
-          "description": "为 SceneSelectionInputNode 添加特殊的 Inspector UI：'Open Selection Tool' 按钮（激活 PCGSelectionTool）、显示当前选中元素数量",
-          "dependencies": ["B5"]
-        },
-        {
-          "id": "B7",
-          "title": "阶段 B 联调测试",
-          "action": "test",
-          "description": "验证完整选择模式",
-          "test_cases": [
-            "Face/Edge/Vertex 三种模式切换正常",
-            "点击选边，验证 PointGroups 包含边两端点索引",
-            "点击选点，验证 PointGroups 包含正确点索引",
-            "矩形框选多个面/边/点",
-            "Overlay 工具栏按钮功能正常",
-            "Inspector 中 Open Selection Tool 按钮正常激活工具",
-            "SceneSelectionInputNode 连接 ScatterNode(group='selected')，验证只在选中面上散布"
-          ],
-          "dependencies": ["B3", "B4", "B5", "B6"]
+          "method": "BuildSelectionToolSection()",
+          "line_range": "389-413",
+          "action": "在现有 foldout 中追加 SelectByNormal 和 SelectByMaterialId 的按钮",
+          "implementation_notes": [
+            "在 statsLabel 之后添加 'Select Up Faces' 按钮",
+            "在其后添加 'Select Same Material' 按钮",
+            "按钮逻辑与 Overlay 中相同"
+          ]
         }
+      ],
+      "acceptance_criteria": [
+        "Overlay 面板中出现 'Select Up Faces' 按钮，点击后选中所有法线朝上的面",
+        "Overlay 面板中出现 'Select by Material' 按钮，点击后选中与当前选中面相同材质的所有面",
+        "Inspector 面板中 SceneSelectionInputNode 的 Selection Tool 区域也有相同按钮",
+        "PCGSelectionTool 未激活时按钮禁用"
       ]
     },
     {
-      "id": "C",
-      "name": "高级功能：选择扩展/收缩 + 按属性选择 + 持久化",
-      "tasks": [
+      "id": "FIX-4",
+      "title": "补全缺失的单元测试和集成测试",
+      "priority": "high",
+      "phase": "B7 + C4",
+      "file": "Assets/PCGToolkit/Editor/Tests/SelectionTests.cs",
+      "current_state": "现有 16 个测试覆盖 Phase A 基础功能和部分 Phase C（序列化、模式切换），缺少框选、Grow/Shrink、属性选择、下游节点集成测试",
+      "target_state": "测试覆盖所有 TASK_TODO.md 中定义的测试用例",
+      "changes": [
         {
-          "id": "C1",
-          "title": "选择扩展/收缩功能",
-          "action": "modify",
-          "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
-          "description": "实现 GrowSelection（扩展选择到相邻面/边/点）和 ShrinkSelection（收缩选择），参考 ProBuilder 的 ElementSelection.cs 中 GetNeighborFaces 等方法",
-          "details": {
-            "grow_selection": "从当前选中面出发，找到共享边的相邻面，加入选择",
-            "shrink_selection": "移除选择集中边界面（只有部分邻居被选中的面）",
-            "keyboard_shortcuts": {
-              "grow": "Ctrl+Numpad+",
-              "shrink": "Ctrl+Numpad-"
+          "action": "在 SelectionTests 类中追加以下测试方法",
+          "new_tests": [
+            {
+              "name": "GrowSelection_Face_ExpandsToAdjacentFaces",
+              "description": "使用 CreateQuadGeo() 创建 2x2 网格，选中 prim 0，调用 GrowSelection()，验证共享顶点的相邻面（prim 1, 2, 3）被加入选择",
+              "notes": "需要创建 PCGSelectionTool 实例并调用 SetGeometry()，然后调用 GrowSelection()"
+            },
+            {
+              "name": "ShrinkSelection_Face_RemovesBoundaryFaces",
+              "description": "选中所有 8 个 prim，调用 ShrinkSelection()，验证边界面被移除，只保留内部面",
+              "notes": "2x2 网格中所有面都是边界面，所以全部应被移除；可构造更大的 3x3 网格来测试"
+            },
+            {
+              "name": "GrowSelection_Vertex_ExpandsToAdjacentVertices",
+              "description": "切换到 Vertex 模式，选中中心顶点 4，调用 GrowSelection()，验证相邻顶点被加入选择",
+              "notes": "依赖 FIX-2 完成后才能通过"
+            },
+            {
+              "name": "GrowSelection_Edge_ExpandsToAdjacentEdges",
+              "description": "切换到 Edge 模式，选中一条边，调用 GrowSelection()，验证共享端点的相邻边被加入选择",
+              "notes": "依赖 FIX-2 完成后才能通过，需先调用 geo.BuildEdges()"
+            },
+            {
+              "name": "SelectByNormal_SelectsUpwardFaces",
+              "description": "创建包含朝上和朝侧面的几何体，调用 SelectByNormal(Vector3.up, 0.7f)，验证只有朝上的面被选中",
+              "notes": "CreateQuadGeo() 所有面都朝上（Y 平面），可额外添加一个竖直面来验证过滤"
+            },
+            {
+              "name": "SelectByMaterialId_SelectsSameMaterial",
+              "description": "创建带 material PrimAttrib 的几何体，部分面标记为 'matA'，部分为 'matB'，调用 SelectByMaterialId(0)，验证所有 'matA' 面被选中",
+              "notes": "需要手动设置 geo.PrimAttribs.CreateAttribute('material', AttribType.String) 并填充值"
+            },
+            {
+              "name": "SceneSelectionInputNode_ConnectBlastNode_DeletesSelectedFaces",
+              "description": "SceneSelectionInputNode 输出带 PrimGroups['selected'] 的几何体，连接 BlastNode(group='selected')，验证选中面被删除",
+              "notes": "需要实例化 BlastNode 并传入 SceneSelectionInputNode 的输出"
+            },
+            {
+              "name": "SceneSelectionInputNode_Persistence_RestoresAfterClear",
+              "description": "选中若干面，执行 SceneSelectionInputNode 使其序列化选择数据，清空 SelectionState，再次执行节点，验证选择从序列化数据恢复",
+              "notes": "验证 serializedSelection 参数的持久化逻辑"
             }
-          },
-          "dependencies": ["B7"]
-        },
-        {
-          "id": "C2",
-          "title": "按属性选择",
-          "action": "modify",
-          "file": "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
-          "description": "支持按材质 ID 选择所有同材质面、按法线方向选择（如选择所有朝上的面）、按 Primitive Attribute 值选择",
-          "details": {
-            "select_by_material": "选中一个面后，可扩展选择所有相同材质 ID 的面",
-            "select_by_normal": "提供法线方向阈值，选择法线在阈值范围内的面",
-            "select_by_attribute": "根据 PCGGeometry 的 PrimAttributes 中某个属性值进行过滤选择"
-          },
-          "dependencies": ["B7"]
-        },
-        {
-          "id": "C3",
-          "title": "选择结果序列化持久化",
-          "action": "modify",
-          "files": [
-            "Assets/PCGToolkit/Editor/Core/PCGSelectionState.cs",
-            "Assets/PCGToolkit/Editor/Nodes/Input/SceneSelectionInputNode.cs"
-          ],
-          "description": "将选择结果序列化保存到 GraphData 中，使选择在关闭/重开编辑器后可恢复",
-          "details": {
-            "serialization_format": "将 selectedPrimIndices/selectedPointIndices 序列化为 JSON 或 int[] 存储在 SceneSelectionInputNode 的 SerializedProperty 中",
-            "restore_logic": "节点加载时从序列化数据恢复 PCGSelectionState"
-          },
-          "dependencies": ["B7"]
-        },
-        {
-          "id": "C4",
-          "title": "阶段 C 联调测试",
-          "action": "test",
-          "description": "验证高级功能",
-          "test_cases": [
-            "选择一个面后 GrowSelection 正确扩展到相邻面",
-            "ShrinkSelection 正确收缩边界面",
-            "按材质选择所有同材质面",
-            "按法线方向选择朝上的面",
-            "关闭编辑器重开后选择结果正确恢复",
-            "完整工作流：交互选面 → ExtrudeNode → UVProjectNode → 输出"
-          ],
-          "dependencies": ["C1", "C2", "C3"]
+          ]
         }
+      ],
+      "acceptance_criteria": [
+        "所有新增测试在 Unity Test Runner 中通过",
+        "GrowSelection Face 模式测试验证相邻面扩展",
+        "ShrinkSelection Face 模式测试验证边界面收缩",
+        "SelectByNormal 测试验证法线过滤",
+        "SelectByMaterialId 测试验证材质过滤",
+        "BlastNode 集成测试验证下游节点正确消费 Group",
+        "持久化测试验证序列化/反序列化往返"
       ]
     }
   ],
-  "files_to_create": [
-    "Assets/PCGToolkit/Editor/Core/PCGSelectMode.cs",
-    "Assets/PCGToolkit/Editor/Core/PCGSelectionState.cs",
-    "Assets/PCGToolkit/Editor/Core/PCGSceneMeshBridge.cs",
-    "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
-    "Assets/PCGToolkit/Editor/Tools/PCGSelectionRenderer.cs",
-    "Assets/PCGToolkit/Editor/Tools/PCGSelectionOverlay.cs",
-    "Assets/PCGToolkit/Editor/Nodes/Input/SceneSelectionInputNode.cs"
+  "execution_order": [
+    {
+      "step": 1,
+      "task_ids": ["FIX-1", "FIX-2"],
+      "reason": "FIX-1 和 FIX-2 互不依赖，可并行执行"
+    },
+    {
+      "step": 2,
+      "task_ids": ["FIX-3"],
+      "reason": "FIX-3 的 Overlay UI 需要调用 GrowSelection/ShrinkSelection，依赖 FIX-2 中 Edge/Vertex 模式的实现"
+    },
+    {
+      "step": 3,
+      "task_ids": ["FIX-4"],
+      "reason": "测试需要在所有功能实现后编写，以确保测试覆盖完整功能"
+    }
   ],
   "files_to_modify": [
-    "Assets/PCGToolkit/Editor/Graph/PCGNodeRegistry.cs",
-    "Assets/PCGToolkit/Editor/Graph/PCGNodeInspectorWindow.cs"
+    "Assets/PCGToolkit/Editor/Tools/PCGSelectionOverlay.cs",
+    "Assets/PCGToolkit/Editor/Tools/PCGSelectionTool.cs",
+    "Assets/PCGToolkit/Editor/Graph/PCGNodeInspectorWindow.cs",
+    "Assets/PCGToolkit/Editor/Tests/SelectionTests.cs"
   ],
-  "key_reference_files": {
-    "pcg_for_unity": [
-      "Assets/PCGToolkit/Editor/Core/PCGGeometry.cs",
-      "Assets/PCGToolkit/Editor/Core/PCGGeometryToMesh.cs",
-      "Assets/PCGToolkit/Editor/Graph/PCGScenePreview.cs",
-      "Assets/PCGToolkit/Editor/Nodes/Input/SceneObjectInputNode.cs",
-      "Assets/PCGToolkit/Editor/Nodes/Distribute/ScatterNode.cs",
-      "Assets/PCGToolkit/Editor/Nodes/Group/GroupCreateNode.cs"
-    ],
-    "com_unity_probuilder": [
-      "Editor/EditorCore/EditorSceneViewPicker.cs",
-      "Runtime/Core/SelectionPickerRenderer.cs",
-      "Runtime/Core/ProBuilderEnum.cs",
-      "Editor/Overlays/SelectionSettingsButtons.cs",
-      "Editor/EditorCore/EditorHandleUtility.cs"
-    ]
-  },
-  "data_flow": {
-    "description": "PCGGeometry → PCGSceneMeshBridge.Instantiate() → 临时 Mesh + MeshCollider → 用户 Scene 交互选择 → PCGSelectionState → SceneSelectionInputNode → PrimGroups['selected'] / PointGroups['selected'] → 下游节点消费"
-  },
-  "downstream_node_compatibility": {
-    "description": "SceneSelectionInputNode 输出的 Group 可被以下现有节点直接消费",
-    "compatible_nodes": [
-      { "node": "BlastNode", "usage": "删除选中面" },
-      { "node": "ExtrudeNode", "usage": "挤出选中面" },
-      { "node": "ScatterNode", "usage": "在选中面上散布" },
-      { "node": "ForEachNode", "usage": "对选中元素逐个迭代" },
-      { "node": "SplitNode", "usage": "按选中/未选中分流" }
-    ]
-  }
+  "estimated_completion_after": "100% of TASK_TODO.md phases A/B/C"
 }
 ```
 
-这份 JSON 包含了完整的三阶段任务分解、文件清单、依赖关系、测试用例和参考文件。每个 task 的 `dependencies` 字段标明了前置依赖，agent 可以据此确定执行顺序。
+---
+
+### 关键说明
+
+| 任务 | 涉及文件 | 核心改动 |
+|------|----------|----------|
+| FIX-1 | `PCGSelectionOverlay.cs` L79-83 | 填充空的 `CreateHorizontalToolbarContent()` |
+| FIX-2 | `PCGSelectionTool.cs` L360-423 | `GrowSelection`/`ShrinkSelection` 增加 Edge/Vertex 分支 |
+| FIX-3 | `PCGSelectionOverlay.cs` + `PCGNodeInspectorWindow.cs` L389-413 | 为 `SelectByNormal`/`SelectByMaterialId` 添加 UI 按钮 |
+| FIX-4 | `SelectionTests.cs` | 新增 8 个测试方法覆盖框选、Grow/Shrink、属性选择、集成 | [1-cite-0](#1-cite-0) [1-cite-1](#1-cite-1) [1-cite-2](#1-cite-2) [1-cite-3](#1-cite-3) [1-cite-4](#1-cite-4) [1-cite-5](#1-cite-5)

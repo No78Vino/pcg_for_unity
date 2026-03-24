@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using PCGToolkit.Core;
+using PCGToolkit.Tools;
 using UnityEngine;
 
 namespace PCGToolkit.Tests
@@ -303,6 +305,271 @@ namespace PCGToolkit.Tests
             bridge.Dispose();
             Assert.IsFalse(bridge.IsValid);
             Assert.AreEqual(0, bridge.UnityTriToPcgPrim.Count);
+        }
+
+        // ---- Phase B7 + C4: Grow/Shrink, SelectByNormal/Material, Integration Tests ----
+
+        private PCGSelectionTool CreateToolWithGeo(PCGGeometry geo)
+        {
+            var tool = ScriptableObject.CreateInstance<PCGSelectionTool>();
+            tool.SetGeometry(geo);
+            return tool;
+        }
+
+        private PCGGeometry Create3x3GridGeo()
+        {
+            var geo = new PCGGeometry();
+            // 4x4 = 16 points forming a 3x3 grid (9 quads = 18 triangle prims)
+            for (int z = 0; z < 4; z++)
+                for (int x = 0; x < 4; x++)
+                    geo.Points.Add(new Vector3(x, 0, z));
+
+            for (int z = 0; z < 3; z++)
+            {
+                for (int x = 0; x < 3; x++)
+                {
+                    int bl = z * 4 + x;
+                    int br = bl + 1;
+                    int tl = bl + 4;
+                    int tr = tl + 1;
+                    geo.Primitives.Add(new int[] { bl, br, tr });
+                    geo.Primitives.Add(new int[] { bl, tr, tl });
+                }
+            }
+            return geo;
+        }
+
+        [Test]
+        public void GrowSelection_Face_ExpandsToAdjacentFaces()
+        {
+            var geo = CreateQuadGeo();
+            var tool = CreateToolWithGeo(geo);
+
+            PCGSelectionState.SetMode(PCGSelectMode.Face);
+            PCGSelectionState.AddToSelection(0);
+
+            tool.GrowSelection();
+
+            // Prim 0 has verts {0,1,4}. Adjacent prims sharing these verts: 1(0,4,3), 2(1,2,5), 3(1,5,4), 4(3,4,7), 6(4,5,8), 7(4,8,7)
+            Assert.IsTrue(PCGSelectionState.SelectedPrimIndices.Contains(0));
+            Assert.IsTrue(PCGSelectionState.SelectedPrimIndices.Count > 1);
+            // Prim 1 shares verts 0,4 with prim 0
+            Assert.IsTrue(PCGSelectionState.SelectedPrimIndices.Contains(1));
+            // Prim 3 shares vert 1,4 with prim 0
+            Assert.IsTrue(PCGSelectionState.SelectedPrimIndices.Contains(3));
+
+            tool.Bridge.Dispose();
+            Object.DestroyImmediate(tool);
+        }
+
+        [Test]
+        public void ShrinkSelection_Face_RemovesBoundaryFaces()
+        {
+            var geo = Create3x3GridGeo();
+            var tool = CreateToolWithGeo(geo);
+
+            PCGSelectionState.SetMode(PCGSelectMode.Face);
+            // Select all 18 prims
+            for (int i = 0; i < geo.Primitives.Count; i++)
+                PCGSelectionState.SelectedPrimIndices.Add(i);
+
+            tool.ShrinkSelection();
+
+            // After shrink, boundary prims should be removed, only interior prims remain
+            // In a 3x3 grid of quads (18 tri prims), the center quad's 2 triangles (prims 8,9)
+            // should be the only interior ones
+            Assert.Less(PCGSelectionState.SelectedPrimIndices.Count, 18);
+
+            tool.Bridge.Dispose();
+            Object.DestroyImmediate(tool);
+        }
+
+        [Test]
+        public void GrowSelection_Vertex_ExpandsToAdjacentVertices()
+        {
+            var geo = CreateQuadGeo();
+            var tool = CreateToolWithGeo(geo);
+
+            PCGSelectionState.SetMode(PCGSelectMode.Vertex);
+            // Select center vertex 4
+            PCGSelectionState.AddToSelection(4);
+
+            tool.GrowSelection();
+
+            // Vertex 4 is shared by prims 0(0,1,4), 1(0,4,3), 3(1,5,4), 4(3,4,7), 6(4,5,8), 7(4,8,7)
+            // All vertices of those prims should be added: 0,1,3,4,5,6,7,8
+            Assert.IsTrue(PCGSelectionState.SelectedPointIndices.Contains(4));
+            Assert.IsTrue(PCGSelectionState.SelectedPointIndices.Contains(0));
+            Assert.IsTrue(PCGSelectionState.SelectedPointIndices.Contains(1));
+            Assert.IsTrue(PCGSelectionState.SelectedPointIndices.Contains(3));
+            Assert.IsTrue(PCGSelectionState.SelectedPointIndices.Contains(5));
+            Assert.IsTrue(PCGSelectionState.SelectedPointIndices.Contains(7));
+            Assert.IsTrue(PCGSelectionState.SelectedPointIndices.Contains(8));
+
+            tool.Bridge.Dispose();
+            Object.DestroyImmediate(tool);
+        }
+
+        [Test]
+        public void GrowSelection_Edge_ExpandsToAdjacentEdges()
+        {
+            var geo = CreateQuadGeo();
+            geo.BuildEdges();
+            var tool = CreateToolWithGeo(geo);
+
+            PCGSelectionState.SetMode(PCGSelectMode.Edge);
+            // Select the first edge
+            Assert.Greater(geo.Edges.Count, 0);
+            PCGSelectionState.AddToSelection(0);
+
+            int endpoint0 = tool.Bridge.Geometry.Edges[0][0];
+            int endpoint1 = tool.Bridge.Geometry.Edges[0][1];
+
+            tool.GrowSelection();
+
+            // After grow, all edges sharing endpoints with edge 0 should be selected
+            Assert.IsTrue(PCGSelectionState.SelectedEdgeIndices.Count > 1);
+            foreach (int edgeIdx in PCGSelectionState.SelectedEdgeIndices)
+            {
+                var edge = tool.Bridge.Geometry.Edges[edgeIdx];
+                bool sharesEndpoint = edge[0] == endpoint0 || edge[0] == endpoint1 ||
+                                       edge[1] == endpoint0 || edge[1] == endpoint1;
+                Assert.IsTrue(sharesEndpoint || edgeIdx == 0);
+            }
+
+            tool.Bridge.Dispose();
+            Object.DestroyImmediate(tool);
+        }
+
+        [Test]
+        public void SelectByNormal_SelectsUpwardFaces()
+        {
+            var geo = new PCGGeometry();
+            // Horizontal face (normal up)
+            geo.Points.Add(new Vector3(0, 0, 0));
+            geo.Points.Add(new Vector3(1, 0, 0));
+            geo.Points.Add(new Vector3(0, 0, 1));
+            geo.Primitives.Add(new int[] { 0, 1, 2 });
+
+            // Vertical face (normal sideways)
+            geo.Points.Add(new Vector3(0, 0, 0));
+            geo.Points.Add(new Vector3(1, 0, 0));
+            geo.Points.Add(new Vector3(0, 1, 0));
+            geo.Primitives.Add(new int[] { 3, 4, 5 });
+
+            var tool = CreateToolWithGeo(geo);
+            PCGSelectionState.SetMode(PCGSelectMode.Face);
+
+            tool.SelectByNormal(Vector3.up, 0.7f);
+
+            // Only the horizontal face (prim 0) should be selected
+            Assert.IsTrue(PCGSelectionState.SelectedPrimIndices.Contains(0));
+            Assert.IsFalse(PCGSelectionState.SelectedPrimIndices.Contains(1));
+
+            tool.Bridge.Dispose();
+            Object.DestroyImmediate(tool);
+        }
+
+        [Test]
+        public void SelectByMaterialId_SelectsSameMaterial()
+        {
+            var geo = CreateQuadGeo();
+            var matAttr = geo.PrimAttribs.CreateAttribute("material", AttribType.String);
+            // Assign materials: prims 0,1,2,3 = "matA", prims 4,5,6,7 = "matB"
+            for (int i = 0; i < 8; i++)
+                matAttr.Values.Add(i < 4 ? "matA" : "matB");
+
+            var tool = CreateToolWithGeo(geo);
+            PCGSelectionState.SetMode(PCGSelectMode.Face);
+
+            tool.SelectByMaterialId(0); // prim 0 has "matA"
+
+            Assert.AreEqual(4, PCGSelectionState.SelectedPrimIndices.Count);
+            Assert.IsTrue(PCGSelectionState.SelectedPrimIndices.Contains(0));
+            Assert.IsTrue(PCGSelectionState.SelectedPrimIndices.Contains(1));
+            Assert.IsTrue(PCGSelectionState.SelectedPrimIndices.Contains(2));
+            Assert.IsTrue(PCGSelectionState.SelectedPrimIndices.Contains(3));
+            Assert.IsFalse(PCGSelectionState.SelectedPrimIndices.Contains(4));
+
+            tool.Bridge.Dispose();
+            Object.DestroyImmediate(tool);
+        }
+
+        [Test]
+        public void SceneSelectionInputNode_ConnectBlastNode_DeletesSelectedFaces()
+        {
+            var geo = CreateQuadGeo();
+            PCGSelectionState.SourceGeometry = geo;
+            PCGSelectionState.SetMode(PCGSelectMode.Face);
+            PCGSelectionState.AddToSelection(0);
+            PCGSelectionState.AddToSelection(1);
+
+            // Execute SceneSelectionInputNode
+            var selNode = new Nodes.SceneSelectionInputNode();
+            var ctx = CreateContext();
+            var selResult = selNode.Execute(ctx,
+                new Dictionary<string, PCGGeometry>(),
+                new Dictionary<string, object> { { "groupName", "selected" } });
+            var selGeo = selResult["geometry"];
+            Assert.IsTrue(selGeo.PrimGroups.ContainsKey("selected"));
+            Assert.AreEqual(2, selGeo.PrimGroups["selected"].Count);
+
+            // Feed into BlastNode to delete the selected faces
+            var blastNode = new Nodes.Geometry.BlastNode();
+            var blastResult = blastNode.Execute(ctx,
+                new Dictionary<string, PCGGeometry> { { "input", selGeo } },
+                new Dictionary<string, object>
+                {
+                    { "group", "selected" },
+                    { "groupType", "primitive" },
+                    { "deleteNonSelected", false }
+                });
+            var blastGeo = blastResult["geometry"];
+
+            // Original had 8 prims, 2 were selected and deleted
+            Assert.AreEqual(6, blastGeo.Primitives.Count);
+        }
+
+        [Test]
+        public void SceneSelectionInputNode_Persistence_RestoresAfterClear()
+        {
+            var geo = CreateQuadGeo();
+            PCGSelectionState.SourceGeometry = geo;
+            PCGSelectionState.SetMode(PCGSelectMode.Face);
+            PCGSelectionState.AddToSelection(2);
+            PCGSelectionState.AddToSelection(5);
+
+            // Execute to serialize selection
+            var node = new Nodes.SceneSelectionInputNode();
+            var ctx = CreateContext();
+            ctx.CurrentNodeId = "testNode1";
+            node.Execute(ctx,
+                new Dictionary<string, PCGGeometry>(),
+                new Dictionary<string, object> { { "groupName", "selected" } });
+
+            // Get serialized selection from context
+            string serialized = ctx.GlobalVariables["testNode1.serializedSelection"] as string;
+            Assert.IsFalse(string.IsNullOrEmpty(serialized));
+
+            // Clear all selection
+            PCGSelectionState.Clear();
+            Assert.AreEqual(0, PCGSelectionState.SelectionCount);
+
+            // Re-execute with serialized data, it should restore selection
+            var ctx2 = CreateContext();
+            var result = node.Execute(ctx2,
+                new Dictionary<string, PCGGeometry>(),
+                new Dictionary<string, object>
+                {
+                    { "groupName", "selected" },
+                    { "serializedSelection", serialized }
+                });
+
+            var outGeo = result["geometry"];
+            Assert.IsTrue(outGeo.PrimGroups.ContainsKey("selected"));
+            Assert.AreEqual(2, outGeo.PrimGroups["selected"].Count);
+            Assert.IsTrue(outGeo.PrimGroups["selected"].Contains(2));
+            Assert.IsTrue(outGeo.PrimGroups["selected"].Contains(5));
         }
     }
 }

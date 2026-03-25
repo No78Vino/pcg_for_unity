@@ -78,26 +78,47 @@ namespace PCGToolkit.Nodes.Geometry
             {
                 // 删除面
                 var newPrims = new List<int[]>();
+                var keptPrimIndices = new List<int>();
                 for (int i = 0; i < geo.Primitives.Count; i++)
                 {
                     if (!toDelete.Contains(i))
+                    {
                         newPrims.Add(geo.Primitives[i]);
+                        keptPrimIndices.Add(i);
+                    }
                 }
                 geo.Primitives = newPrims;
 
+                // B6-1 fix: 同步PrimAttribs - 只保留未被删除面的属性
+                var newPrimAttribs = new AttributeStore();
+                foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+                {
+                    var newAttr = newPrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                    foreach (int oldIdx in keptPrimIndices)
+                    {
+                        if (oldIdx < attr.Values.Count)
+                            newAttr.Values.Add(attr.Values[oldIdx]);
+                        else
+                            newAttr.Values.Add(attr.DefaultValue);
+                    }
+                }
+                geo.PrimAttribs = newPrimAttribs;
+
                 // 更新面分组
                 var newPrimGroups = new Dictionary<string, HashSet<int>>();
+                var primRemap = new Dictionary<int, int>();
+                for (int i = 0; i < keptPrimIndices.Count; i++)
+                {
+                    primRemap[keptPrimIndices[i]] = i;
+                }
                 foreach (var kvp in geo.PrimGroups)
                 {
                     var newGroup = new HashSet<int>();
-                    int newIdx = 0;
-                    for (int i = 0; i < geo.Primitives.Count + toDelete.Count; i++)
+                    foreach (var idx in kvp.Value)
                     {
-                        if (!toDelete.Contains(i))
+                        if (primRemap.TryGetValue(idx, out int newIdx))
                         {
-                            if (kvp.Value.Contains(i))
-                                newGroup.Add(newIdx);
-                            newIdx++;
+                            newGroup.Add(newIdx);
                         }
                     }
                     if (newGroup.Count > 0)
@@ -121,10 +142,12 @@ namespace PCGToolkit.Nodes.Geometry
                 }
                 geo.Points = newPoints;
 
-                // 过滤面并更新索引
+                // 过滤面并更新索引，记录保留的面索引
                 var newPrims = new List<int[]>();
-                foreach (var prim in geo.Primitives)
+                var keptPrimIndices = new List<int>();
+                for (int primIdx = 0; primIdx < geo.Primitives.Count; primIdx++)
                 {
+                    var prim = geo.Primitives[primIdx];
                     bool keep = true;
                     foreach (int idx in prim)
                     {
@@ -140,9 +163,81 @@ namespace PCGToolkit.Nodes.Geometry
                         for (int i = 0; i < prim.Length; i++)
                             newPrim[i] = indexMap[prim[i]];
                         newPrims.Add(newPrim);
+                        keptPrimIndices.Add(primIdx);
                     }
                 }
                 geo.Primitives = newPrims;
+
+                // B6-2 fix: 同步PointAttribs - 按indexMap重建
+                var sortedOldIndices = new List<int>(indexMap.Keys);
+                sortedOldIndices.Sort();
+                var newPointAttribs = new AttributeStore();
+                foreach (var attr in geo.PointAttribs.GetAllAttributes())
+                {
+                    var newAttr = newPointAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                    foreach (int oldIdx in sortedOldIndices)
+                    {
+                        if (oldIdx < attr.Values.Count)
+                            newAttr.Values.Add(attr.Values[oldIdx]);
+                        else
+                            newAttr.Values.Add(attr.DefaultValue);
+                    }
+                }
+                geo.PointAttribs = newPointAttribs;
+
+                // B6-2 fix: 同步PrimAttribs - 只保留未被删除面的属性
+                var newPrimAttribs = new AttributeStore();
+                foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+                {
+                    var newAttr = newPrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                    foreach (int oldIdx in keptPrimIndices)
+                    {
+                        if (oldIdx < attr.Values.Count)
+                            newAttr.Values.Add(attr.Values[oldIdx]);
+                        else
+                            newAttr.Values.Add(attr.DefaultValue);
+                    }
+                }
+                geo.PrimAttribs = newPrimAttribs;
+
+                // B6-2 fix: 同步PointGroups - 使用indexMap更新索引
+                var newPointGroups = new Dictionary<string, HashSet<int>>();
+                foreach (var kvp in geo.PointGroups)
+                {
+                    var newGroup = new HashSet<int>();
+                    foreach (var idx in kvp.Value)
+                    {
+                        if (indexMap.TryGetValue(idx, out int mappedIdx))
+                        {
+                            newGroup.Add(mappedIdx);
+                        }
+                    }
+                    if (newGroup.Count > 0)
+                        newPointGroups[kvp.Key] = newGroup;
+                }
+                geo.PointGroups = newPointGroups;
+
+                // B6-2 fix: 同步PrimGroups - 使用面索引映射
+                var newPrimGroups = new Dictionary<string, HashSet<int>>();
+                var primRemap = new Dictionary<int, int>();
+                for (int i = 0; i < keptPrimIndices.Count; i++)
+                {
+                    primRemap[keptPrimIndices[i]] = i;
+                }
+                foreach (var kvp in geo.PrimGroups)
+                {
+                    var newGroup = new HashSet<int>();
+                    foreach (var idx in kvp.Value)
+                    {
+                        if (primRemap.TryGetValue(idx, out int mappedIdx))
+                        {
+                            newGroup.Add(mappedIdx);
+                        }
+                    }
+                    if (newGroup.Count > 0)
+                        newPrimGroups[kvp.Key] = newGroup;
+                }
+                geo.PrimGroups = newPrimGroups;
             }
 
             return SingleOutput("geometry", geo);

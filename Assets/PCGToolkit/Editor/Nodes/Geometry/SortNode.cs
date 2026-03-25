@@ -125,6 +125,19 @@ namespace PCGToolkit.Nodes.Geometry
                 result.Points.Add(geo.Points[oldIdx]);
             }
 
+            // B9-1 fix: 按newToOld顺序重排PointAttribs
+            foreach (var attr in geo.PointAttribs.GetAllAttributes())
+            {
+                var newAttr = result.PointAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                foreach (int oldIdx in newToOld)
+                {
+                    if (oldIdx < attr.Values.Count)
+                        newAttr.Values.Add(attr.Values[oldIdx]);
+                    else
+                        newAttr.Values.Add(attr.DefaultValue);
+                }
+            }
+
             // 更新面索引
             foreach (var prim in geo.Primitives)
             {
@@ -148,9 +161,10 @@ namespace PCGToolkit.Nodes.Geometry
                 result.PointGroups[kvp.Key] = newGroup;
             }
 
-            result.PrimGroups = geo.PrimGroups;
-            result.PointAttribs = geo.PointAttribs.Clone();
+            // 复制面属性和分组
             result.PrimAttribs = geo.PrimAttribs.Clone();
+            result.PrimGroups = geo.PrimGroups;
+            result.DetailAttribs = geo.DetailAttribs.Clone();
 
             return result;
         }
@@ -160,7 +174,20 @@ namespace PCGToolkit.Nodes.Geometry
             var result = new PCGGeometry();
             
             result.Points = new List<Vector3>(geo.Points);
-            
+
+            // B9-2 fix: 按newToOld顺序重排PrimAttribs
+            foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+            {
+                var newAttr = result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                foreach (int oldIdx in newToOld)
+                {
+                    if (oldIdx < attr.Values.Count)
+                        newAttr.Values.Add(attr.Values[oldIdx]);
+                    else
+                        newAttr.Values.Add(attr.DefaultValue);
+                }
+            }
+
             // 重新排列面
             foreach (int oldIdx in newToOld)
             {
@@ -168,24 +195,28 @@ namespace PCGToolkit.Nodes.Geometry
             }
 
             // 更新面分组
+            var oldToNewPrim = new Dictionary<int, int>();
+            for (int i = 0; i < newToOld.Length; i++)
+            {
+                oldToNewPrim[newToOld[i]] = i;
+            }
             foreach (var kvp in geo.PrimGroups)
             {
                 var newGroup = new HashSet<int>();
-                int newIdx = 0;
-                foreach (int oldIdx in newToOld)
+                foreach (int oldIdx in kvp.Value)
                 {
-                    if (kvp.Value.Contains(oldIdx))
+                    if (oldToNewPrim.TryGetValue(oldIdx, out int newIdx))
                         newGroup.Add(newIdx);
-                    newIdx++;
                 }
                 if (newGroup.Count > 0)
                     result.PrimGroups[kvp.Key] = newGroup;
             }
 
+            // 复制点属性和分组
+            result.PointAttribs = geo.PointAttribs.Clone();
             result.PointGroups = geo.PointGroups;
             result.Edges = new List<int[]>(geo.Edges);
-            result.PointAttribs = geo.PointAttribs.Clone();
-            result.PrimAttribs = geo.PrimAttribs.Clone();
+            result.DetailAttribs = geo.DetailAttribs.Clone();
 
             return result;
         }

@@ -71,6 +71,17 @@ namespace PCGToolkit.Nodes.Geometry
         {
             var result = new PCGGeometry();
 
+            // B8-1 fix: 复制PrimAttribs（面数量和顺序不变）
+            result.PrimAttribs = geo.PrimAttribs.Clone();
+
+            // B8-1 fix: 复制PrimGroups（面索引不变）
+            foreach (var kvp in geo.PrimGroups)
+                result.PrimGroups[kvp.Key] = new HashSet<int>(kvp.Value);
+
+            // B8-1 fix: 复制DetailAttribs
+            result.DetailAttribs = geo.DetailAttribs.Clone();
+
+            int vertOffset = 0;
             foreach (var prim in geo.Primitives)
             {
                 int[] newPrim = new int[prim.Length];
@@ -78,8 +89,19 @@ namespace PCGToolkit.Nodes.Geometry
                 {
                     newPrim[i] = result.Points.Count;
                     result.Points.Add(geo.Points[prim[i]]);
+
+                    // B8-1 fix: 为每个新顶点复制对应原始点的PointAttribs
+                    foreach (var attr in geo.PointAttribs.GetAllAttributes())
+                    {
+                        var destAttr = result.PointAttribs.GetAttribute(attr.Name);
+                        if (prim[i] < attr.Values.Count)
+                            destAttr.Values.Add(attr.Values[prim[i]]);
+                        else
+                            destAttr.Values.Add(attr.DefaultValue);
+                    }
                 }
                 result.Primitives.Add(newPrim);
+                vertOffset += prim.Length;
             }
 
             return result;
@@ -89,6 +111,9 @@ namespace PCGToolkit.Nodes.Geometry
         {
             var result = new PCGGeometry();
             float tolSqr = tolerance * tolerance;
+
+            // B8-2 fix: 复制DetailAttribs
+            result.DetailAttribs = geo.DetailAttribs.Clone();
 
             // 对每个旧点找到或创建新的合并后点
             int[] remap = new int[geo.Points.Count];
@@ -111,10 +136,22 @@ namespace PCGToolkit.Nodes.Geometry
                 {
                     remap[i] = result.Points.Count;
                     result.Points.Add(geo.Points[i]);
+
+                    // B8-2 fix: 为新合并点复制原始点的PointAttribs
+                    foreach (var attr in geo.PointAttribs.GetAllAttributes())
+                    {
+                        var destAttr = result.PointAttribs.GetAttribute(attr.Name);
+                        if (i < attr.Values.Count)
+                            destAttr.Values.Add(attr.Values[i]);
+                        else
+                            destAttr.Values.Add(attr.DefaultValue);
+                    }
                 }
             }
 
             // 重映射面索引，跳过退化面
+            // 记录保留的面索引
+            var keptPrimIndices = new List<int>();
             foreach (var prim in geo.Primitives)
             {
                 var newPrim = new int[prim.Length];
@@ -124,7 +161,41 @@ namespace PCGToolkit.Nodes.Geometry
                 // 去重：确保面内无重复索引
                 var unique = new HashSet<int>(newPrim);
                 if (unique.Count >= 3)
+                {
                     result.Primitives.Add(newPrim);
+                    keptPrimIndices.Add(geo.Primitives.IndexOf(prim));
+                }
+            }
+
+            // B8-2 fix: 复制PrimAttribs（只复制保留面的属性）
+            foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+            {
+                var newAttr = result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                foreach (int idx in keptPrimIndices)
+                {
+                    if (idx < attr.Values.Count)
+                        newAttr.Values.Add(attr.Values[idx]);
+                    else
+                        newAttr.Values.Add(attr.DefaultValue);
+                }
+            }
+
+            // B8-2 fix: 复制PrimGroups（只复制保留面的分组，使用remap更新）
+            var primRemap = new Dictionary<int, int>();
+            for (int i = 0; i < keptPrimIndices.Count; i++)
+            {
+                primRemap[keptPrimIndices[i]] = i;
+            }
+            foreach (var kvp in geo.PrimGroups)
+            {
+                var newGroup = new HashSet<int>();
+                foreach (int idx in kvp.Value)
+                {
+                    if (primRemap.TryGetValue(idx, out int newIdx))
+                        newGroup.Add(newIdx);
+                }
+                if (newGroup.Count > 0)
+                    result.PrimGroups[kvp.Key] = newGroup;
             }
 
             return result;

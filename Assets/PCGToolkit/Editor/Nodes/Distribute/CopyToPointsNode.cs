@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PCGToolkit.Core;
 using UnityEngine;
 
@@ -41,8 +42,8 @@ namespace PCGToolkit.Nodes.Distribute
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            var source = GetInputGeometry(inputGeometries, "source");
-            var target = GetInputGeometry(inputGeometries, "target");
+            var source = GetInputGeometry(inputGeometries, "source").Clone();
+            var target = GetInputGeometry(inputGeometries, "target").Clone();
             bool usePointOrient = GetParamBool(parameters, "usePointOrient", true);
             bool usePointScale = GetParamBool(parameters, "usePointScale", true);
             string transferAttrs = GetParamString(parameters, "transferAttributes", "");
@@ -91,6 +92,9 @@ namespace PCGToolkit.Nodes.Distribute
                     transferAttrData.Add((attrName, attr));
             }
 
+            // B10 fix: 复制源几何体的DetailAttribs
+            result.DetailAttribs = source.DetailAttribs.Clone();
+
             // 对每个目标点复制源几何体
             for (int pointIdx = 0; pointIdx < target.Points.Count; pointIdx++)
             {
@@ -124,15 +128,35 @@ namespace PCGToolkit.Nodes.Distribute
 
                 // 计算顶点偏移
                 int vertexOffset = result.Points.Count;
+                int pointOffsetForAttribs = result.Points.Count;
 
-                // 复制变换后的顶点
-                foreach (var srcPoint in source.Points)
+                // B10 fix: 复制变换后的顶点，同时复制源几何体的PointAttribs
+                foreach (int srcIdx in Enumerable.Range(0, source.Points.Count))
                 {
+                    Vector3 srcPoint = source.Points[srcIdx];
                     Vector3 transformed = rotation * (srcPoint * scale) + position;
                     result.Points.Add(transformed);
+
+                    // 复制源几何体的点属性
+                    foreach (var attr in source.PointAttribs.GetAllAttributes())
+                    {
+                        var destAttr = result.PointAttribs.GetAttribute(attr.Name);
+                        if (destAttr == null)
+                        {
+                            destAttr = result.PointAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                            // 补齐前面已添加的点的默认值
+                            for (int j = 0; j < pointOffsetForAttribs; j++)
+                                destAttr.Values.Add(attr.DefaultValue);
+                        }
+                        if (srcIdx < attr.Values.Count)
+                            destAttr.Values.Add(attr.Values[srcIdx]);
+                        else
+                            destAttr.Values.Add(attr.DefaultValue);
+                    }
                 }
 
-                // 复制面（调整索引）
+                // B10 fix: 复制源几何体的面（调整索引）
+                int primOffsetForAttribs = result.Primitives.Count;
                 foreach (var srcPrim in source.Primitives)
                 {
                     var newPrim = new int[srcPrim.Length];
@@ -143,12 +167,35 @@ namespace PCGToolkit.Nodes.Distribute
                     result.Primitives.Add(newPrim);
                 }
 
+                // B10 fix: 复制源几何体的面属性
+                foreach (var attr in source.PrimAttribs.GetAllAttributes())
+                {
+                    var destAttr = result.PrimAttribs.GetAttribute(attr.Name);
+                    if (destAttr == null)
+                    {
+                        destAttr = result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                        // 补齐前面已添加的面的默认值
+                        for (int j = 0; j < primOffsetForAttribs; j++)
+                            destAttr.Values.Add(attr.DefaultValue);
+                    }
+                    destAttr.Values.AddRange(attr.Values);
+                }
+
+                // B10 fix: 复制源几何体的面分组（索引需要加上primOffset）
+                foreach (var kvp in source.PrimGroups)
+                {
+                    if (!result.PrimGroups.ContainsKey(kvp.Key))
+                        result.PrimGroups[kvp.Key] = new HashSet<int>();
+                    foreach (int idx in kvp.Value)
+                        result.PrimGroups[kvp.Key].Add(idx + primOffsetForAttribs);
+                }
+
                 // 为这个副本的所有点写入 @copynum 属性
                 var copynumAttr = result.PointAttribs.GetAttribute("copynum");
                 if (copynumAttr == null)
                 {
                     copynumAttr = result.PointAttribs.CreateAttribute("copynum", AttribType.Float, 0f);
-                    for (int j = 0; j < vertexOffset; j++)
+                    for (int j = 0; j < pointOffsetForAttribs; j++)
                         copynumAttr.Values.Add(0f);
                 }
                 for (int i = 0; i < source.Points.Count; i++)
@@ -164,13 +211,22 @@ namespace PCGToolkit.Nodes.Distribute
                         {
                             pointAttr = result.PointAttribs.CreateAttribute(attrName, attr.Type, attr.DefaultValue);
                             // 补齐前面已添加的点的默认值
-                            for (int j = 0; j < vertexOffset; j++)
+                            for (int j = 0; j < pointOffsetForAttribs; j++)
                                 pointAttr.Values.Add(attr.DefaultValue);
                         }
                         // 为这个副本的每个点写入对应目标点的属性值
                         for (int i = 0; i < source.Points.Count; i++)
                             pointAttr.Values.Add(attr.Values[pointIdx]);
                     }
+                }
+
+                // B10 fix: 复制源几何体的点分组（索引需要加上vertexOffset）
+                foreach (var kvp in source.PointGroups)
+                {
+                    if (!result.PointGroups.ContainsKey(kvp.Key))
+                        result.PointGroups[kvp.Key] = new HashSet<int>();
+                    foreach (int idx in kvp.Value)
+                        result.PointGroups[kvp.Key].Add(idx + vertexOffset);
                 }
             }
 

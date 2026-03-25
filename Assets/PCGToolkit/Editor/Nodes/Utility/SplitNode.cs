@@ -71,9 +71,14 @@ namespace PCGToolkit.Nodes.Utility
             var result = new PCGGeometry();
             if (primIndices.Count == 0) return result;
 
+            // B14 fix: 复制DetailAttribs
+            result.DetailAttribs = source.DetailAttribs.Clone();
+
             // 收集引用的点
             var usedPoints = new HashSet<int>();
-            foreach (int pi in primIndices)
+            var sortedPrimIndices = new List<int>(primIndices);
+            sortedPrimIndices.Sort();
+            foreach (int pi in sortedPrimIndices)
             {
                 if (pi < source.Primitives.Count)
                     foreach (int vi in source.Primitives[pi])
@@ -82,14 +87,24 @@ namespace PCGToolkit.Nodes.Utility
 
             // 建立旧 -> 新索引映射
             var indexMap = new Dictionary<int, int>();
-            foreach (int oldIdx in usedPoints.OrderBy(x => x))
+            var sortedUsedPoints = new List<int>(usedPoints);
+            sortedUsedPoints.Sort();
+            foreach (int oldIdx in sortedUsedPoints)
             {
                 indexMap[oldIdx] = result.Points.Count;
                 result.Points.Add(source.Points[oldIdx]);
             }
 
+            // 建立旧面索引到新面索引的映射
+            var primIndexMap = new Dictionary<int, int>();
+            for (int i = 0; i < sortedPrimIndices.Count; i++)
+            {
+                primIndexMap[sortedPrimIndices[i]] = i;
+            }
+
             // 复制面
-            foreach (int pi in primIndices)
+            int newPrimIdx = 0;
+            foreach (int pi in sortedPrimIndices)
             {
                 if (pi >= source.Primitives.Count) continue;
                 var prim = source.Primitives[pi];
@@ -97,19 +112,59 @@ namespace PCGToolkit.Nodes.Utility
                 for (int i = 0; i < prim.Length; i++)
                     newPrim[i] = indexMap[prim[i]];
                 result.Primitives.Add(newPrim);
+                newPrimIdx++;
             }
 
-            // 复制点属性
+            // B14 fix: 复制点属性 - 按indexMap重建
             foreach (var attr in source.PointAttribs.GetAllAttributes())
             {
                 var newAttr = result.PointAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
-                foreach (int oldIdx in usedPoints.OrderBy(x => x))
+                foreach (int oldIdx in sortedUsedPoints)
                 {
                     if (oldIdx < attr.Values.Count)
                         newAttr.Values.Add(attr.Values[oldIdx]);
                     else
                         newAttr.Values.Add(attr.DefaultValue);
                 }
+            }
+
+            // B14 fix: 复制面属性 - 按primIndexMap重建
+            foreach (var attr in source.PrimAttribs.GetAllAttributes())
+            {
+                var newAttr = result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                foreach (int oldIdx in sortedPrimIndices)
+                {
+                    if (oldIdx < attr.Values.Count)
+                        newAttr.Values.Add(attr.Values[oldIdx]);
+                    else
+                        newAttr.Values.Add(attr.DefaultValue);
+                }
+            }
+
+            // B14 fix: 复制点分组 - 使用indexMap更新索引
+            foreach (var kvp in source.PointGroups)
+            {
+                var newGroup = new HashSet<int>();
+                foreach (int idx in kvp.Value)
+                {
+                    if (indexMap.TryGetValue(idx, out int newIdx))
+                        newGroup.Add(newIdx);
+                }
+                if (newGroup.Count > 0)
+                    result.PointGroups[kvp.Key] = newGroup;
+            }
+
+            // B14 fix: 复制面分组 - 使用primIndexMap更新索引
+            foreach (var kvp in source.PrimGroups)
+            {
+                var newGroup = new HashSet<int>();
+                foreach (int idx in kvp.Value)
+                {
+                    if (primIndexMap.TryGetValue(idx, out int newIdx))
+                        newGroup.Add(newIdx);
+                }
+                if (newGroup.Count > 0)
+                    result.PrimGroups[kvp.Key] = newGroup;
             }
 
             return result;

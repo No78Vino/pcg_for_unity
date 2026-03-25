@@ -42,6 +42,11 @@ namespace PCGToolkit.Graph
         public string ErrorMessage;
 
         /// <summary>
+        /// A3: 验证警告列表
+        /// </summary>
+        public List<string> Warnings = new List<string>();
+
+        /// <summary>
         /// 便捷属性：获取第一个 Geometry 输出
         /// </summary>
         public PCGGeometry OutputGeometry
@@ -388,6 +393,21 @@ namespace PCGToolkit.Graph
                     foreach (var kvp in outputs)
                     {
                         _context.CacheOutput($"{nodeData.NodeId}.{kvp.Key}", kvp.Value);
+                    }
+
+                    // A3: 自动验证输出的几何体
+                    foreach (var kvp in outputs)
+                    {
+                        if (kvp.Value != null)
+                        {
+                            var validationMessages = GeometryValidator.Validate(kvp.Value);
+                            foreach (var msg in validationMessages)
+                            {
+                                var warning = $"[PCGValidator] Node {nodeData.NodeType} ({nodeData.NodeId}): {msg.Message}";
+                                result.Warnings.Add(warning);
+                                Debug.LogWarning(warning);
+                            }
+                        }
                     }
 
                     // Write to disk cache

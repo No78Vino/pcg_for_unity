@@ -1,5 +1,7 @@
-﻿using UnityEditor;  
+﻿using System.Linq;
+using UnityEditor;  
 using UnityEngine;  
+using UnityEngine.UIElements;
 using PCGToolkit.Core;  
   
 namespace PCGToolkit.Graph  
@@ -19,7 +21,11 @@ namespace PCGToolkit.Graph
         private float _zoom = 3f;  
         private string _nodeDisplayName = "";  
         private string _nodeId = "";  
-        private double _executionTimeMs;  
+        private double _executionTimeMs;
+
+        // A4: Geometry Debug 可折叠面板
+        private bool _showDataPanel = false;
+        private Vector2 _dataPanelScrollPos = Vector2.zero;
   
         public static PCGNodePreviewWindow Open()  
         {  
@@ -137,7 +143,10 @@ namespace PCGToolkit.Graph
             GUILayout.Label(_nodeDisplayName, EditorStyles.boldLabel);  
             GUILayout.FlexibleSpace();  
             if (_executionTimeMs > 0)  
-                GUILayout.Label($"{_executionTimeMs:F2}ms", EditorStyles.miniLabel);  
+                GUILayout.Label($"{_executionTimeMs:F2}ms", EditorStyles.miniLabel);
+
+            // A4: Data Panel 切换按钮
+            _showDataPanel = GUILayout.Toggle(_showDataPanel, "Data", EditorStyles.toolbarButton);
             EditorGUILayout.EndHorizontal();  
   
             // 几何体信息  
@@ -160,6 +169,16 @@ namespace PCGToolkit.Graph
             if (GUILayout.Toggle(_renderMode == PreviewRenderMode.ShadedWireframe, "Shaded+Wire", EditorStyles.toolbarButton))
                 _renderMode = PreviewRenderMode.ShadedWireframe;
             EditorGUILayout.EndHorizontal();
+  
+            // A4: Geometry Debug 数据面板（可折叠）
+            if (_showDataPanel)
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                _dataPanelScrollPos = EditorGUILayout.BeginScrollView(_dataPanelScrollPos, GUILayout.Height(200));
+                DrawGeometryDebugPanel();
+                EditorGUILayout.EndScrollView();
+                EditorGUILayout.EndVertical();
+            }
   
             // 预览区域  
             var previewRect = GUILayoutUtility.GetRect(  
@@ -209,7 +228,115 @@ namespace PCGToolkit.Graph
   
             var resultTexture = _previewRenderUtility.EndPreview();  
             GUI.DrawTexture(previewRect, resultTexture, ScaleMode.StretchToFill, false);  
-        }  
+        }
+
+        /// <summary>
+        /// A4: 绘制Geometry Debug面板（复用Inspector中的逻辑）
+        /// </summary>
+        private void DrawGeometryDebugPanel()
+        {
+            if (_geometry == null)
+            {
+                EditorGUILayout.LabelField("Geometry: null");
+                return;
+            }
+
+            // Topology
+            EditorGUILayout.LabelField("Topology", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            EditorGUILayout.LabelField($"Points: {_geometry.Points.Count}");
+            EditorGUILayout.LabelField($"Primitives: {_geometry.Primitives.Count}");
+            EditorGUILayout.LabelField($"Edges: {_geometry.Edges.Count}");
+            int totalVerts = 0;
+            foreach (var prim in _geometry.Primitives) totalVerts += prim.Length;
+            EditorGUILayout.LabelField($"Total Vertices: {totalVerts}");
+            EditorGUI.indentLevel--;
+
+            // Point Attributes
+            DrawAttribSection("Point Attributes", _geometry.PointAttribs, _geometry.Points.Count);
+
+            // Vertex Attributes
+            DrawAttribSection("Vertex Attributes", _geometry.VertexAttribs, totalVerts);
+
+            // Primitive Attributes
+            DrawAttribSection("Primitive Attributes", _geometry.PrimAttribs, _geometry.Primitives.Count);
+
+            // Detail Attributes
+            DrawAttribSection("Detail Attributes", _geometry.DetailAttribs, 1);
+
+            // Point Groups
+            DrawGroupsSection("Point Groups", _geometry.PointGroups);
+
+            // Prim Groups
+            DrawGroupsSection("Prim Groups", _geometry.PrimGroups);
+
+            // Validation
+            EditorGUILayout.LabelField("Validation", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            var messages = GeometryValidator.Validate(_geometry);
+            if (messages.Count == 0)
+            {
+                EditorGUILayout.LabelField("No issues found", new GUIStyle(EditorStyles.label) { normal = { textColor = new Color(0.3f, 0.9f, 0.3f) } });
+            }
+            else
+            {
+                foreach (var msg in messages)
+                {
+                    var color = msg.Severity == GeometryValidator.Severity.Error
+                        ? new Color(1f, 0.3f, 0.3f)
+                        : new Color(1f, 0.9f, 0.3f);
+                    var prefix = msg.Severity == GeometryValidator.Severity.Error ? "[Error]" : "[Warning]";
+                    EditorGUILayout.LabelField($"{prefix} {msg.Message}",
+                        new GUIStyle(EditorStyles.label) { normal = { textColor = color }, fontSize = 9 });
+                }
+            }
+            EditorGUI.indentLevel--;
+        }
+
+        private void DrawAttribSection(string title, AttributeStore attribStore, int expectedCount)
+        {
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+
+            var attrs = attribStore.GetAllAttributes().ToList();
+            if (attrs.Count == 0)
+            {
+                EditorGUILayout.LabelField("(none)");
+            }
+            else
+            {
+                foreach (var attr in attrs)
+                {
+                    bool hasError = attr.Values.Count != expectedCount;
+                    var color = hasError
+                        ? new Color(1f, 0.3f, 0.3f)
+                        : new Color(0.7f, 0.7f, 0.7f);
+                    EditorGUILayout.LabelField($"{attr.Name}: {attr.Type} [{attr.Values.Count}/{expectedCount}]",
+                        new GUIStyle(EditorStyles.label) { normal = { textColor = color }, fontSize = 9 });
+                }
+            }
+            EditorGUI.indentLevel--;
+        }
+
+        private void DrawGroupsSection(string title, Dictionary<string, HashSet<int>> groups)
+        {
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+
+            if (groups.Count == 0)
+            {
+                EditorGUILayout.LabelField("(none)");
+            }
+            else
+            {
+                foreach (var kvp in groups)
+                {
+                    EditorGUILayout.LabelField($"{kvp.Key}: {kvp.Value.Count} elements",
+                        new GUIStyle(EditorStyles.label) { fontSize = 9 });
+                }
+            }
+            EditorGUI.indentLevel--;
+        }
   
         private void HandleInput(Rect previewRect)  
         {  

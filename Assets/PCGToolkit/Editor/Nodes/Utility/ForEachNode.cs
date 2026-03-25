@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PCGToolkit.Core;
 using PCGToolkit.Graph;
 using UnityEngine;
@@ -227,10 +228,14 @@ namespace PCGToolkit.Nodes.Utility
         {
             var result = new PCGGeometry();
             int pointOffset = 0;
+            int primOffset = 0;
 
             foreach (var piece in pieces)
             {
                 if (piece == null || piece.Points.Count == 0) continue;
+
+                int piecePointCount = piece.Points.Count;
+                int piecePrimCount = piece.Primitives.Count;
 
                 result.Points.AddRange(piece.Points);
                 foreach (var prim in piece.Primitives)
@@ -242,8 +247,10 @@ namespace PCGToolkit.Nodes.Utility
                 }
 
                 // 合并点属性
+                var processedPointAttrNames = new HashSet<string>();
                 foreach (var attr in piece.PointAttribs.GetAllAttributes())
                 {
+                    processedPointAttrNames.Add(attr.Name);
                     var destAttr = result.PointAttribs.GetAttribute(attr.Name);
                     if (destAttr == null)
                     {
@@ -252,6 +259,39 @@ namespace PCGToolkit.Nodes.Utility
                             destAttr.Values.Add(destAttr.DefaultValue);
                     }
                     destAttr.Values.AddRange(attr.Values);
+                }
+                // 补齐dest中已有但piece中没有的点属性
+                foreach (var destAttr in result.PointAttribs.GetAllAttributes())
+                {
+                    if (!processedPointAttrNames.Contains(destAttr.Name))
+                    {
+                        for (int j = 0; j < piecePointCount; j++)
+                            destAttr.Values.Add(destAttr.DefaultValue);
+                    }
+                }
+
+                // B13-1 fix: 合并面属性
+                var processedPrimAttrNames = new HashSet<string>();
+                foreach (var attr in piece.PrimAttribs.GetAllAttributes())
+                {
+                    processedPrimAttrNames.Add(attr.Name);
+                    var destAttr = result.PrimAttribs.GetAttribute(attr.Name);
+                    if (destAttr == null)
+                    {
+                        destAttr = result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                        for (int j = 0; j < primOffset; j++)
+                            destAttr.Values.Add(destAttr.DefaultValue);
+                    }
+                    destAttr.Values.AddRange(attr.Values);
+                }
+                // 补齐dest中已有但piece中没有的面属性
+                foreach (var destAttr in result.PrimAttribs.GetAllAttributes())
+                {
+                    if (!processedPrimAttrNames.Contains(destAttr.Name))
+                    {
+                        for (int j = 0; j < piecePrimCount; j++)
+                            destAttr.Values.Add(destAttr.DefaultValue);
+                    }
                 }
 
                 // 合并点分组
@@ -264,7 +304,6 @@ namespace PCGToolkit.Nodes.Utility
                 }
 
                 // 合并面分组
-                int primOffset = result.Primitives.Count - piece.Primitives.Count;
                 foreach (var grp in piece.PrimGroups)
                 {
                     if (!result.PrimGroups.ContainsKey(grp.Key))
@@ -273,7 +312,8 @@ namespace PCGToolkit.Nodes.Utility
                         result.PrimGroups[grp.Key].Add(idx + primOffset);
                 }
 
-                pointOffset += piece.Points.Count;
+                pointOffset += piecePointCount;
+                primOffset += piecePrimCount;
             }
 
             return result;

@@ -28,7 +28,8 @@ namespace PCGToolkit.Graph
         private ScrollView _paramScrollView;
         private VisualElement _statsContainer;
         private Label _executionTimeLabel;
-        private Label _geometryStatsLabel;
+        private VisualElement _geometryDebugContainer;
+        private PCGGeometry _lastGeometry;
         
         // 参数控件映射（用于双向同步）
         private Dictionary<string, VisualElement> _paramWidgets = new();
@@ -95,20 +96,237 @@ namespace PCGToolkit.Graph
         /// </summary>
         public void UpdateExecutionInfo(double elapsedMs, PCGGeometry geometry)
         {
+            _lastGeometry = geometry;
+
             if (_executionTimeLabel != null)
                 _executionTimeLabel.text = $"Execution: {elapsedMs:F2}ms";
-            
-            if (_geometryStatsLabel != null && geometry != null)
+
+            if (_geometryDebugContainer != null)
             {
-                _geometryStatsLabel.text = 
-                    $"Points: {geometry.Points.Count}\n" +
-                    $"Primitives: {geometry.Primitives.Count}\n" +
-                    $"Edges: {geometry.Edges.Count}\n" +
-                    $"Point Attribs: {string.Join(", ", geometry.PointAttribs.GetAttributeNames())}\n" +
-                    $"Prim Attribs: {string.Join(", ", geometry.PrimAttribs.GetAttributeNames())}\n" +
-                    $"Point Groups: {string.Join(", ", geometry.PointGroups.Keys)}\n" +
-                    $"Prim Groups: {string.Join(", ", geometry.PrimGroups.Keys)}";
+                BuildGeometryDebugPanel(geometry);
             }
+        }
+
+        /// <summary>
+        /// A2: 构建Geometry Debug面板
+        /// </summary>
+        private void BuildGeometryDebugPanel(PCGGeometry geo)
+        {
+            _geometryDebugContainer.Clear();
+
+            if (geo == null)
+            {
+                _geometryDebugContainer.Add(new Label("Geometry: null")
+                {
+                    style = { fontSize = 10, color = new StyleColor(new Color(0.7f, 0.7f, 0.7f)) }
+                });
+                return;
+            }
+
+            // Topology 折叠面板
+            var topologyFoldout = new Foldout { text = "Topology", value = true };
+            topologyFoldout.style.marginBottom = 4;
+            topologyFoldout.Add(new Label($"Points: {geo.Points.Count}")
+                { style = { fontSize = 10, color = new StyleColor(new Color(0.7f, 0.7f, 0.7f)) } });
+            topologyFoldout.Add(new Label($"Primitives: {geo.Primitives.Count}")
+                { style = { fontSize = 10, color = new StyleColor(new Color(0.7f, 0.7f, 0.7f)) } });
+            topologyFoldout.Add(new Label($"Edges: {geo.Edges.Count}")
+                { style = { fontSize = 10, color = new StyleColor(new Color(0.7f, 0.7f, 0.7f)) } });
+
+            int totalVerts = 0;
+            foreach (var prim in geo.Primitives) totalVerts += prim.Length;
+            topologyFoldout.Add(new Label($"Total Vertices: {totalVerts}")
+                { style = { fontSize = 10, color = new StyleColor(new Color(0.7f, 0.7f, 0.7f)) } });
+            _geometryDebugContainer.Add(topologyFoldout);
+
+            // Point Attributes 折叠面板
+            BuildAttribFoldout(_geometryDebugContainer, "Point Attributes",
+                geo.PointAttribs, geo.Points.Count, isError: false);
+
+            // Vertex Attributes 折叠面板
+            BuildAttribFoldout(_geometryDebugContainer, "Vertex Attributes",
+                geo.VertexAttribs, totalVerts, isError: false);
+
+            // Primitive Attributes 折叠面板
+            BuildAttribFoldout(_geometryDebugContainer, "Primitive Attributes",
+                geo.PrimAttribs, geo.Primitives.Count, isError: true);
+
+            // Detail Attributes 折叠面板
+            BuildAttribFoldout(_geometryDebugContainer, "Detail Attributes",
+                geo.DetailAttribs, 1, isError: true);
+
+            // Point Groups 折叠面板
+            BuildGroupsFoldout(_geometryDebugContainer, "Point Groups",
+                geo.PointGroups, isError: false);
+
+            // Prim Groups 折叠面板
+            BuildGroupsFoldout(_geometryDebugContainer, "Prim Groups",
+                geo.PrimGroups, isError: true);
+
+            // Validation 折叠面板
+            BuildValidationFoldout(_geometryDebugContainer, geo);
+        }
+
+        private void BuildAttribFoldout(VisualElement parent, string title,
+            AttributeStore attribStore, int expectedCount, bool isError)
+        {
+            var foldout = new Foldout { text = title, value = false };
+            foldout.style.marginBottom = 4;
+
+            var attrs = attribStore.GetAllAttributes();
+            if (!attrs.Any())
+            {
+                foldout.Add(new Label("(none)")
+                {
+                    style = { fontSize = 10, color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)) }
+                });
+            }
+            else
+            {
+                foreach (var attr in attrs)
+                {
+                    bool hasError = attr.Values.Count != expectedCount;
+                    var attrColor = hasError
+                        ? new StyleColor(new Color(1f, 0.3f, 0.3f))
+                        : new StyleColor(new Color(0.7f, 0.7f, 0.7f));
+
+                    var attrRow = new VisualElement
+                    {
+                        style = { flexDirection = FlexDirection.Row, marginBottom = 2 }
+                    };
+
+                    var nameLabel = new Label($"{attr.Name}:")
+                    {
+                        style = { fontSize = 10, color = attrColor, width = 80 }
+                    };
+                    attrRow.Add(nameLabel);
+
+                    var countLabel = new Label($"{attr.Type} [{attr.Values.Count}/{expectedCount}]")
+                    {
+                        style = { fontSize = 10, color = attrColor }
+                    };
+                    attrRow.Add(countLabel);
+
+                    foldout.Add(attrRow);
+
+                    // 显示前20条Values的具体值（可展开）
+                    if (attr.Values.Count > 0)
+                    {
+                        var valuesFoldout = new Foldout
+                        {
+                            text = $"Values ({System.Math.Min(attr.Values.Count, 20)})",
+                            value = false
+                        };
+                        valuesFoldout.style.marginLeft = 10;
+
+                        int displayCount = System.Math.Min(attr.Values.Count, 20);
+                        for (int i = 0; i < displayCount; i++)
+                        {
+                            var valLabel = new Label($"[{i}]: {TruncateValue(attr.Values[i])}")
+                            {
+                                style = { fontSize = 9, color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)) }
+                            };
+                            valuesFoldout.Add(valLabel);
+                        }
+                        if (attr.Values.Count > 20)
+                        {
+                            valuesFoldout.Add(new Label($"... and {attr.Values.Count - 20} more")
+                            {
+                                style = { fontSize = 9, color = new StyleColor(new Color(0.4f, 0.4f, 0.4f)) }
+                            });
+                        }
+                        foldout.Add(valuesFoldout);
+                    }
+                }
+            }
+
+            parent.Add(foldout);
+        }
+
+        private void BuildGroupsFoldout(VisualElement parent, string title,
+            Dictionary<string, HashSet<int>> groups, bool isError)
+        {
+            var foldout = new Foldout { text = title, value = false };
+            foldout.style.marginBottom = 4;
+
+            if (groups.Count == 0)
+            {
+                foldout.Add(new Label("(none)")
+                {
+                    style = { fontSize = 10, color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)) }
+                });
+            }
+            else
+            {
+                foreach (var kvp in groups)
+                {
+                    var groupFoldout = new Foldout
+                    {
+                        text = $"{kvp.Key} ({kvp.Value.Count})",
+                        value = false
+                    };
+
+                    // 显示前50个索引
+                    var indicesList = new List<int>(kvp.Value);
+                    indicesList.Sort();
+                    int displayCount = System.Math.Min(indicesList.Count, 50);
+                    var indicesStr = string.Join(", ",
+                        indicesList.Take(displayCount).Select(i => i.ToString()));
+                    if (indicesList.Count > 50)
+                        indicesStr += ", ...";
+
+                    groupFoldout.Add(new Label(indicesStr)
+                    {
+                        style = { fontSize = 9, color = new StyleColor(new Color(0.5f, 0.5f, 0.5f)), whiteSpace = WhiteSpace.Normal }
+                    });
+
+                    foldout.Add(groupFoldout);
+                }
+            }
+
+            parent.Add(foldout);
+        }
+
+        private void BuildValidationFoldout(VisualElement parent, PCGGeometry geo)
+        {
+            var foldout = new Foldout { text = "Validation", value = false };
+            foldout.style.marginBottom = 4;
+
+            var messages = GeometryValidator.Validate(geo);
+
+            if (messages.Count == 0)
+            {
+                foldout.Add(new Label("No issues found")
+                {
+                    style = { fontSize = 10, color = new StyleColor(new Color(0.3f, 0.9f, 0.3f)) }
+                });
+            }
+            else
+            {
+                foreach (var msg in messages)
+                {
+                    var color = msg.Severity == GeometryValidator.Severity.Error
+                        ? new StyleColor(new Color(1f, 0.3f, 0.3f))
+                        : new StyleColor(new Color(1f, 0.9f, 0.3f));
+
+                    var prefix = msg.Severity == GeometryValidator.Severity.Error ? "[Error]" : "[Warning]";
+                    foldout.Add(new Label($"{prefix} {msg.Message}")
+                    {
+                        style = { fontSize = 9, color = color, whiteSpace = WhiteSpace.Normal }
+                    });
+                }
+            }
+
+            parent.Add(foldout);
+        }
+
+        private string TruncateValue(object value)
+        {
+            if (value == null) return "null";
+            var str = value.ToString();
+            if (str.Length > 30)
+                return str.Substring(0, 30) + "...";
+            return str;
         }
 
         // ---- UI 构建 ----
@@ -200,32 +418,29 @@ namespace PCGToolkit.Graph
                 style = { fontSize = 10, color = new StyleColor(new Color(0.9f, 0.9f, 0.3f)) }
             };
             _statsContainer.Add(_executionTimeLabel);
-            
-            _geometryStatsLabel = new Label("")
+
+            // A2: Geometry Debug 可折叠面板
+            _geometryDebugContainer = new VisualElement
             {
-                style =
-                {
-                    fontSize = 10,
-                    color = new StyleColor(new Color(0.7f, 0.7f, 0.7f)),
-                    marginTop = 4,
-                    whiteSpace = WhiteSpace.Normal,
-                }
+                style = { marginTop = 4 }
             };
-            _statsContainer.Add(_geometryStatsLabel);
-            
+            _statsContainer.Add(_geometryDebugContainer);
+
             root.Add(_statsContainer);
         }
 
         private void ShowEmpty()
         {
             _currentNode = null;
+            _lastGeometry = null;
             _nodeNameLabel.text = "No Selection";
             _nodeCategoryLabel.text = "";
             _nodeDescLabel.text = "Select a node in the graph to inspect its parameters.";
             _paramContainer.Clear();
             _paramWidgets.Clear();
             _executionTimeLabel.text = "Execution: --";
-            _geometryStatsLabel.text = "";
+            if (_geometryDebugContainer != null)
+                _geometryDebugContainer.Clear();
         }
 
         private void RebuildForNode(PCGNodeVisual nodeVisual)

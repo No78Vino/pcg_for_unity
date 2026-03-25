@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PCGToolkit.Core;
 using UnityEngine;
 
@@ -33,8 +34,9 @@ namespace PCGToolkit.Nodes.Create
         {
             var result = new PCGGeometry();
             int pointOffset = 0;
-            int primOffset = 0;    // <-- 新增：追踪已累积的面数
-            
+            int primOffset = 0;
+            int vertexOffset = 0;
+
             foreach (var kvp in inputGeometries)
             {
                 var geo = kvp.Value;
@@ -62,8 +64,16 @@ namespace PCGToolkit.Nodes.Create
                 }
 
                 // 合并属性（简化处理，按索引追加）
-                MergeAttributes(result.PointAttribs, geo.PointAttribs, vertexCount, pointOffset);  
-                MergeAttributes(result.PrimAttribs, geo.PrimAttribs, geo.Primitives.Count, primOffset);  
+                MergeAttributes(result.PointAttribs, geo.PointAttribs, vertexCount, pointOffset);
+                MergeAttributes(result.PrimAttribs, geo.PrimAttribs, geo.Primitives.Count, primOffset);
+
+                // 合并顶点属性（按顶点总数追加）
+                int totalVertCount = 0;
+                foreach (var prim in geo.Primitives) totalVertCount += prim.Length;
+                MergeAttributes(result.VertexAttribs, geo.VertexAttribs, totalVertCount, vertexOffset);
+
+                // 合并Detail属性（取第一个非空输入的值）
+                MergeDetailAttribs(result, geo);
 
                 // 合并分组
                 foreach (var group in geo.PointGroups)
@@ -83,27 +93,63 @@ namespace PCGToolkit.Nodes.Create
                 }
 
                 pointOffset += vertexCount;
-                primOffset += geo.Primitives.Count;  // <-- 新增：累加当前几何体的面数  
+                primOffset += geo.Primitives.Count;
+                vertexOffset += totalVertCount;
             }
 
             return SingleOutput("geometry", result);
         }
 
-        private void MergeAttributes(AttributeStore dest, AttributeStore src, int elementCount, int existingCount)  
-        {  
-            foreach (var attr in src.GetAllAttributes())  
-            {  
-                var destAttr = dest.GetAttribute(attr.Name);  
-                if (destAttr == null)  
-                {  
-                    destAttr = dest.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);  
-                }  
-                while (destAttr.Values.Count < existingCount)  
-                {  
-                    destAttr.Values.Add(destAttr.DefaultValue);  
-                }  
-                destAttr.Values.AddRange(attr.Values);  
-            }  
+        private void MergeAttributes(AttributeStore dest, AttributeStore src, int elementCount, int existingCount)
+        {
+            // 记录src中已处理的属性名，用于后续补齐
+            var processedNames = new HashSet<string>();
+
+            foreach (var attr in src.GetAllAttributes())
+            {
+                processedNames.Add(attr.Name);
+                var destAttr = dest.GetAttribute(attr.Name);
+                if (destAttr == null)
+                {
+                    destAttr = dest.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                }
+                while (destAttr.Values.Count < existingCount)
+                {
+                    destAttr.Values.Add(destAttr.DefaultValue);
+                }
+                destAttr.Values.AddRange(attr.Values);
+            }
+
+            // B1-3 fix: 补齐dest中已有但src中没有的属性
+            foreach (var destAttr in dest.GetAllAttributes())
+            {
+                if (!processedNames.Contains(destAttr.Name))
+                {
+                    for (int i = 0; i < elementCount; i++)
+                        destAttr.Values.Add(destAttr.DefaultValue);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 合并Detail属性。取第一个非空输入的值。
+        /// </summary>
+        private void MergeDetailAttribs(PCGGeometry result, PCGGeometry geo)
+        {
+            foreach (var attr in geo.DetailAttribs.GetAllAttributes())
+            {
+                var destAttr = result.DetailAttribs.GetAttribute(attr.Name);
+                if (destAttr == null)
+                {
+                    destAttr = result.DetailAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                    // Detail属性只有一个值，取源的第一个
+                    if (attr.Values.Count > 0)
+                        destAttr.Values.Add(attr.Values[0]);
+                    else
+                        destAttr.Values.Add(attr.DefaultValue);
+                }
+                // 如果dest已经有该属性，保留原有值（第一个输入的值优先）
+            }
         }
     }
 }

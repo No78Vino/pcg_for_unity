@@ -93,21 +93,53 @@ namespace PCGToolkit.Nodes.Geometry
             var result = new PCGGeometry();
 
             // 第一步：复制所有原始顶点到 result（保持 1:1 索引映射）
-            for (int i = 0; i < geo.Points.Count; i++)
+            int originalPointCount = geo.Points.Count;
+            for (int i = 0; i < originalPointCount; i++)
             {
                 result.Points.Add(geo.Points[i]);
             }
 
+            // B2 fix: 复制原始点的PointAttribs
+            result.PointAttribs = geo.PointAttribs.Clone();
+
             // 第二步：添加未挤出的原始面
-            for (int i = 0; i < geo.Primitives.Count; i++)
+            int originalPrimCount = geo.Primitives.Count;
+            var nonExtrudedIndices = new List<int>();
+            for (int i = 0; i < originalPrimCount; i++)
             {
                 if (!primsToExtrude.Contains(i))
                 {
                     result.Primitives.Add((int[])geo.Primitives[i].Clone());
+                    nonExtrudedIndices.Add(i);
+                }
+            }
+            foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+            {
+                var newAttr = result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                foreach (int idx in nonExtrudedIndices)
+                {
+                    if (idx < attr.Values.Count)
+                        newAttr.Values.Add(attr.Values[idx]);
+                    else
+                        newAttr.Values.Add(attr.DefaultValue);
                 }
             }
 
+            // B2 fix: 复制未挤出面的PrimGroups
+            foreach (var kvp in geo.PrimGroups)
+            {
+                var newGroup = new HashSet<int>();
+                foreach (int idx in kvp.Value)
+                {
+                    if (nonExtrudedIndices.Contains(idx))
+                        newGroup.Add(nonExtrudedIndices.IndexOf(idx));
+                }
+                if (newGroup.Count > 0)
+                    result.PrimGroups[kvp.Key] = newGroup;
+            }
+
             // 第三步：处理挤出面
+            int newPointCount = originalPointCount; // 追踪新添加的点数
             foreach (int primIdx in primsToExtrude)
             {
                 var prim = geo.Primitives[primIdx];
@@ -139,6 +171,7 @@ namespace PCGToolkit.Nodes.Geometry
                         int newIdx = result.Points.Count;
                         result.Points.Add(newPos);
                         layerVertices[i] = newIdx;
+                        newPointCount++;
                     }
 
                     if (outputSide)
@@ -168,6 +201,22 @@ namespace PCGToolkit.Nodes.Geometry
                 }
             }
 
+            // B2 fix: 为挤出的新顶点添加属性（使用原始点的属性值填充）
+            // 新顶点数量 = originalPointCount + extruded points
+            int totalExtrudedVertices = result.Points.Count - originalPointCount;
+            if (totalExtrudedVertices > 0)
+            {
+                foreach (var attr in result.PointAttribs.GetAllAttributes())
+                {
+                    // 对于新顶点，填充与原始点相同数量的默认值
+                    for (int i = 0; i < totalExtrudedVertices; i++)
+                        attr.Values.Add(attr.DefaultValue);
+                }
+            }
+
+            // B2 fix: 复制DetailAttribs
+            result.DetailAttribs = geo.DetailAttribs.Clone();
+
             return SingleOutput("geometry", result);
         }
 
@@ -181,15 +230,49 @@ namespace PCGToolkit.Nodes.Geometry
         {
             var result = new PCGGeometry();
 
+            int originalPointCount = geo.Points.Count;
             // 复制所有原始顶点到 result（保持 1:1 索引映射）
-            for (int i = 0; i < geo.Points.Count; i++)
+            for (int i = 0; i < originalPointCount; i++)
                 result.Points.Add(geo.Points[i]);
 
+            // B2 fix: 复制原始点的PointAttribs
+            result.PointAttribs = geo.PointAttribs.Clone();
+
             // 添加未挤出的面（直接使用原始索引，无需重映射）
+            var nonExtrudedIndices = new List<int>();
             for (int i = 0; i < geo.Primitives.Count; i++)
             {
                 if (!primsToExtrude.Contains(i))
+                {
                     result.Primitives.Add((int[])geo.Primitives[i].Clone());
+                    nonExtrudedIndices.Add(i);
+                }
+            }
+
+            // B2 fix: 复制未挤出面的PrimAttribs
+            foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+            {
+                var newAttr = result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                foreach (int idx in nonExtrudedIndices)
+                {
+                    if (idx < attr.Values.Count)
+                        newAttr.Values.Add(attr.Values[idx]);
+                    else
+                        newAttr.Values.Add(attr.DefaultValue);
+                }
+            }
+
+            // B2 fix: 复制未挤出面的PrimGroups
+            foreach (var kvp in geo.PrimGroups)
+            {
+                var newGroup = new HashSet<int>();
+                foreach (int idx in kvp.Value)
+                {
+                    if (nonExtrudedIndices.Contains(idx))
+                        newGroup.Add(nonExtrudedIndices.IndexOf(idx));
+                }
+                if (newGroup.Count > 0)
+                    result.PrimGroups[kvp.Key] = newGroup;
             }
 
             // 对每个挤出面创建独立的顶点副本并挤出
@@ -210,6 +293,16 @@ namespace PCGToolkit.Nodes.Geometry
                 {
                     baseVertices[i] = result.Points.Count;
                     result.Points.Add(geo.Points[prim[i]]);
+
+                    // B2 fix: 为新顶点复制属性（从对应的原始点复制）
+                    foreach (var attr in geo.PointAttribs.GetAllAttributes())
+                    {
+                        var destAttr = result.PointAttribs.GetAttribute(attr.Name);
+                        if (prim[i] < attr.Values.Count)
+                            destAttr.Values.Add(attr.Values[prim[i]]);
+                        else
+                            destAttr.Values.Add(attr.DefaultValue);
+                    }
                 }
 
                 int[] prevLayerVertices = baseVertices;
@@ -232,6 +325,16 @@ namespace PCGToolkit.Nodes.Geometry
                         int newIdx = result.Points.Count;
                         result.Points.Add(newPos);
                         layerVertices[i] = newIdx;
+
+                        // B2 fix: 为新顶点填充属性（使用原始点的属性值）
+                        foreach (var attr in geo.PointAttribs.GetAllAttributes())
+                        {
+                            var destAttr = result.PointAttribs.GetAttribute(attr.Name);
+                            if (prim[i] < attr.Values.Count)
+                                destAttr.Values.Add(attr.Values[prim[i]]);
+                            else
+                                destAttr.Values.Add(attr.DefaultValue);
+                        }
                     }
 
                     if (outputSide)
@@ -258,6 +361,9 @@ namespace PCGToolkit.Nodes.Geometry
                     result.Primitives.Add(frontPrim);
                 }
             }
+
+            // B2 fix: 复制DetailAttribs
+            result.DetailAttribs = geo.DetailAttribs.Clone();
 
             ctx.Log($"Extrude Individual: 挤出了 {primsToExtrude.Count} 个独立面");
             return SingleOutput("geometry", result);

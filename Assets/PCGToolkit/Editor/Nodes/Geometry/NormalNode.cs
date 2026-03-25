@@ -92,6 +92,7 @@ namespace PCGToolkit.Nodes.Geometry
                         if (!pointToFaces.TryGetValue(i, out var adjacentFaces))
                         {
                             vertexNormals[i] = Vector3.up;
+                            normalAttr.Values.Add(Vector3.up);
                             continue;
                         }
 
@@ -110,18 +111,19 @@ namespace PCGToolkit.Nodes.Geometry
                                     break;
                                 }
                             }
-                            float area = weightByArea ? CalculateFaceArea(geo, faceIdx) : 1f;
-                            avgNormal += faceNormals[faceIdx] * area;
+                            // B12-1 fix: 只有当该面与所有其他相邻面的夹角都在cusp angle范围内时，才将其法线累加
+                            if (withinCusp)
+                            {
+                                float area = weightByArea ? CalculateFaceArea(geo, faceIdx) : 1f;
+                                avgNormal += faceNormals[faceIdx] * area;
+                            }
                         }
 
-                        vertexNormals[i] = avgNormal.sqrMagnitude > 0.0001f
+                        Vector3 finalNormal = avgNormal.sqrMagnitude > 0.0001f
                             ? avgNormal.normalized
                             : Vector3.up;
-                    }
-
-                    for (int i = 0; i < geo.Points.Count; i++)
-                    {
-                        normalAttr.Values.Add(vertexNormals[i]);
+                        vertexNormals[i] = finalNormal;
+                        normalAttr.Values.Add(finalNormal);
                     }
                     break;
 

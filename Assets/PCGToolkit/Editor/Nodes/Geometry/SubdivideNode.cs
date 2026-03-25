@@ -35,14 +35,15 @@ namespace PCGToolkit.Nodes.Geometry
             Dictionary<string, PCGGeometry> inputGeometries,
             Dictionary<string, object> parameters)
         {
-            var geo = GetInputGeometry(inputGeometries, "input");
+            // B3-1 fix: Clone input geometry to avoid modifying upstream data
+            var geo = GetInputGeometry(inputGeometries, "input").Clone();
             int iterations = Mathf.Max(1, GetParamInt(parameters, "iterations", 1));
             string algorithm = GetParamString(parameters, "algorithm", "linear");
 
             for (int iter = 0; iter < iterations; iter++)
             {
-                geo = algorithm.ToLower() == "catmull-clark" 
-                    ? SubdivideCatmullClark(geo) 
+                geo = algorithm.ToLower() == "catmull-clark"
+                    ? SubdivideCatmullClark(geo)
                     : SubdivideLinear(geo);
             }
 
@@ -54,10 +55,14 @@ namespace PCGToolkit.Nodes.Geometry
             var result = new PCGGeometry();
 
             // 第一步：复制所有原始顶点
-            for (int i = 0; i < geo.Points.Count; i++)
+            int originalVertCount = geo.Points.Count;
+            for (int i = 0; i < originalVertCount; i++)
             {
                 result.Points.Add(geo.Points[i]);
             }
+
+            // B3-2 fix: 复制原始点的PointAttribs（前originalVertCount个点保持原值）
+            result.PointAttribs = geo.PointAttribs.Clone();
 
             // 第二步：为每条边创建共享中点（key 为排序后的顶点对）
             var edgeMidpoints = new Dictionary<(int, int), int>();
@@ -70,6 +75,23 @@ namespace PCGToolkit.Nodes.Geometry
                 midIdx = result.Points.Count;
                 result.Points.Add((geo.Points[a] + geo.Points[b]) * 0.5f);
                 edgeMidpoints[key] = midIdx;
+
+                // B3-2 fix: 为边中点插值属性
+                foreach (var attr in geo.PointAttribs.GetAllAttributes())
+                {
+                    var destAttr = result.PointAttribs.GetAttribute(attr.Name);
+                    if (a < attr.Values.Count && b < attr.Values.Count)
+                    {
+                        object interpolated = AttributeSyncHelper.InterpolateAttributeValue(
+                            attr.Values[a], attr.Values[b], 0.5f, attr.Type);
+                        destAttr.Values.Add(interpolated);
+                    }
+                    else
+                    {
+                        destAttr.Values.Add(attr.DefaultValue);
+                    }
+                }
+
                 return midIdx;
             }
 
@@ -88,6 +110,20 @@ namespace PCGToolkit.Nodes.Geometry
                     int center = result.Points.Count;
                     result.Points.Add((geo.Points[v0] + geo.Points[v1] +
                                        geo.Points[v2] + geo.Points[v3]) * 0.25f);
+
+                    // B3-2 fix: 为面中心点计算平均属性值
+                    foreach (var attr in geo.PointAttribs.GetAllAttributes())
+                    {
+                        var destAttr = result.PointAttribs.GetAttribute(attr.Name);
+                        var cornerValues = new List<object>();
+                        foreach (int vi in prim)
+                        {
+                            if (vi < attr.Values.Count)
+                                cornerValues.Add(attr.Values[vi]);
+                        }
+                        object averaged = AttributeSyncHelper.AverageAttributeValues(cornerValues, attr.Type);
+                        destAttr.Values.Add(averaged);
+                    }
 
                     result.Primitives.Add(new int[] { v0, m01, center, m30 });
                     result.Primitives.Add(new int[] { m01, v1, m12, center });
@@ -111,6 +147,50 @@ namespace PCGToolkit.Nodes.Geometry
                     // 其他多边形：直接复制（索引已经有效，因为原始顶点已在 result 中）
                     result.Primitives.Add((int[])prim.Clone());
                 }
+            }
+
+            // B3-2 fix: 复制DetailAttribs
+            result.DetailAttribs = geo.DetailAttribs.Clone();
+
+            // B3-2 fix: 复制PrimAttribs（子面继承原面的属性值）
+            // 首先初始化PrimAttribs的属性结构
+            foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+            {
+                result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+            }
+
+            int primIdx = 0;
+            foreach (var origPrim in geo.Primitives)
+            {
+                int numSubPrims = origPrim.Length == 4 ? 4 : (origPrim.Length == 3 ? 4 : 1);
+                foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+                {
+                    var destAttr = result.PrimAttribs.GetAttribute(attr.Name);
+                    object value = (primIdx < attr.Values.Count) ? attr.Values[primIdx] : attr.DefaultValue;
+                    for (int i = 0; i < numSubPrims; i++)
+                        destAttr.Values.Add(value);
+                }
+                primIdx++;
+            }
+
+            // B3-2 fix: 复制PrimGroups（子面继承原面的分组）
+            primIdx = 0;
+            int subPrimOffset = 0;
+            foreach (var origPrim in geo.Primitives)
+            {
+                int numSubPrims = origPrim.Length == 4 ? 4 : (origPrim.Length == 3 ? 4 : 1);
+                foreach (var kvp in geo.PrimGroups)
+                {
+                    if (!result.PrimGroups.ContainsKey(kvp.Key))
+                        result.PrimGroups[kvp.Key] = new HashSet<int>();
+                    if (kvp.Value.Contains(primIdx))
+                    {
+                        for (int i = 0; i < numSubPrims; i++)
+                            result.PrimGroups[kvp.Key].Add(subPrimOffset + i);
+                    }
+                }
+                primIdx++;
+                subPrimOffset += numSubPrims;
             }
 
             return result;
@@ -257,6 +337,10 @@ namespace PCGToolkit.Nodes.Geometry
             for (int vi = 0; vi < origVertCount; vi++)
                 result.Points.Add(newVertPositions[vi]);
 
+            // B3-2 fix: 复制原始点的PointAttribs（已修改顶点位置，属性需要特殊处理）
+            // 对于内部顶点，属性需要按Catmull-Clark规则插值
+            result.PointAttribs = geo.PointAttribs.Clone();
+
             // 添加面点 [origVertCount, origVertCount + origFaceCount)
             int facePointBase = result.Points.Count;
             for (int fi = 0; fi < origFaceCount; fi++)
@@ -269,6 +353,45 @@ namespace PCGToolkit.Nodes.Geometry
             {
                 edgePointIndex[kvp.Key] = result.Points.Count;
                 result.Points.Add(kvp.Value);
+            }
+
+            // B3-2 fix: 为边点插值属性
+            foreach (var kvp in edgePoints)
+            {
+                var ek = kvp.Key;
+                var faces = kvp.Value;
+                int v1 = ek.Item1;
+                int v2 = ek.Item2;
+                int faceIdx1 = faces.Count > 0 ? faces[0] : -1;
+                int faceIdx2 = faces.Count > 1 ? faces[1] : faceIdx1;
+
+                foreach (var attr in geo.PointAttribs.GetAllAttributes())
+                {
+                    var destAttr = result.PointAttribs.GetAttribute(attr.Name);
+                    // 边点属性插值：取两个顶点属性值的平均
+                    object val1 = v1 < attr.Values.Count ? attr.Values[v1] : attr.DefaultValue;
+                    object val2 = v2 < attr.Values.Count ? attr.Values[v2] : attr.DefaultValue;
+                    object interpolated = AttributeSyncHelper.InterpolateAttributeValue(val1, val2, 0.5f, attr.Type);
+                    destAttr.Values.Add(interpolated);
+                }
+            }
+
+            // B3-2 fix: 为面点计算平均属性值
+            for (int fi = 0; fi < origFaceCount; fi++)
+            {
+                var prim = geo.Primitives[fi];
+                foreach (var attr in geo.PointAttribs.GetAllAttributes())
+                {
+                    var destAttr = result.PointAttribs.GetAttribute(attr.Name);
+                    var cornerValues = new List<object>();
+                    foreach (int vi in prim)
+                    {
+                        if (vi < attr.Values.Count)
+                            cornerValues.Add(attr.Values[vi]);
+                    }
+                    object averaged = AttributeSyncHelper.AverageAttributeValues(cornerValues, attr.Type);
+                    destAttr.Values.Add(averaged);
+                }
             }
 
             // 为每个原始面生成子面
@@ -292,6 +415,48 @@ namespace PCGToolkit.Nodes.Geometry
                     // 子四边形: [原始顶点, 下一边的边点, 面点, 前一边的边点]
                     result.Primitives.Add(new int[] { v, epNext, fpIdx, epPrev });
                 }
+            }
+
+            // B3-2 fix: 复制DetailAttribs
+            result.DetailAttribs = geo.DetailAttribs.Clone();
+
+            // B3-2 fix: 复制PrimAttribs（子面继承原面的属性值）
+            int primIdx = 0;
+            int subPrimOffset = 0;
+            foreach (var origPrim in geo.Primitives)
+            {
+                int numSubPrims = origPrim.Length;
+                foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+                {
+                    if (!result.PrimAttribs.HasAttribute(attr.Name))
+                        result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                    var destAttr = result.PrimAttribs.GetAttribute(attr.Name);
+                    object value = (primIdx < attr.Values.Count) ? attr.Values[primIdx] : attr.DefaultValue;
+                    for (int i = 0; i < numSubPrims; i++)
+                        destAttr.Values.Add(value);
+                }
+                primIdx++;
+                subPrimOffset += numSubPrims;
+            }
+
+            // B3-2 fix: 复制PrimGroups（子面继承原面的分组）
+            primIdx = 0;
+            subPrimOffset = 0;
+            foreach (var origPrim in geo.Primitives)
+            {
+                int numSubPrims = origPrim.Length;
+                foreach (var kvp in geo.PrimGroups)
+                {
+                    if (!result.PrimGroups.ContainsKey(kvp.Key))
+                        result.PrimGroups[kvp.Key] = new HashSet<int>();
+                    if (kvp.Value.Contains(primIdx))
+                    {
+                        for (int i = 0; i < numSubPrims; i++)
+                            result.PrimGroups[kvp.Key].Add(subPrimOffset + i);
+                    }
+                }
+                primIdx++;
+                subPrimOffset += numSubPrims;
             }
 
             return result;

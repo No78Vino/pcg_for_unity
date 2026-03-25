@@ -48,21 +48,20 @@ namespace PCGToolkit.Nodes.Geometry
             }
 
             // 计算每个顶点到平面的有符号距离
-            // dist > 0: 在法线方向一侧
-            // dist < 0: 在法线反方向一侧
-            // dist = 0: 在平面上
             float[] distances = new float[geo.Points.Count];
             for (int i = 0; i < geo.Points.Count; i++)
             {
                 distances[i] = Vector3.Dot(geo.Points[i] - origin, normal);
             }
 
-            // 过滤面：保留所有顶点都在正确一侧的面
+            // 过滤面：记录保留的面索引（用于属性同步）
             var newPrims = new List<int[]>();
+            var keptPrimIndices = new List<int>();
             var usedPoints = new HashSet<int>();
 
-            foreach (var prim in geo.Primitives)
+            for (int primIdx = 0; primIdx < geo.Primitives.Count; primIdx++)
             {
+                var prim = geo.Primitives[primIdx];
                 bool keepPrim = true;
                 foreach (int idx in prim)
                 {
@@ -77,15 +76,18 @@ namespace PCGToolkit.Nodes.Geometry
                 if (keepPrim)
                 {
                     newPrims.Add((int[])prim.Clone());
+                    keptPrimIndices.Add(primIdx);
                     foreach (int idx in prim)
                         usedPoints.Add(idx);
                 }
             }
 
-            // 构建顶点映射
+            // 构建顶点映射（使用有序遍历确保确定性）
             var indexMap = new Dictionary<int, int>();
             var newPoints = new List<Vector3>();
-            foreach (int idx in usedPoints)
+            var sortedUsedPoints = new List<int>(usedPoints);
+            sortedUsedPoints.Sort();
+            foreach (int idx in sortedUsedPoints)
             {
                 indexMap[idx] = newPoints.Count;
                 newPoints.Add(geo.Points[idx]);
@@ -102,6 +104,78 @@ namespace PCGToolkit.Nodes.Geometry
 
             geo.Points = newPoints;
             geo.Primitives = newPrims;
+
+            // B5 fix: 同步PointAttribs - 按indexMap重建
+            var newPointAttribs = new AttributeStore();
+            foreach (var attr in geo.PointAttribs.GetAllAttributes())
+            {
+                var newAttr = newPointAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                foreach (int oldIdx in sortedUsedPoints)
+                {
+                    if (oldIdx < attr.Values.Count)
+                        newAttr.Values.Add(attr.Values[oldIdx]);
+                    else
+                        newAttr.Values.Add(attr.DefaultValue);
+                }
+            }
+            geo.PointAttribs = newPointAttribs;
+
+            // B5 fix: 同步PrimAttribs - 使用keptPrimIndices
+            var newPrimAttribs = new AttributeStore();
+            foreach (var attr in geo.PrimAttribs.GetAllAttributes())
+            {
+                var newAttr = newPrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                foreach (int oldIdx in keptPrimIndices)
+                {
+                    if (oldIdx < attr.Values.Count)
+                        newAttr.Values.Add(attr.Values[oldIdx]);
+                    else
+                        newAttr.Values.Add(attr.DefaultValue);
+                }
+            }
+            geo.PrimAttribs = newPrimAttribs;
+
+            // B5 fix: 同步PointGroups - 使用indexMap更新索引
+            var newPointGroups = new Dictionary<string, HashSet<int>>();
+            foreach (var kvp in geo.PointGroups)
+            {
+                var newGroup = new HashSet<int>();
+                foreach (var idx in kvp.Value)
+                {
+                    if (indexMap.TryGetValue(idx, out int newIdx))
+                    {
+                        newGroup.Add(newIdx);
+                    }
+                }
+                if (newGroup.Count > 0)
+                    newPointGroups[kvp.Key] = newGroup;
+            }
+            geo.PointGroups = newPointGroups;
+
+            // B5 fix: 同步PrimGroups - 使用keptPrimIndices建立映射
+            var newPrimGroups = new Dictionary<string, HashSet<int>>();
+            var primRemap = new Dictionary<int, int>();
+            for (int i = 0; i < keptPrimIndices.Count; i++)
+            {
+                primRemap[keptPrimIndices[i]] = i;
+            }
+            foreach (var kvp in geo.PrimGroups)
+            {
+                var newGroup = new HashSet<int>();
+                foreach (var idx in kvp.Value)
+                {
+                    if (primRemap.TryGetValue(idx, out int newIdx))
+                    {
+                        newGroup.Add(newIdx);
+                    }
+                }
+                if (newGroup.Count > 0)
+                    newPrimGroups[kvp.Key] = newGroup;
+            }
+            geo.PrimGroups = newPrimGroups;
+
+            // 清空Edges（拓扑已变化）
+            geo.Edges.Clear();
 
             return SingleOutput("geometry", geo);
         }

@@ -90,6 +90,38 @@ namespace PCGToolkit.Nodes.Geometry
                 edge[1] = oldToNew[edge[1]];
             }
 
+            // B4 fix: 同步PointAttribs - 重建属性值，只保留主点的属性
+            var newPointAttribs = new AttributeStore();
+            foreach (var attr in geo.PointAttribs.GetAllAttributes())
+            {
+                var newAttr = newPointAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                foreach (var kvp in oldToNew)
+                {
+                    if (kvp.Key == kvp.Value && kvp.Key < attr.Values.Count)
+                    {
+                        newAttr.Values.Add(attr.Values[kvp.Key]);
+                    }
+                }
+            }
+            geo.PointAttribs = newPointAttribs;
+
+            // B4 fix: 同步PointGroups - 更新索引
+            var newPointGroups = new Dictionary<string, HashSet<int>>();
+            foreach (var kvp in geo.PointGroups)
+            {
+                var newGroup = new HashSet<int>();
+                foreach (var idx in kvp.Value)
+                {
+                    if (oldToNew.TryGetValue(idx, out int newIdx))
+                    {
+                        newGroup.Add(newIdx);
+                    }
+                }
+                if (newGroup.Count > 0)
+                    newPointGroups[kvp.Key] = newGroup;
+            }
+            geo.PointGroups = newPointGroups;
+
             geo.Points = newPoints;
             return SingleOutput("geometry", geo);
         }

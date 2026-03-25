@@ -91,12 +91,25 @@ namespace PCGToolkit.Nodes.Geometry
                 }
             }
 
+            // B11 fix: 复制镜像几何体的PrimAttribs
+            mirrored.PrimAttribs = geo.PrimAttribs.Clone();
+
+            // B11 fix: 复制镜像几何体的PrimGroups和PointGroups
+            foreach (var kvp in geo.PrimGroups)
+                mirrored.PrimGroups[kvp.Key] = new HashSet<int>(kvp.Value);
+            foreach (var kvp in geo.PointGroups)
+                mirrored.PointGroups[kvp.Key] = new HashSet<int>(kvp.Value);
+
+            // B11 fix: 复制镜像几何体的DetailAttribs
+            mirrored.DetailAttribs = geo.DetailAttribs.Clone();
+
             if (!keepOriginal)
                 return SingleOutput("geometry", mirrored);
 
             // 合并原始 + 镜像
             var result = geo.Clone();
             int offset = result.Points.Count;
+            int primOffset = result.Primitives.Count;
             result.Points.AddRange(mirrored.Points);
 
             foreach (var prim in mirrored.Primitives)
@@ -118,6 +131,37 @@ namespace PCGToolkit.Nodes.Geometry
                         destAttr.Values.Add(destAttr.DefaultValue);
                 }
                 destAttr.Values.AddRange(attr.Values);
+            }
+
+            // B11 fix: 合并镜像侧的点分组
+            foreach (var kvp in mirrored.PointGroups)
+            {
+                if (!result.PointGroups.ContainsKey(kvp.Key))
+                    result.PointGroups[kvp.Key] = new HashSet<int>();
+                foreach (int idx in kvp.Value)
+                    result.PointGroups[kvp.Key].Add(idx + offset);
+            }
+
+            // B11 fix: 合并镜像侧的面属性
+            foreach (var attr in mirrored.PrimAttribs.GetAllAttributes())
+            {
+                var destAttr = result.PrimAttribs.GetAttribute(attr.Name);
+                if (destAttr == null)
+                {
+                    destAttr = result.PrimAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                    for (int j = 0; j < primOffset; j++)
+                        destAttr.Values.Add(destAttr.DefaultValue);
+                }
+                destAttr.Values.AddRange(attr.Values);
+            }
+
+            // B11 fix: 合并镜像侧的面分组
+            foreach (var kvp in mirrored.PrimGroups)
+            {
+                if (!result.PrimGroups.ContainsKey(kvp.Key))
+                    result.PrimGroups[kvp.Key] = new HashSet<int>();
+                foreach (int idx in kvp.Value)
+                    result.PrimGroups[kvp.Key].Add(idx + primOffset);
             }
 
             return SingleOutput("geometry", result);

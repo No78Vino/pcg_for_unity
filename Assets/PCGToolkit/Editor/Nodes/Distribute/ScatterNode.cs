@@ -161,15 +161,69 @@ namespace PCGToolkit.Nodes.Distribute
             var prim = geo.Primitives[primIndex];
             if (prim.Length < 3) return geo.Points[prim[0]];
 
-            // 三角化后的随机采样
+            // B15-1 fix: 按面积加权随机选择子三角形
             int triCount = prim.Length - 2;
-            int selectedTri = rng.Next(triCount);
 
-            Vector3 v0 = geo.Points[prim[0]];
-            Vector3 v1 = geo.Points[prim[selectedTri + 1]];
-            Vector3 v2 = geo.Points[prim[selectedTri + 2]];
+            // 计算每个子三角形的面积并构建CDF
+            Vector3[] triV0 = new Vector3[triCount];
+            Vector3[] triV1 = new Vector3[triCount];
+            Vector3[] triV2 = new Vector3[triCount];
+            float[] triAreas = new float[triCount];
+            float totalTriArea = 0f;
 
-            // 三角形内随机采样
+            for (int i = 0; i < triCount; i++)
+            {
+                triV0[i] = geo.Points[prim[0]];
+                triV1[i] = geo.Points[prim[i + 1]];
+                triV2[i] = geo.Points[prim[i + 2]];
+
+                Vector3 edge1 = triV1[i] - triV0[i];
+                Vector3 edge2 = triV2[i] - triV0[i];
+                triAreas[i] = Vector3.Cross(edge1, edge2).magnitude * 0.5f;
+                totalTriArea += triAreas[i];
+            }
+
+            if (totalTriArea <= 0f)
+            {
+                // 如果面积为0，使用均匀选择
+                int selectedTri = rng.Next(triCount);
+                Vector3 v0 = triV0[selectedTri];
+                Vector3 v1 = triV1[selectedTri];
+                Vector3 v2 = triV2[selectedTri];
+                float r1 = (float)rng.NextDouble();
+                float r2 = (float)rng.NextDouble();
+                if (r1 + r2 > 1) { r1 = 1 - r1; r2 = 1 - r2; }
+                return v0 + (v1 - v0) * r1 + (v2 - v0) * r2;
+            }
+
+            // 构建累积分布函数(CDF)
+            float[] cdf = new float[triCount];
+            float cumulative = 0f;
+            for (int i = 0; i < triCount; i++)
+            {
+                cumulative += triAreas[i] / totalTriArea;
+                cdf[i] = cumulative;
+            }
+
+            // 二分查找选择三角形
+            float r = (float)rng.NextDouble();
+            int selectedTri = 0;
+            int left = 0, right = triCount - 1;
+            while (left < right)
+            {
+                int mid = (left + right) / 2;
+                if (cdf[mid] < r)
+                    left = mid + 1;
+                else
+                    right = mid;
+            }
+            selectedTri = left;
+
+            // 在选中的三角形内随机采样
+            Vector3 v0Selected = triV0[selectedTri];
+            Vector3 v1Selected = triV1[selectedTri];
+            Vector3 v2Selected = triV2[selectedTri];
+
             float r1 = (float)rng.NextDouble();
             float r2 = (float)rng.NextDouble();
             if (r1 + r2 > 1)
@@ -178,7 +232,7 @@ namespace PCGToolkit.Nodes.Distribute
                 r2 = 1 - r2;
             }
 
-            return v0 + (v1 - v0) * r1 + (v2 - v0) * r2;
+            return v0Selected + (v1Selected - v0Selected) * r1 + (v2Selected - v0Selected) * r2;
         }
 
         private List<Vector3> RelaxPoints(List<Vector3> points, int iterations)

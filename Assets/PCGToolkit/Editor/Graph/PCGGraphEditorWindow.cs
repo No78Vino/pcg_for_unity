@@ -365,6 +365,34 @@ namespace PCGToolkit.Graph
             };
             toolbar.Add(inspectorButton);
 
+            // 4: Spreadsheet 按钮
+            var spreadsheetButton = new Button(() =>
+            {
+                var node = _graphView?.GetSelectedNodes()?.FirstOrDefault();
+                if (node != null && _asyncExecutor != null)
+                {
+                    var result = _asyncExecutor.GetNodeResult(node.NodeId);
+                    if (result?.OutputGeometry != null)
+                    {
+                        var window = PCGGeometrySpreadsheetWindow.Open();
+                        window.SetGeometry(result.OutputGeometry, node.PCGNode?.DisplayName ?? "");
+                    }
+                    else
+                    {
+                        Debug.Log("Please execute the graph first to see node results in the Spreadsheet.");
+                    }
+                }
+                else
+                {
+                    PCGGeometrySpreadsheetWindow.Open();
+                }
+            })
+            {
+                text = "Spreadsheet",
+                tooltip = "Open Geometry Spreadsheet"
+            };
+            toolbar.Add(spreadsheetButton);
+
             // 迭代七：性能面板切换按钮
             var perfToggle = new ToolbarToggle { text = "Perf" };
             perfToggle.RegisterValueChangedCallback(evt =>

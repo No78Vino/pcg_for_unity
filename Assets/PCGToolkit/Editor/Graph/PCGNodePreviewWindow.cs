@@ -253,6 +253,13 @@ namespace PCGToolkit.Graph
             EditorGUILayout.LabelField($"Total Vertices: {totalVerts}");
             EditorGUI.indentLevel--;
 
+            // 3: Open Spreadsheet 按钮
+            if (GUILayout.Button("Open Spreadsheet"))
+            {
+                var window = PCGGeometrySpreadsheetWindow.Open();
+                window.SetGeometry(_geometry, _nodeDisplayName);
+            }
+
             // Point Attributes
             DrawAttribSection("Point Attributes", _geometry.PointAttribs, _geometry.Points.Count);
 

@@ -139,6 +139,18 @@ namespace PCGToolkit.Graph
                 { style = { fontSize = 10, color = new StyleColor(new Color(0.7f, 0.7f, 0.7f)) } });
             _geometryDebugContainer.Add(topologyFoldout);
 
+            // 2: Open Spreadsheet 按钮
+            var spreadsheetBtn = new Button(() =>
+            {
+                var window = PCGGeometrySpreadsheetWindow.Open();
+                window.SetGeometry(geo, _currentNode?.PCGNode?.DisplayName ?? "");
+            })
+            {
+                text = "Open Spreadsheet",
+                style = { marginBottom = 8, backgroundColor = new StyleColor(new Color(0.15f, 0.35f, 0.5f)) }
+            };
+            _geometryDebugContainer.Add(spreadsheetBtn);
+
             // Point Attributes 折叠面板
             BuildAttribFoldout(_geometryDebugContainer, "Point Attributes",
                 geo.PointAttribs, geo.Points.Count, isError: false);

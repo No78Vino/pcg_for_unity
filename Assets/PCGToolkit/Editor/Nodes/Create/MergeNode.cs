@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using PCGToolkit.Core;
 using UnityEngine;
 
@@ -12,20 +11,26 @@ namespace PCGToolkit.Nodes.Create
     {
         public override string Name => "Merge";
         public override string DisplayName => "Merge";
-        public override string Description => "合并多个几何体为一个";
+        public override string Description => "合并多个几何体";
         public override PCGNodeCategory Category => PCGNodeCategory.Utility;
 
+        // M1: 5个显式输入端口
         public override PCGParamSchema[] Inputs => new[]
         {
-            new PCGParamSchema("input", PCGPortDirection.Input, PCGPortType.Geometry,
-                "Input", "输入几何体（支持多输入）", null, required: true, allowMultiple: true),
+            new PCGParamSchema("input0", PCGPortDirection.Input, PCGPortType.Geometry, "Input 0", "输入几何体 0", null, false),
+            new PCGParamSchema("input1", PCGPortDirection.Input, PCGPortType.Geometry, "Input 1", "输入几何体 1", null, false),
+            new PCGParamSchema("input2", PCGPortDirection.Input, PCGPortType.Geometry, "Input 2", "输入几何体 2", null, false),
+            new PCGParamSchema("input3", PCGPortDirection.Input, PCGPortType.Geometry, "Input 3", "输入几何体 3", null, false),
+            new PCGParamSchema("input4", PCGPortDirection.Input, PCGPortType.Geometry, "Input 4", "输入几何体 4", null, false),
         };
 
         public override PCGParamSchema[] Outputs => new[]
         {
-            new PCGParamSchema("geometry", PCGPortDirection.Output, PCGPortType.Geometry,
-                "Geometry", "合并后的几何体"),
+            new PCGParamSchema("geometry", PCGPortDirection.Output, PCGPortType.Geometry, "Geometry", "合并后的几何体", null, false),
         };
+
+        // M2: 固定端口名顺序
+        private static readonly string[] InputPortNames = { "input0", "input1", "input2", "input3", "input4" };
 
         public override Dictionary<string, PCGGeometry> Execute(
             PCGContext ctx,
@@ -33,107 +38,108 @@ namespace PCGToolkit.Nodes.Create
             Dictionary<string, object> parameters)
         {
             var result = new PCGGeometry();
+
+            // M2: 按固定顺序收集非空 geometry
+            var geoList = new List<PCGGeometry>();
+            foreach (var portName in InputPortNames)
+            {
+                if (inputGeometries.TryGetValue(portName, out var geo) && geo != null && geo.Points.Count > 0)
+                    geoList.Add(geo);
+            }
+
+            if (geoList.Count == 0)
+            {
+                ctx.LogWarning("Merge: 没有有效的输入几何体");
+                return SingleOutput("geometry", result);
+            }
+
+            // M3: 逐个合并 geometry
             int pointOffset = 0;
             int primOffset = 0;
-            int vertexOffset = 0;
-
-            foreach (var kvp in inputGeometries)
-            {
-                var geo = kvp.Value;
-                if (geo == null || geo.Points.Count == 0) continue;
-
-                // 合并顶点
-                int vertexCount = geo.Points.Count;
-                result.Points.AddRange(geo.Points);
-
-                // 合并面（调整索引）
-                foreach (var prim in geo.Primitives)
-                {
-                    var newPrim = new int[prim.Length];
-                    for (int i = 0; i < prim.Length; i++)
-                    {
-                        newPrim[i] = prim[i] + pointOffset;
-                    }
-                    result.Primitives.Add(newPrim);
-                }
-
-                // 合并边（调整索引）
-                foreach (var edge in geo.Edges)
-                {
-                    result.Edges.Add(new int[] { edge[0] + pointOffset, edge[1] + pointOffset });
-                }
-
-                // 合并属性（简化处理，按索引追加）
-                MergeAttributes(result.PointAttribs, geo.PointAttribs, vertexCount, pointOffset);
-                MergeAttributes(result.PrimAttribs, geo.PrimAttribs, geo.Primitives.Count, primOffset);
-
-                // 合并顶点属性（按顶点总数追加）
-                int totalVertCount = 0;
-                foreach (var prim in geo.Primitives) totalVertCount += prim.Length;
-                MergeAttributes(result.VertexAttribs, geo.VertexAttribs, totalVertCount, vertexOffset);
-
-                // 合并Detail属性（取第一个非空输入的值）
-                MergeDetailAttribs(result, geo);
-
-                // 合并分组
-                foreach (var group in geo.PointGroups)
-                {
-                    if (!result.PointGroups.ContainsKey(group.Key))
-                        result.PointGroups[group.Key] = new HashSet<int>();
-                    foreach (int idx in group.Value)
-                        result.PointGroups[group.Key].Add(idx + pointOffset);
-                }
-
-                foreach (var group in geo.PrimGroups)
-                {
-                    if (!result.PrimGroups.ContainsKey(group.Key))
-                        result.PrimGroups[group.Key] = new HashSet<int>();
-                    foreach (int idx in group.Value)
-                        result.PrimGroups[group.Key].Add(idx + result.Primitives.Count - geo.Primitives.Count);
-                }
-
-                pointOffset += vertexCount;
-                primOffset += geo.Primitives.Count;
-                vertexOffset += totalVertCount;
-            }
+            foreach (var geo in geoList)
+                MergeOne(result, geo, ref pointOffset, ref primOffset);
 
             return SingleOutput("geometry", result);
         }
 
-        private void MergeAttributes(AttributeStore dest, AttributeStore src, int elementCount, int existingCount)
+        /// <summary>
+        /// M3: 合并单个 geometry 到 result
+        /// </summary>
+        private void MergeOne(PCGGeometry result, PCGGeometry geo, ref int pointOffset, ref int primOffset)
         {
-            // 记录src中已处理的属性名，用于后续补齐
-            var processedNames = new HashSet<string>();
+            if (geo == null || geo.Points.Count == 0) return;
+
+            int pointCount = geo.Points.Count;
+            int primCount = geo.Primitives.Count;
+
+            // 复制顶点
+            result.Points.AddRange(geo.Points);
+
+            // 复制面（调整索引）
+            foreach (var prim in geo.Primitives)
+            {
+                var newPrim = new int[prim.Length];
+                for (int i = 0; i < prim.Length; i++)
+                    newPrim[i] = prim[i] + pointOffset;
+                result.Primitives.Add(newPrim);
+            }
+
+            // 复制边（调整索引）
+            foreach (var edge in geo.Edges)
+                result.Edges.Add(new[] { edge[0] + pointOffset, edge[1] + pointOffset });
+
+            // 合并属性
+            MergeAttribs(result.PointAttribs, geo.PointAttribs, pointOffset, primOffset);
+            MergeAttribs(result.PrimAttribs, geo.PrimAttribs, pointOffset, primOffset);
+            MergeAttribs(result.VertexAttribs, geo.VertexAttribs, pointOffset, primOffset);
+            MergeDetailAttribs(result, geo);
+
+            // 合并 PointGroups
+            foreach (var kvp in geo.PointGroups)
+            {
+                if (!result.PointGroups.ContainsKey(kvp.Key))
+                    result.PointGroups[kvp.Key] = new HashSet<int>();
+                foreach (int idx in kvp.Value)
+                    result.PointGroups[kvp.Key].Add(idx + pointOffset);
+            }
+
+            // M4 fix: 合并 PrimGroups（使用 primOffset 变量）
+            foreach (var kvp in geo.PrimGroups)
+            {
+                if (!result.PrimGroups.ContainsKey(kvp.Key))
+                    result.PrimGroups[kvp.Key] = new HashSet<int>();
+                foreach (int idx in kvp.Value)
+                    result.PrimGroups[kvp.Key].Add(idx + primOffset);
+            }
+
+            pointOffset += pointCount;
+            primOffset += primCount;
+        }
+
+        private void MergeAttribs(AttributeStore dest, AttributeStore src, int pointOffset, int primOffset)
+        {
+            var processed = new HashSet<string>();
 
             foreach (var attr in src.GetAllAttributes())
             {
-                processedNames.Add(attr.Name);
-                var destAttr = dest.GetAttribute(attr.Name);
-                if (destAttr == null)
-                {
-                    destAttr = dest.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
-                }
-                while (destAttr.Values.Count < existingCount)
-                {
+                processed.Add(attr.Name);
+                var destAttr = dest.GetAttribute(attr.Name) ?? dest.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
+                while (destAttr.Values.Count < pointOffset)
                     destAttr.Values.Add(destAttr.DefaultValue);
-                }
                 destAttr.Values.AddRange(attr.Values);
             }
 
-            // B1-3 fix: 补齐dest中已有但src中没有的属性
+            // 补齐 dest 有但 src 没有的属性
             foreach (var destAttr in dest.GetAllAttributes())
             {
-                if (!processedNames.Contains(destAttr.Name))
+                if (!processed.Contains(destAttr.Name))
                 {
-                    for (int i = 0; i < elementCount; i++)
+                    for (int i = 0; i < pointOffset; i++)
                         destAttr.Values.Add(destAttr.DefaultValue);
                 }
             }
         }
 
-        /// <summary>
-        /// 合并Detail属性。取第一个非空输入的值。
-        /// </summary>
         private void MergeDetailAttribs(PCGGeometry result, PCGGeometry geo)
         {
             foreach (var attr in geo.DetailAttribs.GetAllAttributes())
@@ -142,13 +148,8 @@ namespace PCGToolkit.Nodes.Create
                 if (destAttr == null)
                 {
                     destAttr = result.DetailAttribs.CreateAttribute(attr.Name, attr.Type, attr.DefaultValue);
-                    // Detail属性只有一个值，取源的第一个
-                    if (attr.Values.Count > 0)
-                        destAttr.Values.Add(attr.Values[0]);
-                    else
-                        destAttr.Values.Add(attr.DefaultValue);
+                    destAttr.Values.Add(attr.Values.Count > 0 ? attr.Values[0] : attr.DefaultValue);
                 }
-                // 如果dest已经有该属性，保留原有值（第一个输入的值优先）
             }
         }
     }

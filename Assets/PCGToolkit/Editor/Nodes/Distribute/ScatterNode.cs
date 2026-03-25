@@ -186,14 +186,14 @@ namespace PCGToolkit.Nodes.Distribute
             if (totalTriArea <= 0f)
             {
                 // 如果面积为0，使用均匀选择
-                int selectedTri = rng.Next(triCount);
-                Vector3 v0 = triV0[selectedTri];
-                Vector3 v1 = triV1[selectedTri];
-                Vector3 v2 = triV2[selectedTri];
-                float r1 = (float)rng.NextDouble();
-                float r2 = (float)rng.NextDouble();
-                if (r1 + r2 > 1) { r1 = 1 - r1; r2 = 1 - r2; }
-                return v0 + (v1 - v0) * r1 + (v2 - v0) * r2;
+                int selectedTri0 = rng.Next(triCount);
+                Vector3 v0 = triV0[selectedTri0];
+                Vector3 v1 = triV1[selectedTri0];
+                Vector3 v2 = triV2[selectedTri0];
+                float tR1 = (float)rng.NextDouble();
+                float tR2 = (float)rng.NextDouble();
+                if (tR1 + tR2 > 1) { tR1 = 1 - tR1; tR2 = 1 - tR2; }
+                return v0 + (v1 - v0) * tR1 + (v2 - v0) * tR2;
             }
 
             // 构建累积分布函数(CDF)

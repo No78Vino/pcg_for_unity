@@ -359,12 +359,8 @@ namespace PCGToolkit.Nodes.Geometry
             foreach (var kvp in edgePoints)
             {
                 var ek = kvp.Key;
-                var faces = kvp.Value;
                 int v1 = ek.Item1;
                 int v2 = ek.Item2;
-                int faceIdx1 = faces.Count > 0 ? faces[0] : -1;
-                int faceIdx2 = faces.Count > 1 ? faces[1] : faceIdx1;
-
                 foreach (var attr in geo.PointAttribs.GetAllAttributes())
                 {
                     var destAttr = result.PointAttribs.GetAttribute(attr.Name);

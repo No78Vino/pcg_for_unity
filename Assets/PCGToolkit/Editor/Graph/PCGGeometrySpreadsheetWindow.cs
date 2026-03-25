@@ -10,7 +10,13 @@ namespace PCGToolkit.Graph
 {
     public class PCGGeometrySpreadsheetWindow : EditorWindow
     {
-        private enum SpreadsheetTab { Points, Vertices, Primitives, Detail }
+        private enum SpreadsheetTab
+        {
+            Points,
+            Vertices,
+            Primitives,
+            Detail
+        }
 
         private PCGGeometry _geometry;
         private string _nodeDisplayName = "";
@@ -79,6 +85,7 @@ namespace PCGToolkit.Graph
                     map.Add(pi * 10000 + vi);
                 }
             }
+
             return map;
         }
 
@@ -109,6 +116,7 @@ namespace PCGToolkit.Graph
                 RebuildColumns();
                 RebuildFilteredIndices();
             }
+
             EditorGUILayout.EndHorizontal();
         }
 
@@ -116,7 +124,8 @@ namespace PCGToolkit.Graph
         {
             GUILayout.FlexibleSpace();
             EditorGUILayout.LabelField("No geometry loaded.",
-                new GUIStyle(EditorStyles.centeredGreyMiniLabel) { alignment = TextAnchor.MiddleCenter, fontSize = 14 });
+                new GUIStyle(EditorStyles.centeredGreyMiniLabel)
+                    { alignment = TextAnchor.MiddleCenter, fontSize = 14 });
             EditorGUILayout.LabelField("Execute a node, then click 'Open Spreadsheet' in the Inspector.",
                 new GUIStyle(EditorStyles.centeredGreyMiniLabel) { alignment = TextAnchor.MiddleCenter });
             GUILayout.FlexibleSpace();
@@ -188,7 +197,8 @@ namespace PCGToolkit.Graph
             foreach (var c in _columns) totalW += c.Width;
 
             EditorGUILayout.BeginHorizontal();
-            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+            _scrollPos =
+                EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
 
             DrawHeader(totalW);
 
@@ -216,7 +226,7 @@ namespace PCGToolkit.Graph
             {
                 var col = _columns[i];
                 Rect rect = new Rect(xPos, 0, col.Width, HEADER_HEIGHT);
-                string lbl = col.Name + ((_sortColumn == i ? (_sortAscending ? " ▲" : " ▼") : "");
+                string lbl = col.Name + (_sortColumn == i ? (_sortAscending ? " ▲" : " ▼") : "");
 
                 GUI.backgroundColor = _sortColumn == i
                     ? new Color(0.3f, 0.4f, 0.5f)
@@ -231,12 +241,14 @@ namespace PCGToolkit.Graph
                         _sortColumn = i;
                         _sortAscending = true;
                     }
+
                     RebuildFilteredIndices();
                 }
 
                 GUI.backgroundColor = Color.white;
                 xPos += col.Width;
             }
+
             GUILayout.EndHorizontal();
         }
 
@@ -257,6 +269,7 @@ namespace PCGToolkit.Graph
                 });
                 xPos += col.Width;
             }
+
             GUILayout.EndHorizontal();
         }
 
@@ -277,10 +290,18 @@ namespace PCGToolkit.Graph
 
             switch (_currentTab)
             {
-                case SpreadsheetTab.Points: RebuildPointsColumns(); break;
-                case SpreadsheetTab.Vertices: RebuildVerticesColumns(); break;
-                case SpreadsheetTab.Primitives: RebuildPrimitivesColumns(); break;
-                case SpreadsheetTab.Detail: RebuildDetailColumns(); break;
+                case SpreadsheetTab.Points:
+                    RebuildPointsColumns();
+                    break;
+                case SpreadsheetTab.Vertices:
+                    RebuildVerticesColumns();
+                    break;
+                case SpreadsheetTab.Primitives:
+                    RebuildPrimitivesColumns();
+                    break;
+                case SpreadsheetTab.Detail:
+                    RebuildDetailColumns();
+                    break;
             }
         }
 
@@ -321,6 +342,7 @@ namespace PCGToolkit.Graph
                     if (pi < geo.Primitives.Count && vi < geo.Primitives[pi].Length)
                         ptIdx = geo.Primitives[pi][vi];
                 }
+
                 int primIdx = pi, vtxIn = vi;
                 _columns.Add(new ColumnDef("Prim#", 60, i => primIdx.ToString()));
                 _columns.Add(new ColumnDef("VtxInPrim", 70, i => vtxIn.ToString()));
@@ -342,7 +364,7 @@ namespace PCGToolkit.Graph
             var geo = _geometry;
             _columns.Add(new ColumnDef("#", 50, i => i.ToString()));
             _columns.Add(new ColumnDef("Verts", 50, i => geo.Primitives[i].Length.ToString()));
-            _columns.Add(new ColumnDef("PointIndices", 180, i => IndexArrayToString(geo.Primitives[i]));
+            _columns.Add(new ColumnDef("PointIndices", 180, i => IndexArrayToString(geo.Primitives[i])));
 
             foreach (var attr in geo.PrimAttribs.GetAllAttributes())
                 AddAttribColumns(attr, i => i < attr.Values.Count ? attr.Values[i] : null);
@@ -392,6 +414,7 @@ namespace PCGToolkit.Graph
                         _columns.Add(new ColumnDef(attr.Name + ".xyzw"[s].ToString(), 50,
                             i => FormatComponent(getVal(i), sub)));
                     }
+
                     break;
                 case AttribType.Color:
                     for (int s = 0; s < 4; s++)
@@ -400,6 +423,7 @@ namespace PCGToolkit.Graph
                         _columns.Add(new ColumnDef(attr.Name + ".rgba"[s].ToString(), 50,
                             i => FormatComponent(getVal(i), sub)));
                     }
+
                     break;
             }
         }
@@ -476,15 +500,19 @@ namespace PCGToolkit.Graph
                                p.y.ToString().Contains(filter) ||
                                p.z.ToString().Contains(filter);
                     }
+
                     break;
                 case SpreadsheetTab.Primitives:
                     if (idx < _geometry.Primitives.Count)
                     {
                         foreach (int i in _geometry.Primitives[idx])
-                            if (i.ToString().Contains(filter)) return true;
+                            if (i.ToString().Contains(filter))
+                                return true;
                     }
+
                     break;
             }
+
             return false;
         }
 
@@ -522,6 +550,7 @@ namespace PCGToolkit.Graph
                 if (i > 0) sb.Append(",");
                 sb.Append(prim[i]);
             }
+
             if (prim.Length > 8) sb.Append("...");
             return sb.ToString();
         }

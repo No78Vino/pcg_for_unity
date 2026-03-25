@@ -368,7 +368,7 @@ namespace PCGToolkit.Graph
             // 4: Spreadsheet 按钮
             var spreadsheetButton = new Button(() =>
             {
-                var node = _graphView?.GetSelectedNodes()?.FirstOrDefault();
+                var node = graphView?.GetSelectedNodeVisual();
                 if (node != null && _asyncExecutor != null)
                 {
                     var result = _asyncExecutor.GetNodeResult(node.NodeId);

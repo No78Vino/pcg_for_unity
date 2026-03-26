@@ -219,17 +219,12 @@ namespace PCGToolkit.Graph
                 _previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity, _previewMaterial, 0);
             }
 
+            _previewRenderUtility.camera.Render();
+
+            // Wireframe overlay: 使用 GL 手动绘制线条，避免 GL.wireframe 全局状态污染 UI
             if (_renderMode == PreviewRenderMode.Wireframe || _renderMode == PreviewRenderMode.ShadedWireframe)
             {
-                _previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity,
-                    _wireMaterial != null ? _wireMaterial : _previewMaterial, 0);
-                GL.wireframe = true;
-                _previewRenderUtility.camera.Render();
-                GL.wireframe = false;
-            }
-            else
-            {
-                _previewRenderUtility.camera.Render();
+                DrawWireframeOverlay();
             }
   
             var resultTexture = _previewRenderUtility.EndPreview();  
@@ -376,6 +371,60 @@ namespace PCGToolkit.Graph
                     Repaint();  
                     break;  
             }  
-        }  
-    }  
+        }
+
+        /// <summary>
+        /// 使用 GL 手动绘制线框，避免 GL.wireframe 全局状态污染 UI
+        /// </summary>
+        private void DrawWireframeOverlay()
+        {
+            if (_previewMesh == null) return;
+
+            var camera = _previewRenderUtility.camera;
+            var material = _wireMaterial != null ? _wireMaterial : _previewMaterial;
+
+            material.SetPass(0);
+
+            GL.PushMatrix();
+            GL.MultMatrix(Matrix4x4.identity);
+
+            GL.Begin(GL.LINES);
+            GL.Color(new Color(0f, 1f, 0f, 1f)); // 绿色线框
+
+            var vertices = _previewMesh.vertices;
+            var triangles = _previewMesh.triangles;
+
+            // 使用 HashSet 避免重复绘制边
+            var drawnEdges = new HashSet<(int, int)>();
+
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                int v0 = triangles[i];
+                int v1 = triangles[i + 1];
+                int v2 = triangles[i + 2];
+
+                DrawEdge(v0, v1, vertices, drawnEdges);
+                DrawEdge(v1, v2, vertices, drawnEdges);
+                DrawEdge(v2, v0, vertices, drawnEdges);
+            }
+
+            GL.End();
+            GL.PopMatrix();
+        }
+
+        private void DrawEdge(int a, int b, Vector3[] vertices, HashSet<(int, int)> drawnEdges)
+        {
+            // 确保边是有序的，避免 (a,b) 和 (b,a) 被视为不同的边
+            var edge = a < b ? (a, b) : (b, a);
+            if (drawnEdges.Contains(edge)) return;
+
+            drawnEdges.Add(edge);
+
+            if (a < vertices.Length && b < vertices.Length)
+            {
+                GL.Vertex(vertices[a]);
+                GL.Vertex(vertices[b]);
+            }
+        }
+    }
 }

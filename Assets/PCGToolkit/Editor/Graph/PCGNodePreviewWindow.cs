@@ -85,6 +85,8 @@ namespace PCGToolkit.Graph
                 _wireMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 _wireMaterial.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
                 _wireMaterial.SetInt("_ZWrite", 0);
+                _wireMaterial.SetColor("_Color", new Color(0f, 1f, 0f, 1f));
+                _wireMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
             }
         }
 
@@ -219,13 +221,16 @@ namespace PCGToolkit.Graph
 
             if (_renderMode == PreviewRenderMode.Wireframe || _renderMode == PreviewRenderMode.ShadedWireframe)
             {
-                GL.wireframe = true;
                 _previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity,
                     _wireMaterial != null ? _wireMaterial : _previewMaterial, 0);
+                GL.wireframe = true;
+                _previewRenderUtility.camera.Render();
+                GL.wireframe = false;
             }
-
-            _previewRenderUtility.camera.Render();
-            GL.wireframe = false;
+            else
+            {
+                _previewRenderUtility.camera.Render();
+            }
   
             var resultTexture = _previewRenderUtility.EndPreview();  
             GUI.DrawTexture(previewRect, resultTexture, ScaleMode.StretchToFill, false);  

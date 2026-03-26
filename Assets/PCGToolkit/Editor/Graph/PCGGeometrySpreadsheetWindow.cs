@@ -206,6 +206,7 @@ namespace PCGToolkit.Graph
             int first = Mathf.Max(0, Mathf.FloorToInt(_scrollPos.y / ROW_HEIGHT));
             int last = Mathf.Min(_filteredIndices.Length, Mathf.CeilToInt((_scrollPos.y + viewH) / ROW_HEIGHT));
 
+            GUILayout.Space(first * ROW_HEIGHT);
             for (int row = first; row < last; row++)
             {
                 int dataIdx = _filteredIndices[row];
@@ -213,6 +214,7 @@ namespace PCGToolkit.Graph
                 Color txtCol = even ? new Color(0.85f, 0.85f, 0.85f) : Color.white;
                 DrawRow(dataIdx, txtCol);
             }
+            GUILayout.Space((_filteredIndices.Length - last) * ROW_HEIGHT);
 
             EditorGUILayout.EndScrollView();
             EditorGUILayout.EndHorizontal();
@@ -221,18 +223,16 @@ namespace PCGToolkit.Graph
         private void DrawHeader(float totalWidth)
         {
             GUILayout.BeginHorizontal(GUILayout.Width(totalWidth), GUILayout.Height(HEADER_HEIGHT));
-            float xPos = 0;
             for (int i = 0; i < _columns.Count; i++)
             {
                 var col = _columns[i];
-                Rect rect = new Rect(xPos, 0, col.Width, HEADER_HEIGHT);
                 string lbl = col.Name + (_sortColumn == i ? (_sortAscending ? " ▲" : " ▼") : "");
 
                 GUI.backgroundColor = _sortColumn == i
                     ? new Color(0.3f, 0.4f, 0.5f)
                     : new Color(0.25f, 0.25f, 0.25f);
 
-                if (GUI.Button(rect, lbl, EditorStyles.toolbarButton))
+                if (GUILayout.Button(lbl, EditorStyles.toolbarButton, GUILayout.Width(col.Width), GUILayout.Height(HEADER_HEIGHT)))
                 {
                     if (_sortColumn == i)
                         _sortAscending = !_sortAscending;
@@ -246,7 +246,6 @@ namespace PCGToolkit.Graph
                 }
 
                 GUI.backgroundColor = Color.white;
-                xPos += col.Width;
             }
 
             GUILayout.EndHorizontal();
@@ -255,19 +254,16 @@ namespace PCGToolkit.Graph
         private void DrawRow(int dataIdx, Color txtCol)
         {
             GUILayout.BeginHorizontal(GUILayout.Height(ROW_HEIGHT));
-            float xPos = 0;
             for (int i = 0; i < _columns.Count; i++)
             {
                 var col = _columns[i];
-                Rect rect = new Rect(xPos, 0, col.Width, ROW_HEIGHT);
                 string val = col.GetValue(dataIdx);
-                GUI.Label(rect, val, new GUIStyle(GUI.skin.label)
+                GUILayout.Label(val, new GUIStyle(GUI.skin.label)
                 {
                     alignment = TextAnchor.MiddleCenter,
                     fontSize = 10,
                     normal = { textColor = txtCol }
-                });
-                xPos += col.Width;
+                }, GUILayout.Width(col.Width), GUILayout.Height(ROW_HEIGHT));
             }
 
             GUILayout.EndHorizontal();

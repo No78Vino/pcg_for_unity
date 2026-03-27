@@ -64,5 +64,55 @@ namespace PCGToolkit.Core
 
             return sorted;
         }
+
+        /// <summary>
+        /// 对子图进行拓扑排序（Kahn 算法）。
+        /// 只对 subgraphNodeIds 中的节点做排序，用于增量执行优化。
+        /// </summary>
+        public static List<PCGNodeData> TopologicalSortSubgraph(PCGGraphData graphData, HashSet<string> subgraphNodeIds)
+        {
+            var nodeMap = new Dictionary<string, PCGNodeData>();
+            var inDegree = new Dictionary<string, int>();
+            var adjacency = new Dictionary<string, List<string>>();
+
+            foreach (var node in graphData.Nodes)
+            {
+                if (!subgraphNodeIds.Contains(node.NodeId)) continue;
+                nodeMap[node.NodeId] = node;
+                inDegree[node.NodeId] = 0;
+                adjacency[node.NodeId] = new List<string>();
+            }
+
+            foreach (var edge in graphData.Edges)
+            {
+                if (subgraphNodeIds.Contains(edge.OutputNodeId) && subgraphNodeIds.Contains(edge.InputNodeId))
+                {
+                    adjacency[edge.OutputNodeId].Add(edge.InputNodeId);
+                    inDegree[edge.InputNodeId]++;
+                }
+            }
+
+            var queue = new Queue<string>();
+            foreach (var kvp in inDegree)
+            {
+                if (kvp.Value == 0)
+                    queue.Enqueue(kvp.Key);
+            }
+
+            var sorted = new List<PCGNodeData>();
+            while (queue.Count > 0)
+            {
+                var nodeId = queue.Dequeue();
+                sorted.Add(nodeMap[nodeId]);
+                foreach (var neighbor in adjacency[nodeId])
+                {
+                    inDegree[neighbor]--;
+                    if (inDegree[neighbor] == 0)
+                        queue.Enqueue(neighbor);
+                }
+            }
+
+            return sorted;
+        }
     }
 }

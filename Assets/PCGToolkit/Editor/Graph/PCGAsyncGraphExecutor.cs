@@ -102,6 +102,8 @@ namespace PCGToolkit.Graph
         private Stopwatch _nodeStopwatch;
         private Stopwatch _totalStopwatch;
         private double _lastNodeElapsedMs;
+        private Dictionary<string, List<PCGEdgeData>> _inputEdgeMap;
+        public bool FastMode { get; set; } = false;
 
         // ---- 公共属性 ----  
         public double TotalElapsedMs => _totalStopwatch?.Elapsed.TotalMilliseconds ?? 0;
@@ -193,6 +195,16 @@ namespace PCGToolkit.Graph
                 return;
             }
 
+            // 预建邻接表
+            _inputEdgeMap = new Dictionary<string, List<PCGEdgeData>>();
+            foreach (var node in _sortedNodes)
+                _inputEdgeMap[node.NodeId] = new List<PCGEdgeData>();
+            foreach (var edge in _graphData.Edges)
+            {
+                if (_inputEdgeMap.ContainsKey(edge.InputNodeId))
+                    _inputEdgeMap[edge.InputNodeId].Add(edge);
+            }
+
             _totalStopwatch = Stopwatch.StartNew();
             _nodeStopwatch = new Stopwatch();
 
@@ -215,12 +227,33 @@ namespace PCGToolkit.Graph
             if (State != ExecutionState.Running) return;
             if (_currentNodeIndex >= _sortedNodes.Count)
             {
-                // 全部执行完毕  
+                // 全部执行完毕
                 FinishExecution();
                 return;
             }
 
             var nodeData = _sortedNodes[_currentNodeIndex];
+
+            // FastMode: 跳过动画帧，直接执行
+            if (FastMode)
+            {
+                var result = ExecuteNodeInternal(nodeData);
+                _lastNodeElapsedMs = result.ElapsedMs;
+                _nodeResults[nodeData.NodeId] = result;
+                OnNodeCompleted?.Invoke(result);
+
+                if (!result.Success)
+                {
+                    Debug.LogError($"[PCGAsyncExecutor] Node {nodeData.NodeType} failed: {result.ErrorMessage}");
+                    Stop();
+                    return;
+                }
+
+                _currentNodeIndex++;
+                if (_currentNodeIndex >= _sortedNodes.Count)
+                    FinishExecution();
+                return;
+            }
 
             switch (_currentPhase)
             {
@@ -310,15 +343,15 @@ namespace PCGToolkit.Graph
                 return result;
             }
 
-            var nodeInstance = (IPCGNode)Activator.CreateInstance(nodeTemplate.GetType());
+            var nodeInstance = PCGNodeRegistry.GetOrCreateInstance(nodeData.NodeType)
+                ?? (IPCGNode)Activator.CreateInstance(nodeTemplate.GetType());
 
-            // 收集输入几何体  
+            // 收集输入几何体（使用邻接表）
             var inputGeometries = new Dictionary<string, PCGGeometry>();
-            foreach (var edge in _graphData.Edges)
+            if (_inputEdgeMap.TryGetValue(nodeData.NodeId, out var inputEdges))
             {
-                if (edge.InputNodeId == nodeData.NodeId)
+                foreach (var edge in inputEdges)
                 {
-                    // 先尝试从几何体输出中获取
                     if (_nodeOutputs.TryGetValue(edge.OutputNodeId, out var outputs) &&
                         outputs.TryGetValue(edge.OutputPort, out var geo))
                     {
@@ -344,11 +377,11 @@ namespace PCGToolkit.Graph
                 }
             }
 
-            // 收集参数：从上游 Const 节点的 GlobalVariables 中获取值  
-            // （Const 节点将值存入 ctx.GlobalVariables["{nodeId}.value"]）  
-            foreach (var edge in _graphData.Edges)
+            // 收集参数：从上游 Const 节点的 GlobalVariables 中获取值
+            // （Const 节点将值存入 ctx.GlobalVariables["{nodeId}.value"]）
+            if (_inputEdgeMap.TryGetValue(nodeData.NodeId, out var gvEdges))
             {
-                if (edge.InputNodeId == nodeData.NodeId)
+                foreach (var edge in gvEdges)
                 {
                     var upstreamKey = $"{edge.OutputNodeId}.{edge.OutputPort}";
                     if (_context.GlobalVariables.TryGetValue(upstreamKey, out var val))

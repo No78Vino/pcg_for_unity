@@ -13,6 +13,7 @@ namespace PCGToolkit.Core
     {
         private static readonly Dictionary<string, IPCGNode> _registeredNodes = new Dictionary<string, IPCGNode>();
         private static bool _initialized = false;
+        private static readonly Dictionary<string, IPCGNode> _instancePool = new Dictionary<string, IPCGNode>();
 
         /// <summary>
         /// 注册一个节点
@@ -99,8 +100,27 @@ namespace PCGToolkit.Core
         public static void Refresh()
         {
             _registeredNodes.Clear();
+            _instancePool.Clear();
             _initialized = false;
             EnsureInitialized();
+        }
+
+        /// <summary>
+        /// 获取或创建节点实例（实例池，避免每次 Activator.CreateInstance 反射开销）
+        /// 节点 Execute 方法必须是无状态的（当前设计已满足）
+        /// </summary>
+        public static IPCGNode GetOrCreateInstance(string nodeType)
+        {
+            EnsureInitialized();
+            if (_instancePool.TryGetValue(nodeType, out var cached))
+                return cached;
+
+            var template = GetNode(nodeType);
+            if (template == null) return null;
+
+            var instance = (IPCGNode)Activator.CreateInstance(template.GetType());
+            _instancePool[nodeType] = instance;
+            return instance;
         }
     }
 }

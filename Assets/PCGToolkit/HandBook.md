@@ -606,3 +606,13 @@ Assets/PCGToolkit/.cache.meta
 ```
 
 磁盘缓存位于 `Library/` 下，Unity 默认已排除。
+
+---
+
+## Skill 文档参考
+
+详细的节点 Skill 文档位于 `Editor/Skill/Docs/` 目录，按节点大类组织：
+
+Create / Attribute / Geometry / UV / Distribute / Curve / Deform / Topology / Procedural / Output / Utility / Input
+
+每份文档包含节点的完整端口定义、参数说明、Houdini 对标和常见组合模式。

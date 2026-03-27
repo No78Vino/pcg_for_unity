@@ -57,6 +57,12 @@ namespace PCGToolkit.Graph
             foreach (var m in _injectedMeshes)
                 if (m != null) Object.DestroyImmediate(m);
             _injectedMeshes.Clear();
+
+            // 清理场景中同名旧对象（防止 Live 模式残留）
+            var existing = GameObject.Find(label);
+            if (existing != null && existing.hideFlags == HideFlags.DontSave)
+                Object.DestroyImmediate(existing);
+
             foreach (var old in _injectedObjects)
                 if (old != null) Object.DestroyImmediate(old);
             _injectedObjects.Clear();

@@ -74,7 +74,7 @@ namespace PCGToolkit.Core
                     {
                         sb.Append(kvp.Key);
                         sb.Append(":");
-                        sb.Append(PCGGeometrySerializer.ComputeHash(kvp.Value));
+                        sb.Append(kvp.Value?.GetContentHash() ?? "null");
                     }
                 }
 
@@ -86,6 +86,10 @@ namespace PCGToolkit.Core
             }
         }
 
+        /// <summary>
+        /// 获取缓存几何体（Clone 版本，返回独立副本，调用方可安全修改）
+        /// 如果不需要修改，使用 TryGetGeometryReadOnly 避免 Clone 开销
+        /// </summary>
         public static bool TryGetGeometry(string cacheKey, out PCGGeometry geo)
         {
             EnsureInitialized();
@@ -117,6 +121,48 @@ namespace PCGToolkit.Core
                     };
 
                     geo = loaded.Clone();
+                    _hitCount++;
+                    return true;
+                }
+            }
+
+            _missCount++;
+            geo = null;
+            return false;
+        }
+
+        /// <summary>
+        /// 获取缓存几何体（只读版本，返回原始引用，不 Clone）
+        /// 注意: 调用方如果需要修改返回的 geo，必须自行 Clone()
+        /// </summary>
+        public static bool TryGetGeometryReadOnly(string cacheKey, out PCGGeometry geo)
+        {
+            EnsureInitialized();
+
+            // L1: memory cache — 返回原始引用，不 Clone
+            if (_memoryCache.TryGetValue(cacheKey, out var memEntry))
+            {
+                memEntry.LastAccessed = DateTime.UtcNow;
+                geo = memEntry.Geometry;
+                _hitCount++;
+                return true;
+            }
+
+            // L2: disk cache — 反序列化后存入 L1 并返回引用
+            if (_manifest.TryGetValue(cacheKey, out var entry) && !string.IsNullOrEmpty(entry.DiskFilePath))
+            {
+                var loaded = PCGGeometrySerializer.DeserializeFromFile(entry.DiskFilePath);
+                if (loaded != null)
+                {
+                    entry.LastAccessedAtTicks = DateTime.UtcNow.Ticks;
+                    _memoryCache[cacheKey] = new MemoryCacheEntry
+                    {
+                        Geometry = loaded,
+                        CreatedAt = new DateTime(entry.CreatedAtTicks),
+                        LastAccessed = DateTime.UtcNow,
+                        SizeEstimate = EstimateGeometrySize(loaded)
+                    };
+                    geo = loaded;
                     _hitCount++;
                     return true;
                 }

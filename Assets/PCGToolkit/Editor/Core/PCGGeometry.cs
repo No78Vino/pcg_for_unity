@@ -30,6 +30,10 @@ namespace PCGToolkit.Core
         public Dictionary<string, HashSet<int>> PointGroups = new Dictionary<string, HashSet<int>>();
         public Dictionary<string, HashSet<int>> PrimGroups = new Dictionary<string, HashSet<int>>();
 
+        // ---- 内容 hash 缓存 ----
+        private string _contentHash;
+        private bool _hashDirty = true;
+
         /// <summary>
         /// 创建当前几何体的深拷贝
         /// </summary>
@@ -50,6 +54,8 @@ namespace PCGToolkit.Core
                 clone.PointGroups[kvp.Key] = new HashSet<int>(kvp.Value);
             foreach (var kvp in PrimGroups)
                 clone.PrimGroups[kvp.Key] = new HashSet<int>(kvp.Value);
+            clone._hashDirty = true;
+            clone._contentHash = null;
             return clone;
         }
 
@@ -95,6 +101,28 @@ namespace PCGToolkit.Core
             DetailAttribs.Clear();
             PointGroups.Clear();
             PrimGroups.Clear();
+            _hashDirty = true;
+            _contentHash = null;
+        }
+
+        /// <summary>
+        /// 标记内容已修改，下次 GetContentHash 时需要重新计算
+        /// </summary>
+        public void MarkDirty()
+        {
+            _hashDirty = true;
+            _contentHash = null;
+        }
+
+        /// <summary>
+        /// 获取内容 hash（增量缓存，未修改时直接返回缓存值）
+        /// </summary>
+        public string GetContentHash()
+        {
+            if (!_hashDirty && _contentHash != null) return _contentHash;
+            _contentHash = PCGGeometrySerializer.ComputeHash(this);
+            _hashDirty = false;
+            return _contentHash;
         }
     }
 }

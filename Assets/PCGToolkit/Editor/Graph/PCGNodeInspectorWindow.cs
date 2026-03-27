@@ -50,6 +50,7 @@ namespace PCGToolkit.Graph
 
         private void OnEnable()
         {
+            rootVisualElement.Clear();
             BuildUI();
             ShowEmpty();
             // Inspector 重新打开时，尝试从已存在的 EditorWindow 重新获取 graphView

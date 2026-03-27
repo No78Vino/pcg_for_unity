@@ -64,6 +64,7 @@ namespace PCGToolkit.Graph
 
         private void OnEnable()
         {
+            rootVisualElement.Clear();
             ConstructGraphView();
             GenerateToolbar();
             InitializeExecutor();

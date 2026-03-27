@@ -671,7 +671,7 @@ namespace PCGToolkit.Graph
                 _liveProgressFill.style.width = new Length(100, LengthUnit.Percent);
 
             // 2秒后淡出
-            schedule.Execute(() =>
+            rootVisualElement.schedule.Execute(() =>
             {
                 if (_silentExecutor != null && !_silentExecutor.IsRunning)
                 {

@@ -23,6 +23,7 @@ namespace PCGToolkit.Graph
         private string _nodeDisplayName = "";  
         private string _nodeId = "";  
         private double _executionTimeMs;
+        private Mesh _wireOverlayMesh;
 
         // A4: Geometry Debug 可折叠面板
         private bool _showDataPanel = false;
@@ -46,13 +47,15 @@ namespace PCGToolkit.Graph
             if (geometry != null && geometry.Points.Count > 0)  
             {  
                 string cacheKey = "preview_" + nodeId + "_" + PCGGeometrySerializer.ComputeHash(geometry);  
-                _previewMesh = PCGCacheManager.GetOrCreateMesh(cacheKey, geometry);  
-            }  
-            else  
-            {  
-                _previewMesh = null;  
-            }  
-  
+                _previewMesh = PCGCacheManager.GetOrCreateMesh(cacheKey, geometry);
+                BuildWireOverlayMesh();
+            }
+            else
+            {
+                _previewMesh = null;
+                _wireOverlayMesh = null;
+            }
+
             Repaint();  
         }  
   
@@ -62,9 +65,12 @@ namespace PCGToolkit.Graph
             _nodeDisplayName = "";  
             _nodeId = "";  
             _executionTimeMs = 0;  
-            if (_previewMesh != null)  
-                DestroyImmediate(_previewMesh);  
-            _previewMesh = null;  
+            if (_previewMesh != null)
+                DestroyImmediate(_previewMesh);
+            if (_wireOverlayMesh != null)
+                DestroyImmediate(_wireOverlayMesh);
+            _previewMesh = null;
+            _wireOverlayMesh = null;  
             Repaint();  
         }  
   
@@ -135,8 +141,10 @@ namespace PCGToolkit.Graph
                 DestroyImmediate(_previewMaterial);
             if (_wireMaterial != null)
                 DestroyImmediate(_wireMaterial);
-            if (_previewMesh != null)  
-                DestroyImmediate(_previewMesh);  
+            if (_previewMesh != null)
+                DestroyImmediate(_previewMesh);
+            if (_wireOverlayMesh != null)
+                DestroyImmediate(_wireOverlayMesh);  
         }  
   
         private void OnGUI()  
@@ -219,13 +227,15 @@ namespace PCGToolkit.Graph
                 _previewRenderUtility.DrawMesh(_previewMesh, Matrix4x4.identity, _previewMaterial, 0);
             }
 
-            _previewRenderUtility.camera.Render();
-
-            // Wireframe overlay: 使用 GL 手动绘制线条，避免 GL.wireframe 全局状态污染 UI
             if (_renderMode == PreviewRenderMode.Wireframe || _renderMode == PreviewRenderMode.ShadedWireframe)
             {
-                DrawWireframeOverlay();
+                if (_wireOverlayMesh != null && _wireMaterial != null)
+                {
+                    _previewRenderUtility.DrawMesh(_wireOverlayMesh, Matrix4x4.identity, _wireMaterial, 0);
+                }
             }
+
+            _previewRenderUtility.camera.Render();
   
             var resultTexture = _previewRenderUtility.EndPreview();  
             GUI.DrawTexture(previewRect, resultTexture, ScaleMode.StretchToFill, false);  
@@ -374,56 +384,46 @@ namespace PCGToolkit.Graph
         }
 
         /// <summary>
-        /// 使用 GL 手动绘制线框，避免 GL.wireframe 全局状态污染 UI
+        /// 从 preview mesh 构建 GL.LINES 拓扑的线框覆盖 mesh（边去重，仅在 geometry 更新时构建一次）
         /// </summary>
-        private void DrawWireframeOverlay()
+        private void BuildWireOverlayMesh()
         {
+            if (_wireOverlayMesh != null)
+            {
+                DestroyImmediate(_wireOverlayMesh);
+                _wireOverlayMesh = null;
+            }
+
             if (_previewMesh == null) return;
-
-            var camera = _previewRenderUtility.camera;
-            var material = _wireMaterial != null ? _wireMaterial : _previewMaterial;
-
-            material.SetPass(0);
-
-            GL.PushMatrix();
-            GL.MultMatrix(Matrix4x4.identity);
-
-            GL.Begin(GL.LINES);
-            GL.Color(new Color(0f, 1f, 0f, 1f)); // 绿色线框
 
             var vertices = _previewMesh.vertices;
             var triangles = _previewMesh.triangles;
+            if (vertices.Length == 0 || triangles.Length == 0) return;
 
-            // 使用 HashSet 避免重复绘制边
-            var drawnEdges = new HashSet<(int, int)>();
+            var edgeSet = new HashSet<(int, int)>();
+            var lineIndices = new List<int>();
 
             for (int i = 0; i < triangles.Length; i += 3)
             {
-                int v0 = triangles[i];
-                int v1 = triangles[i + 1];
-                int v2 = triangles[i + 2];
-
-                DrawEdge(v0, v1, vertices, drawnEdges);
-                DrawEdge(v1, v2, vertices, drawnEdges);
-                DrawEdge(v2, v0, vertices, drawnEdges);
+                TryAddEdge(triangles[i], triangles[i + 1], edgeSet, lineIndices);
+                TryAddEdge(triangles[i + 1], triangles[i + 2], edgeSet, lineIndices);
+                TryAddEdge(triangles[i + 2], triangles[i], edgeSet, lineIndices);
             }
 
-            GL.End();
-            GL.PopMatrix();
+            var wireMesh = new Mesh();
+            wireMesh.vertices = vertices;
+            wireMesh.SetIndices(lineIndices.ToArray(), MeshTopology.Lines, 0);
+            wireMesh.RecalculateBounds();
+            _wireOverlayMesh = wireMesh;
         }
 
-        private void DrawEdge(int a, int b, Vector3[] vertices, HashSet<(int, int)> drawnEdges)
+        private static void TryAddEdge(int a, int b, HashSet<(int, int)> edgeSet, List<int> lineIndices)
         {
-            // 确保边是有序的，避免 (a,b) 和 (b,a) 被视为不同的边
             var edge = a < b ? (a, b) : (b, a);
-            if (drawnEdges.Contains(edge)) return;
-
-            drawnEdges.Add(edge);
-
-            if (a < vertices.Length && b < vertices.Length)
+            if (edgeSet.Add(edge))
             {
-                GL.Vertex(vertices[a]);
-                GL.Vertex(vertices[b]);
+                lineIndices.Add(a);
+                lineIndices.Add(b);
             }
         }
     }

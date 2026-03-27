@@ -28,20 +28,15 @@ namespace PCGToolkit.Graph
         private int _nodesPerTick = 5;
         private double _timeBudgetMs = 8.0;
 
-        // ---- 事件 ----
         public event Action<int, int> OnProgressChanged;
         public event Action<Dictionary<string, NodeExecutionResult>, double> OnSilentExecutionCompleted;
         public event Action OnSilentExecutionCancelled;
         public event Action<string> OnSilentExecutionFailed;
 
-        // ---- 公共属性 ----
         public bool IsRunning => _isRunning;
         public float Progress => _sortedNodes?.Count > 0 ? (float)_currentNodeIndex / _sortedNodes.Count : 0f;
 
-        /// <summary>
-        /// 启动静默执行
-        /// </summary>
-        public void Start(PCGGraphData graphData)
+        public void Start(PCGGraphData graphData, string stopAtNodeId = null)
         {
             if (_isRunning) Cancel();
 
@@ -56,7 +51,6 @@ namespace PCGToolkit.Graph
                 return;
             }
 
-            // 过滤 Output 类别节点
             _sortedNodes = _sortedNodes.Where(node =>
             {
                 var template = PCGNodeRegistry.GetNode(node.NodeType);
@@ -69,7 +63,19 @@ namespace PCGToolkit.Graph
                 return;
             }
 
-            // 预建邻接表
+            if (stopAtNodeId != null)
+            {
+                int stopIndex = _sortedNodes.FindIndex(n => n.NodeId == stopAtNodeId);
+                if (stopIndex >= 0)
+                    _sortedNodes = _sortedNodes.Take(stopIndex + 1).ToList();
+            }
+
+            if (_sortedNodes.Count == 0)
+            {
+                OnSilentExecutionFailed?.Invoke("Target node not found in executable nodes.");
+                return;
+            }
+
             _inputEdgeMap = new Dictionary<string, List<PCGEdgeData>>();
             foreach (var node in _sortedNodes)
                 _inputEdgeMap[node.NodeId] = new List<PCGEdgeData>();
@@ -90,17 +96,11 @@ namespace PCGToolkit.Graph
             EditorApplication.update += Tick;
         }
 
-        /// <summary>
-        /// 请求取消执行
-        /// </summary>
         public void Cancel()
         {
             _cancellationRequested = true;
         }
 
-        /// <summary>
-        /// 立即停止执行
-        /// </summary>
         public void Stop()
         {
             EditorApplication.update -= Tick;
@@ -153,7 +153,6 @@ namespace PCGToolkit.Graph
             var nodeInstance = PCGNodeRegistry.GetOrCreateInstance(nodeData.NodeType)
                 ?? (IPCGNode)Activator.CreateInstance(nodeTemplate.GetType());
 
-            // 收集输入几何体（使用邻接表）
             var inputGeometries = new Dictionary<string, PCGGeometry>();
             if (_inputEdgeMap.TryGetValue(nodeData.NodeId, out var edges))
             {
@@ -167,7 +166,6 @@ namespace PCGToolkit.Graph
                 }
             }
 
-            // 收集参数
             var parameters = new Dictionary<string, object>();
             foreach (var param in nodeData.Parameters)
                 parameters[param.Key] = PCGParamHelper.DeserializeParamValue(param);
@@ -182,7 +180,6 @@ namespace PCGToolkit.Graph
                 }
             }
 
-            // 收集上游 GlobalVariables（使用邻接表）
             if (_inputEdgeMap.TryGetValue(nodeData.NodeId, out var gvEdges))
             {
                 foreach (var edge in gvEdges)
@@ -195,9 +192,7 @@ namespace PCGToolkit.Graph
 
             _context.CurrentNodeId = nodeData.NodeId;
 
-            // Cache query
             string cacheKey = PCGCacheManager.ComputeCacheKey(nodeData.NodeType, parameters, inputGeometries);
-
             if (_context.UseDiskCache && PCGCacheManager.TryGetGeometry(cacheKey, out var cachedGeo))
             {
                 result.ElapsedMs = 0;
@@ -211,22 +206,18 @@ namespace PCGToolkit.Graph
             }
 
             _nodeStopwatch.Restart();
-
             try
             {
                 var outputs = nodeInstance.Execute(_context, inputGeometries, parameters);
                 _nodeStopwatch.Stop();
-
                 result.ElapsedMs = _nodeStopwatch.Elapsed.TotalMilliseconds;
                 result.Outputs = outputs;
                 result.Success = true;
-
                 if (outputs != null)
                 {
                     _nodeOutputs[nodeData.NodeId] = outputs;
                     foreach (var kvp in outputs)
                         _context.CacheOutput($"{nodeData.NodeId}.{kvp.Key}", kvp.Value);
-
                     if (_context.UseDiskCache)
                     {
                         foreach (var kvp in outputs)
@@ -245,7 +236,6 @@ namespace PCGToolkit.Graph
                 result.Success = false;
                 result.ErrorMessage = e.Message;
             }
-
             _nodeResults[nodeData.NodeId] = result;
         }
 
@@ -255,19 +245,14 @@ namespace PCGToolkit.Graph
             OnSilentExecutionCompleted?.Invoke(_nodeResults, _totalStopwatch.Elapsed.TotalMilliseconds);
         }
 
-        /// <summary>
-        /// 获取最后一个有非空输出的节点的几何体
-        /// </summary>
         public PCGGeometry GetLastTerminalGeometry()
         {
             if (_sortedNodes == null) return null;
-
             for (int i = _sortedNodes.Count - 1; i >= 0; i--)
             {
                 if (_nodeResults.TryGetValue(_sortedNodes[i].NodeId, out var result) && result.OutputGeometry != null)
                     return result.OutputGeometry;
             }
-
             return null;
         }
     }

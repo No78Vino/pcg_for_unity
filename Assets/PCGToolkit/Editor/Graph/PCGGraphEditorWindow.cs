@@ -124,6 +124,15 @@ namespace PCGToolkit.Graph
                 _lastSelectedNode = currentSelected;
                 if (_inspectorWindow != null)
                     _inspectorWindow.InspectNode(currentSelected);
+
+                // Live 模式下切换选中节点也触发执行
+                if (_liveMode)
+                {
+                    _lastChangeTime = EditorApplication.timeSinceStartup;
+                    _pendingSilentRun = true;
+                    if (_silentExecutor != null && _silentExecutor.IsRunning)
+                        _silentExecutor.Cancel();
+                }
             }
         }
 
@@ -653,7 +662,11 @@ namespace PCGToolkit.Graph
             if (graphView == null) return;
             var data = graphView.SaveToGraphData();
             if (data == null || data.Nodes.Count == 0) return;
-            _silentExecutor.Start(data);
+
+            // Live mode: run to selected node, or last non-Output node
+            var selectedNode = graphView.GetSelectedNodeVisual();
+            string stopAtNodeId = selectedNode?.NodeId;
+            _silentExecutor.Start(data, stopAtNodeId);
         }
 
         private void OnSilentExecutionProgress(int completed, int total)

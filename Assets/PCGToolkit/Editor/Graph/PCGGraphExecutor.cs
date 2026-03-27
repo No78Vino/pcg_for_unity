@@ -113,6 +113,7 @@ namespace PCGToolkit.Graph
         {
             if (dirtyNodes.Count == 0) return;
 
+            // 从 dirty nodes 出发，沿下游传播，收集所有需要重新执行的节点
             var toExecute = new HashSet<string>(dirtyNodes);
             var queue = new Queue<string>(dirtyNodes);
             while (queue.Count > 0)
@@ -128,15 +129,13 @@ namespace PCGToolkit.Graph
                 }
             }
 
-            var sortedNodes = PCGGraphHelper.TopologicalSort(graphData);
-            if (sortedNodes == null) return;
+            // 优化: 只对 dirty 子图做拓扑排序，而非全图
+            var sortedSubgraph = PCGGraphHelper.TopologicalSortSubgraph(graphData, toExecute);
+            if (sortedSubgraph == null || sortedSubgraph.Count == 0) return;
 
-            foreach (var nodeData in sortedNodes)
+            foreach (var nodeData in sortedSubgraph)
             {
-                if (toExecute.Contains(nodeData.NodeId))
-                {
-                    ExecuteNode(nodeData);
-                }
+                ExecuteNode(nodeData);
             }
 
             dirtyNodes.Clear();
@@ -163,7 +162,8 @@ namespace PCGToolkit.Graph
                 return;
             }
 
-            var nodeInstance = (IPCGNode)Activator.CreateInstance(nodeTemplate.GetType());
+            var nodeInstance = PCGNodeRegistry.GetOrCreateInstance(nodeData.NodeType)
+                ?? (IPCGNode)Activator.CreateInstance(nodeTemplate.GetType());
 
             var inputGeometries = new Dictionary<string, PCGGeometry>();
             var inputPortCounts = new Dictionary<string, int>();

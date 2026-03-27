@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -13,6 +15,14 @@ namespace PCGToolkit.Graph
     {
         private ScrollView _scrollView;
         private List<PCGErrorEntry> _errors = new List<PCGErrorEntry>();
+
+        // P2-T3: 过滤/搜索
+        private bool _showWarnings = true;
+        private bool _showErrors = true;
+        private string _searchText = "";
+        private ToolbarToggle _warningToggle;
+        private ToolbarToggle _errorToggle;
+        private TextField _searchField;
         
         public PCGErrorPanel()
         {
@@ -46,7 +56,27 @@ namespace PCGToolkit.Graph
                 }
             };
             header.Add(titleLabel);
-            
+
+            // P2-T3: Warning 过滤 Toggle
+            _warningToggle = new ToolbarToggle { text = "Warn", value = true };
+            _warningToggle.style.width = 55;
+            _warningToggle.RegisterValueChangedCallback(evt => { _showWarnings = evt.newValue; RefreshFilteredView(); });
+            header.Add(_warningToggle);
+
+            // P2-T3: Error 过滤 Toggle
+            _errorToggle = new ToolbarToggle { text = "Error", value = true };
+            _errorToggle.style.width = 55;
+            _errorToggle.RegisterValueChangedCallback(evt => { _showErrors = evt.newValue; RefreshFilteredView(); });
+            header.Add(_errorToggle);
+
+            // P2-T3: 搜索框
+            _searchField = new TextField { value = "" };
+            _searchField.style.width = 120;
+            _searchField.style.height = 18;
+            _searchField.style.fontSize = 10;
+            _searchField.RegisterValueChangedCallback(evt => { _searchText = evt.newValue; RefreshFilteredView(); });
+            header.Add(_searchField);
+
             // 清除按钮
             var clearButton = new Button(() => ClearErrors())
             {
@@ -77,10 +107,7 @@ namespace PCGToolkit.Graph
         {
             var entry = new PCGErrorEntry(nodeId, nodeName, message, isWarning);
             _errors.Add(entry);
-            
-            var element = CreateErrorElement(entry);
-            _scrollView.Add(element);
-            
+            RefreshFilteredView();
             style.display = DisplayStyle.Flex;
         }
         
@@ -93,7 +120,29 @@ namespace PCGToolkit.Graph
         {
             _errors.Clear();
             _scrollView.Clear();
-            style.display = DisplayStyle.None; // 迭代四修复：清空后隐藏面板
+            style.display = DisplayStyle.None;
+        }
+
+        // P2-T3: 刷新过滤后的视图
+        private void RefreshFilteredView()
+        {
+            _scrollView.Clear();
+            foreach (var entry in _errors)
+            {
+                // 过滤: Warning/Error Toggle
+                if (entry.IsWarning && !_showWarnings) continue;
+                if (!entry.IsWarning && !_showErrors) continue;
+
+                // 过滤: 搜索文本
+                if (!string.IsNullOrEmpty(_searchText))
+                {
+                    if (!entry.NodeName.Contains(_searchText, StringComparison.OrdinalIgnoreCase) &&
+                        !entry.Message.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                }
+
+                _scrollView.Add(CreateErrorElement(entry));
+            }
         }
         
         public bool HasErrors => _errors.Exists(e => !e.IsWarning);
@@ -171,17 +220,21 @@ namespace PCGToolkit.Graph
     
     public class PCGErrorEntry
     {
+        public enum ErrorLevel { Warning, Error, Fatal }
+
         public string NodeId;
         public string NodeName;
         public string Message;
         public bool IsWarning;
-        
+        public ErrorLevel Level;
+
         public PCGErrorEntry(string nodeId, string nodeName, string message, bool isWarning)
         {
             NodeId = nodeId;
             NodeName = nodeName;
             Message = message;
             IsWarning = isWarning;
+            Level = isWarning ? ErrorLevel.Warning : ErrorLevel.Error;
         }
     }
 }

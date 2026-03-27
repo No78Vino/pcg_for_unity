@@ -6,15 +6,15 @@ namespace PCGToolkit.Core
     public static class PCGToolkitVersion
     {
         public const int Major = 0;
-        public const int Minor = 5;
+        public const int Minor = 6;
         public const int Patch = 0;
-        public const string Label = "alpha"; // alpha / beta / rc / ""
-        
+        public const string Label = ""; // alpha / beta / rc / ""
+
         /// <summary>对应的 Git commit SHA（构建时更新）</summary>
-        public const string CommitSHA = "05f8f419";
-        
+        public const string CommitSHA = "84520cc";
+
         /// <summary>构建日期</summary>
-        public const string BuildDate = "2026-03-20";
+        public const string BuildDate = "2026-03-27";
 
         public static string Version => Label == "" 
             ? $"{Major}.{Minor}.{Patch}" 

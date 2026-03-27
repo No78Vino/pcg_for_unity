@@ -41,6 +41,16 @@ namespace PCGToolkit.Graph
         // 迭代七：性能面板
         private PCGPerformancePanel _perfPanel;
         private bool _showPerfPanel = false;
+
+        // P1-T2: Live Feedback Mode
+        private bool _liveMode = false;
+        private PCGSilentExecutor _silentExecutor;
+        private double _lastChangeTime = 0;
+        private bool _pendingSilentRun = false;
+        private const double DEBOUNCE_DELAY = 0.4;
+        private VisualElement _liveProgressBar;
+        private Label _liveProgressLabel;
+        private VisualElement _liveProgressFill;
   
         [MenuItem("PCG Toolkit/Node Editor")]  
         public static PCGGraphEditorWindow OpenWindow()  
@@ -65,6 +75,20 @@ namespace PCGToolkit.Graph
             // 迭代四：注册本地化变更回调
             PCGToolkit.Core.PCGLocalization.OnLanguageChanged += RefreshToolbarLabels;
 
+            // P1-T2: Live 模式初始化
+            _liveMode = EditorPrefs.GetBool("PCGToolkit_LiveMode", false);
+            _silentExecutor = new PCGSilentExecutor();
+            _silentExecutor.OnProgressChanged += OnSilentExecutionProgress;
+            _silentExecutor.OnSilentExecutionCompleted += OnSilentExecutionCompleted;
+            _silentExecutor.OnSilentExecutionCancelled += () =>
+            {
+                _liveProgressLabel.text = "Live: Cancelled";
+            };
+            _silentExecutor.OnSilentExecutionFailed += (err) =>
+            {
+                _liveProgressLabel.text = $"Live: Error - {err}";
+            };
+
             // 自动打开 Inspector（现在是唯一的参数编辑入口）
             EditorApplication.delayCall += () =>
             {
@@ -80,6 +104,16 @@ namespace PCGToolkit.Graph
 
         private void Update()
         {
+            // P1-T2: Live 模式防抖检测
+            if (_liveMode && _pendingSilentRun)
+            {
+                if (EditorApplication.timeSinceStartup - _lastChangeTime >= DEBOUNCE_DELAY)
+                {
+                    _pendingSilentRun = false;
+                    StartSilentExecution();
+                }
+            }
+
             // 轮询检测选中节点变化（GraphView 没有原生的 OnSelectionChanged）
             if (graphView == null) return;
             var currentSelected = graphView.GetSelectedNodeVisual();
@@ -108,6 +142,10 @@ namespace PCGToolkit.Graph
 
             // 迭代四：注销本地化回调
             PCGToolkit.Core.PCGLocalization.OnLanguageChanged -= RefreshToolbarLabels;
+
+            // P1-T2: 清理静默执行器
+            if (_silentExecutor != null && _silentExecutor.IsRunning)
+                _silentExecutor.Stop();
         }
 
         private void ConstructGraphView()  
@@ -131,6 +169,18 @@ namespace PCGToolkit.Graph
             // 迭代一：注册脏状态回调
             graphView.OnGraphChanged += MarkDirty;
 
+            // P1-T2: Live 模式触发逻辑
+            graphView.OnGraphChanged += () =>
+            {
+                if (_liveMode)
+                {
+                    _lastChangeTime = EditorApplication.timeSinceStartup;
+                    _pendingSilentRun = true;
+                    if (_silentExecutor != null && _silentExecutor.IsRunning)
+                        _silentExecutor.Cancel();
+                }
+            };
+
             // 连线/断线时刷新 Inspector（参数连接状态变化）
             graphView.OnGraphChanged += () =>
             {
@@ -151,6 +201,45 @@ namespace PCGToolkit.Graph
             _perfPanel = new PCGPerformancePanel();
             _perfPanel.style.display = DisplayStyle.None;
             _mainContainer.Add(_perfPanel);
+
+            // P1-T2: Live 进度条
+            _liveProgressBar = new VisualElement
+            {
+                style =
+                {
+                    height = 20,
+                    backgroundColor = new StyleColor(new Color(0.1f, 0.1f, 0.1f, 0.6f)),
+                    flexDirection = FlexDirection.Row,
+                    paddingLeft = 8,
+                    paddingRight = 8,
+                    alignItems = Align.Center,
+                }
+            };
+            _liveProgressFill = new VisualElement
+            {
+                style =
+                {
+                    position = Position.Absolute,
+                    left = 0,
+                    top = 0,
+                    height = new Length(100, LengthUnit.Percent),
+                    width = new Length(0, LengthUnit.Percent),
+                    backgroundColor = new StyleColor(new Color(0.2f, 0.7f, 0.8f, 0.4f)),
+                }
+            };
+            _liveProgressBar.Add(_liveProgressFill);
+            _liveProgressLabel = new Label("Live: Idle")
+            {
+                style =
+                {
+                    color = new StyleColor(Color.white),
+                    fontSize = 11,
+                    unityTextAlign = TextAnchor.MiddleLeft,
+                }
+            };
+            _liveProgressBar.Add(_liveProgressLabel);
+            _liveProgressBar.style.display = _liveMode ? DisplayStyle.Flex : DisplayStyle.None;
+            _mainContainer.Add(_liveProgressBar);
         }
         
         // 迭代三：节点点击预览
@@ -325,7 +414,22 @@ namespace PCGToolkit.Graph
   
             _stopButton = new Button(() => OnStopClicked()) { text = L("btn.stop") };  
             _stopButton.style.backgroundColor = new StyleColor(new Color(0.5f, 0.2f, 0.2f));  
-            toolbar.Add(_stopButton);  
+            toolbar.Add(_stopButton);
+
+            // P1-T2: Live 模式 Toggle 按钮
+            var liveToggle = new ToolbarToggle { text = "Live", value = _liveMode };
+            liveToggle.style.backgroundColor = _liveMode ? new StyleColor(new Color(0.1f, 0.6f, 0.2f)) : default;
+            liveToggle.RegisterValueChangedCallback(evt =>
+            {
+                _liveMode = evt.newValue;
+                EditorPrefs.SetBool("PCGToolkit_LiveMode", _liveMode);
+                liveToggle.style.backgroundColor = _liveMode ? new StyleColor(new Color(0.1f, 0.6f, 0.2f)) : default;
+                if (_liveProgressBar != null)
+                    _liveProgressBar.style.display = _liveMode ? DisplayStyle.Flex : DisplayStyle.None;
+                if (!_liveMode && _silentExecutor != null && _silentExecutor.IsRunning)
+                    _silentExecutor.Cancel();
+            });
+            toolbar.Add(liveToggle);  
             // C3: Export All
             var exportAllButton = new Button(OnExportAllClicked)
             {
@@ -540,6 +644,55 @@ namespace PCGToolkit.Graph
             }
         }
         
+        // ---- P1-T2: Live Feedback Mode ----
+
+        private void StartSilentExecution()
+        {
+            if (graphView == null) return;
+            var data = graphView.SaveToGraphData();
+            if (data == null || data.Nodes.Count == 0) return;
+            _silentExecutor.Start(data);
+        }
+
+        private void OnSilentExecutionProgress(int completed, int total)
+        {
+            if (_liveProgressFill != null)
+                _liveProgressFill.style.width = new Length((float)completed / total * 100f, LengthUnit.Percent);
+            if (_liveProgressLabel != null)
+                _liveProgressLabel.text = $"Live: {completed}/{total} nodes...";
+        }
+
+        private void OnSilentExecutionCompleted(Dictionary<string, NodeExecutionResult> results, double totalMs)
+        {
+            if (_liveProgressLabel != null)
+                _liveProgressLabel.text = $"Live: Done ({totalMs:F1}ms)";
+            if (_liveProgressFill != null)
+                _liveProgressFill.style.width = new Length(100, LengthUnit.Percent);
+
+            // 2秒后淡出
+            schedule.Execute(() =>
+            {
+                if (_silentExecutor != null && !_silentExecutor.IsRunning)
+                {
+                    if (_liveProgressLabel != null)
+                        _liveProgressLabel.text = "Live: Idle";
+                    if (_liveProgressFill != null)
+                        _liveProgressFill.style.width = new Length(0, LengthUnit.Percent);
+                }
+            }).ExecuteLater(2000);
+
+            // 预览结果到 Scene
+            var previewGeo = _silentExecutor.GetLastTerminalGeometry();
+
+            // 如果用户选中了某个节点，优先预览该节点
+            var selectedNode = graphView?.GetSelectedNodeVisual();
+            if (selectedNode != null && results != null && results.TryGetValue(selectedNode.NodeId, out var selResult))
+                previewGeo = selResult.OutputGeometry ?? previewGeo;
+
+            if (previewGeo != null)
+                PCGScenePreview.InjectToScene(previewGeo, "PCG_LivePreview");
+        }
+
         // ---- 迭代一：脏状态管理 ----
         
         private void MarkDirty()
@@ -582,7 +735,11 @@ namespace PCGToolkit.Graph
         // ---- 执行操作 ----  
   
         private void OnExecuteClicked()  
-        {  
+        {
+            // P1-T2: 手动执行时打断静默运行
+            if (_silentExecutor != null && _silentExecutor.IsRunning)
+                _silentExecutor.Cancel();
+
             if (_asyncExecutor.State == ExecutionState.Paused)  
             {  
                 // 从暂停状态继续  

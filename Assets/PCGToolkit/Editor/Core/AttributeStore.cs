@@ -63,13 +63,20 @@ namespace PCGToolkit.Core
     /// </summary>
     public class AttributeStore
     {
-        private Dictionary<string, PCGAttribute> _attributes = new Dictionary<string, PCGAttribute>();
+        private Dictionary<string, PCGAttribute> _attributes = null;
+
+        private void EnsureDict()
+        {
+            if (_attributes == null)
+                _attributes = new Dictionary<string, PCGAttribute>(4);
+        }
 
         /// <summary>
         /// 创建一个新属性
         /// </summary>
         public PCGAttribute CreateAttribute(string name, AttribType type, object defaultValue = null)
         {
+            EnsureDict();
             var attr = new PCGAttribute(name, type, defaultValue);
             _attributes[name] = attr;
             return attr;
@@ -80,6 +87,7 @@ namespace PCGToolkit.Core
         /// </summary>
         public PCGAttribute GetAttribute(string name)
         {
+            if (_attributes == null) return null;
             _attributes.TryGetValue(name, out var attr);
             return attr;
         }
@@ -89,7 +97,7 @@ namespace PCGToolkit.Core
         /// </summary>
         public bool HasAttribute(string name)
         {
-            return _attributes.ContainsKey(name);
+            return _attributes != null && _attributes.ContainsKey(name);
         }
 
         /// <summary>
@@ -97,7 +105,7 @@ namespace PCGToolkit.Core
         /// </summary>
         public bool RemoveAttribute(string name)
         {
-            return _attributes.Remove(name);
+            return _attributes != null && _attributes.Remove(name);
         }
 
         /// <summary>
@@ -105,7 +113,7 @@ namespace PCGToolkit.Core
         /// </summary>
         public IEnumerable<string> GetAttributeNames()
         {
-            return _attributes.Keys;
+            return _attributes?.Keys ?? Enumerable.Empty<string>();
         }
 
         /// <summary>
@@ -113,7 +121,7 @@ namespace PCGToolkit.Core
         /// </summary>
         public IEnumerable<PCGAttribute> GetAllAttributes()
         {
-            return _attributes.Values;
+            return _attributes?.Values ?? Enumerable.Empty<PCGAttribute>();
         }
 
         /// <summary>
@@ -121,6 +129,7 @@ namespace PCGToolkit.Core
         /// </summary>
         public AttributeStore SetAttribute(string name, object value)
         {
+            EnsureDict();
             AttribType type = InferType(value);
             if (_attributes.TryGetValue(name, out var existing))
             {
@@ -153,7 +162,7 @@ namespace PCGToolkit.Core
         /// </summary>
         public void Clear()
         {
-            _attributes.Clear();
+            _attributes = null;
         }
 
         /// <summary>
@@ -161,7 +170,9 @@ namespace PCGToolkit.Core
         /// </summary>
         public AttributeStore Clone()
         {
+            if (_attributes == null) return new AttributeStore();
             var clone = new AttributeStore();
+            clone._attributes = new Dictionary<string, PCGAttribute>(_attributes.Count);
             foreach (var kvp in _attributes)
                 clone._attributes[kvp.Key] = kvp.Value.Clone();
             return clone;

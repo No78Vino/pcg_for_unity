@@ -19,6 +19,13 @@ namespace PCGToolkit.Graph
             public long EstimatedBytes;
         }
 
+        // P2-T3: FlameChart 支持
+        private enum ViewMode { Table, FlameChart }
+        private ViewMode _viewMode = ViewMode.Table;
+        private VisualElement _flameChartContainer;
+        private Button _tableButton;
+        private Button _flameButton;
+
         private List<NodePerfEntry> _entries = new List<NodePerfEntry>();
         private Label _summaryLabel;
         private VisualElement _listContainer;
@@ -53,6 +60,19 @@ namespace PCGToolkit.Graph
                 }
             };
             header.Add(titleLabel);
+
+            // P2-T3: Table/FlameChart 切换按钮
+            _tableButton = new Button(() => SwitchView(ViewMode.Table)) { text = "Table" };
+            _tableButton.style.width = 45;
+            _tableButton.style.height = 18;
+            _tableButton.style.fontSize = 10;
+            header.Add(_tableButton);
+
+            _flameButton = new Button(() => SwitchView(ViewMode.FlameChart)) { text = "Flame" };
+            _flameButton.style.width = 45;
+            _flameButton.style.height = 18;
+            _flameButton.style.fontSize = 10;
+            header.Add(_flameButton);
 
             _summaryLabel = new Label("No data")
             {
@@ -89,6 +109,21 @@ namespace PCGToolkit.Graph
             _listContainer = new VisualElement();
             scrollView.Add(_listContainer);
             Add(scrollView);
+
+            // P2-T3: 火焰图容器
+            _flameChartContainer = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    flexWrap = Wrap.NoWrap,
+                    height = 28,
+                    paddingLeft = 8,
+                    paddingRight = 8,
+                    display = DisplayStyle.None,
+                }
+            };
+            Add(_flameChartContainer);
         }
 
         public void CollectFromExecutor(PCGAsyncGraphExecutor asyncExecutor, PCGGraphData graphData)
@@ -163,6 +198,67 @@ namespace PCGToolkit.Graph
 
                 _listContainer.Add(row);
             }
+
+            // P2-T3: 如果当前是火焰图模式则自动刷新
+            if (_viewMode == ViewMode.FlameChart) RenderFlameChart();
+        }
+
+        // P2-T3: 视图切换
+        private void SwitchView(ViewMode mode)
+        {
+            _viewMode = mode;
+            _listContainer.parent.style.display = mode == ViewMode.Table ? DisplayStyle.Flex : DisplayStyle.None;
+            _flameChartContainer.style.display = mode == ViewMode.FlameChart ? DisplayStyle.Flex : DisplayStyle.None;
+            if (mode == ViewMode.FlameChart) RenderFlameChart();
+        }
+
+        // P2-T3: 渲染火焰图
+        private void RenderFlameChart()
+        {
+            _flameChartContainer.Clear();
+            if (_entries.Count == 0) return;
+
+            double totalMs = _entries.Sum(e => e.ElapsedMs);
+            if (totalMs <= 0) totalMs = 1;
+
+            foreach (var entry in _entries)
+            {
+                float widthPct = (float)(entry.ElapsedMs / totalMs) * 100f;
+                if (widthPct < 0.5f) widthPct = 0.5f;
+
+                var block = new VisualElement
+                {
+                    style =
+                    {
+                        width = new Length(widthPct, LengthUnit.Percent),
+                        height = 24,
+                        backgroundColor = GetHeatColor(entry.ElapsedMs),
+                        borderRightWidth = 1,
+                        borderRightColor = new StyleColor(new Color(0.1f, 0.1f, 0.1f)),
+                    }
+                };
+
+                var label = new Label(entry.NodeType)
+                {
+                    style =
+                    {
+                        fontSize = 9,
+                        overflow = Overflow.Hidden,
+                        color = new StyleColor(Color.white),
+                    }
+                };
+                block.Add(label);
+
+                block.tooltip = $"{entry.NodeType}\n{entry.ElapsedMs:F2}ms\nPts: {entry.OutputPoints}\nPrims: {entry.OutputPrims}";
+                _flameChartContainer.Add(block);
+            }
+        }
+
+        private static StyleColor GetHeatColor(double elapsedMs)
+        {
+            if (elapsedMs > 50) return new StyleColor(new Color(0.8f, 0.2f, 0.2f, 0.9f));
+            if (elapsedMs > 10) return new StyleColor(new Color(0.8f, 0.6f, 0.1f, 0.9f));
+            return new StyleColor(new Color(0.2f, 0.6f, 0.3f, 0.9f));
         }
 
         private static long EstimateMemory(PCGGeometry geo)

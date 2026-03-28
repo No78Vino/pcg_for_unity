@@ -64,8 +64,8 @@ namespace PCGToolkit.Examples
                 "slide_main", "slide_top_flat", "slide_front_bevel", "slide_rear_serrations",
                 "ejection_port", "front_sight", "rear_sight", "rear_sight_notch_left", "rear_sight_notch_right"
             };
-            foreach (var p in slideParts)
-                AddEdge(data, nodes, p + "_xform", "merge_slide");
+            AddMergeEdges(data, nodes, "merge_slide",
+                System.Array.ConvertAll(slideParts, p => p + "_xform"));
 
             // =====================================================
             //  Group 2: Barrel (枪管) — 2 primitives
@@ -98,8 +98,8 @@ namespace PCGToolkit.Examples
 
             // Merge barrel group
             nodes["merge_barrel"] = data.AddNode("Merge", new Vector2(600, barrelBase + 90));
-            AddEdge(data, nodes, "barrel_outer_xform", "merge_barrel");
-            AddEdge(data, nodes, "barrel_bore_xform", "merge_barrel");
+            AddMergeEdges(data, nodes, "merge_barrel",
+                new[] { "barrel_outer_xform", "barrel_bore_xform" });
 
             // =====================================================
             //  Group 3: Frame (机匣) — 5 primitives
@@ -127,8 +127,8 @@ namespace PCGToolkit.Examples
                 "frame_main", "frame_front_extension", "accessory_rail_1",
                 "accessory_rail_2", "frame_rear_tang"
             };
-            foreach (var p in frameParts)
-                AddEdge(data, nodes, p + "_xform", "merge_frame");
+            AddMergeEdges(data, nodes, "merge_frame",
+                System.Array.ConvertAll(frameParts, p => p + "_xform"));
 
             // =====================================================
             //  Group 4: Trigger Guard (扳机护圈) — 4 primitives
@@ -153,8 +153,8 @@ namespace PCGToolkit.Examples
                 "trigger_guard_front", "trigger_guard_bottom",
                 "trigger_guard_front_curve", "trigger_guard_rear"
             };
-            foreach (var p in tgParts)
-                AddEdge(data, nodes, p + "_xform", "merge_trigger_guard");
+            AddMergeEdges(data, nodes, "merge_trigger_guard",
+                System.Array.ConvertAll(tgParts, p => p + "_xform"));
 
             // =====================================================
             //  Group 5: Trigger (扳机) — 3 primitives
@@ -181,9 +181,8 @@ namespace PCGToolkit.Examples
             AddEdge(data, nodes, "trigger_pivot", "trigger_pivot_xform");
 
             nodes["merge_trigger"] = data.AddNode("Merge", new Vector2(600, trigBase + 180));
-            AddEdge(data, nodes, "trigger_body_xform", "merge_trigger");
-            AddEdge(data, nodes, "trigger_face_xform", "merge_trigger");
-            AddEdge(data, nodes, "trigger_pivot_xform", "merge_trigger");
+            AddMergeEdges(data, nodes, "merge_trigger",
+                new[] { "trigger_body_xform", "trigger_face_xform", "trigger_pivot_xform" });
 
             // =====================================================
             //  Group 6: Grip (握把) — 6 primitives
@@ -214,8 +213,8 @@ namespace PCGToolkit.Examples
                 "grip_main", "grip_front_strap", "grip_back_strap",
                 "grip_left_panel", "grip_right_panel", "grip_bottom_swell"
             };
-            foreach (var p in gripParts)
-                AddEdge(data, nodes, p + "_xform", "merge_grip");
+            AddMergeEdges(data, nodes, "merge_grip",
+                System.Array.ConvertAll(gripParts, p => p + "_xform"));
 
             // =====================================================
             //  Group 7: Magazine (弹匣) — 3 primitives
@@ -234,8 +233,8 @@ namespace PCGToolkit.Examples
 
             nodes["merge_magazine"] = data.AddNode("Merge", new Vector2(600, magBase + 180));
             string[] magParts = { "magazine_body", "magazine_baseplate", "magazine_baseplate_lip" };
-            foreach (var p in magParts)
-                AddEdge(data, nodes, p + "_xform", "merge_magazine");
+            AddMergeEdges(data, nodes, "merge_magazine",
+                System.Array.ConvertAll(magParts, p => p + "_xform"));
 
             // =====================================================
             //  Group 8: Controls (操控部件) — 6 primitives
@@ -281,13 +280,12 @@ namespace PCGToolkit.Examples
 
             nodes["merge_controls"] = data.AddNode("Merge", new Vector2(600, ctrlBase + 450));
             string[] ctrlParts = {
-                "slide_lock", "slide_lock_lever", "takedown_lever",
-                "magazine_release"
+                "slide_lock", "slide_lock_lever", "takedown_lever", "magazine_release"
             };
-            foreach (var p in ctrlParts)
-                AddEdge(data, nodes, p + "_xform", "merge_controls");
-            AddEdge(data, nodes, "pin_front_xform", "merge_controls");
-            AddEdge(data, nodes, "pin_rear_xform", "merge_controls");
+            AddMergeEdges(data, nodes, "merge_controls", new[] {
+                "slide_lock_xform", "slide_lock_lever_xform", "takedown_lever_xform",
+                "magazine_release_xform", "pin_front_xform", "pin_rear_xform"
+            });
 
             // =====================================================
             //  Group 9: Slide Details (套筒细节) — 3 primitives
@@ -306,8 +304,8 @@ namespace PCGToolkit.Examples
 
             nodes["merge_slide_details"] = data.AddNode("Merge", new Vector2(600, detailBase + 180));
             string[] detailParts = { "slide_channel_left", "slide_channel_right", "slide_text_area" };
-            foreach (var p in detailParts)
-                AddEdge(data, nodes, p + "_xform", "merge_slide_details");
+            AddMergeEdges(data, nodes, "merge_slide_details",
+                System.Array.ConvertAll(detailParts, p => p + "_xform"));
 
             // =====================================================
             //  Final Assembly
@@ -316,15 +314,11 @@ namespace PCGToolkit.Examples
             float asmY = 3600;
 
             nodes["merge_all"] = data.AddNode("Merge", new Vector2(asmX, asmY));
-            AddEdge(data, nodes, "merge_slide", "merge_all");
-            AddEdge(data, nodes, "merge_barrel", "merge_all");
-            AddEdge(data, nodes, "merge_frame", "merge_all");
-            AddEdge(data, nodes, "merge_trigger_guard", "merge_all");
-            AddEdge(data, nodes, "merge_trigger", "merge_all");
-            AddEdge(data, nodes, "merge_grip", "merge_all");
-            AddEdge(data, nodes, "merge_magazine", "merge_all");
-            AddEdge(data, nodes, "merge_controls", "merge_all");
-            AddEdge(data, nodes, "merge_slide_details", "merge_all");
+            AddMergeEdges(data, nodes, "merge_all", new[] {
+                "merge_slide", "merge_barrel", "merge_frame",
+                "merge_trigger_guard", "merge_trigger", "merge_grip",
+                "merge_magazine", "merge_controls", "merge_slide_details"
+            });
 
             nodes["fuse"] = data.AddNode("Fuse", new Vector2(asmX + 250, asmY));
             SetParam(nodes["fuse"], "distance", "0.001", "float");
@@ -350,6 +344,7 @@ namespace PCGToolkit.Examples
             // ---- Groups ----
             AddGroup(data, nodes, "Slide (套筒)", slideParts,
                 new Vector2(-20, -40), new Vector2(700, 1700));
+            // Fix: Barrel Group includes Tube nodes
             AddGroup(data, nodes, "Barrel (枪管)",
                 new[] { "barrel_outer", "barrel_bore" },
                 new Vector2(-20, barrelBase - 40), new Vector2(700, 420));
@@ -357,15 +352,18 @@ namespace PCGToolkit.Examples
                 new Vector2(-20, frameBase - 40), new Vector2(700, 960));
             AddGroup(data, nodes, "Trigger Guard (扳机护圈)", tgParts,
                 new Vector2(-20, tgBase - 40), new Vector2(700, 780));
+            // Fix: Trigger Group includes trigger_pivot (Tube)
             AddGroup(data, nodes, "Trigger (扳机)",
-                new[] { "trigger_body", "trigger_face" },
-                new Vector2(-20, trigBase - 40), new Vector2(700, 600));
+                new[] { "trigger_body", "trigger_face", "trigger_pivot" },
+                new Vector2(-20, trigBase - 40), new Vector2(700, 780));
             AddGroup(data, nodes, "Grip (握把)", gripParts,
                 new Vector2(-20, gripBase - 40), new Vector2(700, 1140));
             AddGroup(data, nodes, "Magazine (弹匣)", magParts,
                 new Vector2(-20, magBase - 40), new Vector2(700, 600));
-            AddGroup(data, nodes, "Controls (操控部件)", ctrlParts,
-                new Vector2(-20, ctrlBase - 40), new Vector2(700, 1140));
+            // Fix: Controls Group includes pin_front and pin_rear (Tube)
+            AddGroup(data, nodes, "Controls (操控部件)",
+                new[] { "slide_lock", "slide_lock_lever", "takedown_lever", "magazine_release", "pin_front", "pin_rear" },
+                new Vector2(-20, ctrlBase - 40), new Vector2(700, 1320));
             AddGroup(data, nodes, "Slide Details (套筒细节)", detailParts,
                 new Vector2(-20, detailBase - 40), new Vector2(700, 600));
 
@@ -429,9 +427,21 @@ namespace PCGToolkit.Examples
         }
 
         private static void AddEdge(PCGGraphData data, Dictionary<string, PCGNodeData> nodes,
-            string fromKey, string toKey)
+            string fromKey, string toKey, string toPort = "input")
         {
-            data.AddEdge(nodes[fromKey].NodeId, "geometry", nodes[toKey].NodeId, "input");
+            data.AddEdge(nodes[fromKey].NodeId, "geometry", nodes[toKey].NodeId, toPort);
+        }
+
+        /// <summary>
+        /// 将多个源节点按顺序连接到 Merge 节点的 input0, input1, ... 端口
+        /// </summary>
+        private static void AddMergeEdges(PCGGraphData data, Dictionary<string, PCGNodeData> nodes,
+            string mergeKey, string[] fromKeys)
+        {
+            for (int i = 0; i < fromKeys.Length; i++)
+            {
+                AddEdge(data, nodes, fromKeys[i], mergeKey, $"input{i}");
+            }
         }
 
         private static void AddGroup(PCGGraphData data, Dictionary<string, PCGNodeData> nodes,

@@ -14,7 +14,7 @@ namespace PCGToolkit.Nodes.Create
         public override string Description => "合并多个几何体";
         public override PCGNodeCategory Category => PCGNodeCategory.Utility;
 
-        // M1: 5个显式输入端口
+        // M1: 10个显式输入端口
         public override PCGParamSchema[] Inputs => new[]
         {
             new PCGParamSchema("input0", PCGPortDirection.Input, PCGPortType.Geometry, "Input 0", "输入几何体 0", null, false),
@@ -22,6 +22,11 @@ namespace PCGToolkit.Nodes.Create
             new PCGParamSchema("input2", PCGPortDirection.Input, PCGPortType.Geometry, "Input 2", "输入几何体 2", null, false),
             new PCGParamSchema("input3", PCGPortDirection.Input, PCGPortType.Geometry, "Input 3", "输入几何体 3", null, false),
             new PCGParamSchema("input4", PCGPortDirection.Input, PCGPortType.Geometry, "Input 4", "输入几何体 4", null, false),
+            new PCGParamSchema("input5", PCGPortDirection.Input, PCGPortType.Geometry, "Input 5", "输入几何体 5", null, false),
+            new PCGParamSchema("input6", PCGPortDirection.Input, PCGPortType.Geometry, "Input 6", "输入几何体 6", null, false),
+            new PCGParamSchema("input7", PCGPortDirection.Input, PCGPortType.Geometry, "Input 7", "输入几何体 7", null, false),
+            new PCGParamSchema("input8", PCGPortDirection.Input, PCGPortType.Geometry, "Input 8", "输入几何体 8", null, false),
+            new PCGParamSchema("input9", PCGPortDirection.Input, PCGPortType.Geometry, "Input 9", "输入几何体 9", null, false),
         };
 
         public override PCGParamSchema[] Outputs => new[]
@@ -30,7 +35,7 @@ namespace PCGToolkit.Nodes.Create
         };
 
         // M2: 固定端口名顺序
-        private static readonly string[] InputPortNames = { "input0", "input1", "input2", "input3", "input4" };
+        private static readonly string[] InputPortNames = { "input0", "input1", "input2", "input3", "input4", "input5", "input6", "input7", "input8", "input9" };
 
         public override Dictionary<string, PCGGeometry> Execute(
             PCGContext ctx,

@@ -98,36 +98,7 @@ namespace PCGToolkit.Graph
 
         private static Material CreatePreviewMaterial()
         {
-            string[] shaderCandidates = new[]
-            {
-                "Universal Render Pipeline/Lit",
-                "HDRP/Lit",
-                "Standard",
-            };
-
-            Shader shader = null;
-            foreach (var name in shaderCandidates)
-            {
-                shader = Shader.Find(name);
-                if (shader != null && !shader.name.Contains("Error")) break;
-                shader = null;
-            }
-
-            Material mat;
-            if (shader != null)
-            {
-                mat = new Material(shader);
-                if (mat.HasProperty("_BaseColor"))
-                    mat.SetColor("_BaseColor", new Color(0.7f, 0.7f, 0.7f));
-                if (mat.HasProperty("_Color"))
-                    mat.SetColor("_Color", new Color(0.7f, 0.7f, 0.7f));
-            }
-            else
-            {
-                mat = new Material(AssetDatabase.GetBuiltinExtraResource<Material>("Default-Diffuse.mat"));
-            }
-
-            return mat;
+            return new Material(PCGDefaultMaterials.GetDefaultMaterial());
         }
   
         private void OnDisable()  

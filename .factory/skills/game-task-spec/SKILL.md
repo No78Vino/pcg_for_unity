@@ -1,14 +1,8 @@
 ---
 name: game-task-spec
-description: >-
-  Generate structured JSON task specification documents for game development.
-  Use this skill whenever the user describes a game feature, system, mechanic,
-  or any game-related programming task they want an AI agent to execute. Also
-  trigger when the user wants to create, review, or manage game dev task specs,
-  or says things like "create a task", "write a spec", "generate requirement doc",
-  or describes a game programming need in natural language.
-model: inherit
+description: Generate structured JSON task specification documents for game development. Use this skill whenever the user describes a game feature, system, mechanic, or any game-related programming task they want an AI agent to execute. Also trigger when the user wants to create, review, or manage game dev task specs, or says things like "create a task", "write a spec", "generate requirement doc", or describes a game programming need in natural language.
 ---
+
 # Game Task Spec Generator
 
 Transform natural language game development requests into concise, complete JSON task specifications that any AI coding agent can execute without ambiguity.
@@ -102,7 +96,7 @@ After generating the JSON, present it to the user and offer two options:
 
 **Option A — Execute immediately**: Hand the JSON spec to an AI agent to start implementation. The agent should read the spec and begin coding.
 
-**Option B — Save for later**: Save the JSON document to the persistent storage directory at `.game-task-specs/` (relative to the project root). Create this directory if it doesn't exist. File naming: `{task_name-kebab-case}.json`. Confirm the save location to the user.
+**Option B — Save for later**: Save the JSON document to the persistent storage directory at `~/.game-task-specs/`. Create this directory if it doesn't exist. File naming: `{task_name-kebab-case}.json`. Confirm the save location to the user.
 
 Ask the user which option they prefer. If they choose A, begin execution. If they choose B, save and confirm.
 

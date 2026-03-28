@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 341b0cd2de4216e4da4ab80431b502d5, type: 3}
-  m_Name: 
+  m_Name: ProceduralGlock
   m_EditorClassIdentifier: 
   Version: 7
   GraphName: ProceduralGlock
   Nodes:
-  - NodeId: 8966b9a1-45d3-4599-8114-817ad31944c7
+  - NodeId: b44dff57-cefc-4b87-a69c-39af227d7736
     NodeType: Box
     Position: {x: 0, y: 0}
     Parameters:
@@ -28,10 +28,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.62
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
+  - NodeId: d4674adc-bf97-4133-9fac-f65c0b3dbbb1
+    NodeType: Transform
+    Position: {x: 300, y: 0}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.36,0.12
       ValueType: Vector3
-  - NodeId: 7eb49ff0-d381-4909-a983-a21de8a63e9b
+  - NodeId: 4c8af01c-6afe-46c4-b061-6e12babcdcd0
     NodeType: Box
     Position: {x: 0, y: 180}
     Parameters:
@@ -44,10 +48,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.62
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
+  - NodeId: 1631b8aa-da0e-4641-92e5-c0b4037d6951
+    NodeType: Transform
+    Position: {x: 300, y: 180}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.44,0.12
       ValueType: Vector3
-  - NodeId: 0106fce8-9c30-4733-8fe4-8f14526a9448
+  - NodeId: f64ee829-d1cb-4ed5-a0c5-694daf5c82eb
     NodeType: Box
     Position: {x: 0, y: 360}
     Parameters:
@@ -60,10 +68,17 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.03
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
+  - NodeId: 6fbd71d4-7eca-46ec-8813-0dae4ac5325c
+    NodeType: Transform
+    Position: {x: 300, y: 360}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.35,0.44
       ValueType: Vector3
-  - NodeId: 121e78c4-8b2a-4ba2-8d72-b731993641e3
+    - Key: rotate
+      ValueJson: 5,0,0
+      ValueType: Vector3
+  - NodeId: ba19deef-526f-4066-bc06-e85042ede6a2
     NodeType: Box
     Position: {x: 0, y: 540}
     Parameters:
@@ -76,10 +91,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.1
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
+  - NodeId: f36703a3-4ef2-4c0a-ac61-f6a5daf29ba7
+    NodeType: Transform
+    Position: {x: 300, y: 540}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.36,-0.18
       ValueType: Vector3
-  - NodeId: 051e944d-248e-40cc-9e6c-d405ea24a191
+  - NodeId: 96d9ab60-09ed-482f-a107-009de949b1b8
     NodeType: Box
     Position: {x: 0, y: 720}
     Parameters:
@@ -92,10 +111,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.12
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
+  - NodeId: 86698a5e-f733-4614-bdf7-5c6708d2f3b3
+    NodeType: Transform
+    Position: {x: 300, y: 720}
+    Parameters:
+    - Key: translate
+      ValueJson: 0.04,0.38,0.05
       ValueType: Vector3
-  - NodeId: 94f777ea-cd86-48c4-b4d3-e9b6a41ea28f
+  - NodeId: 9f2c2567-8b56-4b7b-998a-7615769ce61c
     NodeType: Box
     Position: {x: 0, y: 900}
     Parameters:
@@ -108,10 +131,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.02
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
+  - NodeId: a4b2fe79-bcc6-4224-943c-17c7724f6d1b
+    NodeType: Transform
+    Position: {x: 300, y: 900}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.46,0.38
       ValueType: Vector3
-  - NodeId: 0c2582e4-54be-4699-91fb-f5e3c8e56e19
+  - NodeId: de553df4-0e32-49ae-863c-529ad9e8c4c4
     NodeType: Box
     Position: {x: 0, y: 1080}
     Parameters:
@@ -124,10 +151,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.025
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
+  - NodeId: d74fd05d-5f34-4705-bc29-44ef000ff6dc
+    NodeType: Transform
+    Position: {x: 300, y: 1080}
+    Parameters:
+    - Key: translate
+      ValueJson: 0,0.46,-0.15
       ValueType: Vector3
-  - NodeId: 6403aa19-fd14-4a01-8a00-aca519d65ec9
+  - NodeId: e8ff01a7-1c10-494f-815b-5e2642cdf995
     NodeType: Box
     Position: {x: 0, y: 1260}
     Parameters:
@@ -140,10 +171,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.025
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
+  - NodeId: e214f434-f091-44a2-89ef-dab2de6ee165
+    NodeType: Transform
+    Position: {x: 300, y: 1260}
+    Parameters:
+    - Key: translate
+      ValueJson: -0.025,0.46,-0.15
       ValueType: Vector3
-  - NodeId: 3d65ddfc-c468-4261-a2b2-fad32c45b7f7
+  - NodeId: b3ab7e75-2eca-4117-b2e9-1819f8784f13
     NodeType: Box
     Position: {x: 0, y: 1440}
     Parameters:
@@ -156,29 +191,18 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.025
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: dc6e7321-33b7-480f-bb53-a5a353a28526
+  - NodeId: b3b7e725-e0bb-456e-9aaa-3e6d7bf5f1f8
     NodeType: Transform
     Position: {x: 300, y: 1440}
     Parameters:
     - Key: translate
       ValueJson: 0.025,0.46,-0.15
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 56c39a23-5875-47f2-ac92-c66b53579e54
+  - NodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
+    NodeType: Merge
+    Position: {x: 600, y: 720}
+    Parameters: []
+  - NodeId: eafb7192-b0f3-408c-be18-3920bbe91adf
     NodeType: Tube
     Position: {x: 0, y: 1800}
     Parameters:
@@ -191,35 +215,23 @@ MonoBehaviour:
     - Key: height
       ValueJson: 0.15
       ValueType: float
-    - Key: rows
-      ValueJson: 1
-      ValueType: int
     - Key: columns
       ValueJson: 16
       ValueType: int
     - Key: endCaps
-      ValueJson: True
+      ValueJson: true
       ValueType: bool
-  - NodeId: 82b0aeea-16f6-4eb2-a139-8352c7a692ba
+  - NodeId: 263ac65a-f1ea-4fbc-89e9-58b9ed930177
     NodeType: Transform
     Position: {x: 300, y: 1800}
     Parameters:
     - Key: translate
-      ValueJson: 0,0.33,0.5
+      ValueJson: 0,0.33,0.50
       ValueType: Vector3
     - Key: rotate
       ValueJson: 90,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 75322dce-cf0d-4395-9717-5d73d893d9e7
+  - NodeId: 9d08b0bf-f627-4d29-bc6c-22d996e9b9fe
     NodeType: Tube
     Position: {x: 0, y: 1980}
     Parameters:
@@ -232,39 +244,27 @@ MonoBehaviour:
     - Key: height
       ValueJson: 0.16
       ValueType: float
-    - Key: rows
-      ValueJson: 1
-      ValueType: int
     - Key: columns
       ValueJson: 16
       ValueType: int
     - Key: endCaps
-      ValueJson: True
+      ValueJson: true
       ValueType: bool
-  - NodeId: b984fec0-1a41-4c21-83d8-26c832a9e45e
+  - NodeId: 103e6a84-359e-44f1-9cf4-5990afb4a0e9
     NodeType: Transform
     Position: {x: 300, y: 1980}
     Parameters:
     - Key: translate
-      ValueJson: 0,0.33,0.5
+      ValueJson: 0,0.33,0.50
       ValueType: Vector3
     - Key: rotate
       ValueJson: 90,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 2bd4271a-4cb4-47c2-ad10-d22cb78df253
+  - NodeId: 4c1dbd0d-a19f-4e83-9eff-6aa56a22a14d
     NodeType: Merge
-    Position: {x: 600, y: 1889.6001}
+    Position: {x: 600, y: 1890}
     Parameters: []
-  - NodeId: cf868aef-6bc6-4c1c-842c-7d0c44beeac1
+  - NodeId: fab5ac95-db26-45ef-9a2b-bc51496e0f51
     NodeType: Box
     Position: {x: 0, y: 2300}
     Parameters:
@@ -277,29 +277,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.52
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 820d9b3f-91ee-44c7-a94c-28c903e1d522
+  - NodeId: f1bc5108-3c27-45c0-b323-7553771e9389
     NodeType: Transform
     Position: {x: 300, y: 2300}
     Parameters:
     - Key: translate
       ValueJson: 0,0.24,0.1
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 157bbb74-04cf-497b-bef0-c55e63f674ae
+  - NodeId: af1329f5-6349-4821-bc19-d9627ee8ff62
     NodeType: Box
     Position: {x: 0, y: 2480}
     Parameters:
@@ -312,29 +297,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.12
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: be153db0-2951-4e45-9d1d-98f7e000d05e
+  - NodeId: 5e79c21b-ff7f-41ea-86d4-862b38479571
     NodeType: Transform
     Position: {x: 300, y: 2480}
     Parameters:
     - Key: translate
       ValueJson: 0,0.22,0.38
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: b807bc06-9cf0-4310-bea9-f7cc833628eb
+  - NodeId: b0b7850a-cdbb-49fa-91ad-5f143840532a
     NodeType: Box
     Position: {x: 0, y: 2660}
     Parameters:
@@ -347,29 +317,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.04
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: ef5b6258-651c-476f-977c-f2b11f183051
+  - NodeId: 60cb23ac-fa2a-471d-bfa2-30bcd22b39d9
     NodeType: Transform
     Position: {x: 300, y: 2660}
     Parameters:
     - Key: translate
       ValueJson: 0,0.195,0.36
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: f7aab092-505c-4853-8957-7dda3cee5abc
+  - NodeId: 2d8c4cda-b57e-42a2-9e63-f22c38f99f52
     NodeType: Box
     Position: {x: 0, y: 2840}
     Parameters:
@@ -382,29 +337,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.04
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: ba871310-ff02-4d6b-956e-355a6f58a9a4
+  - NodeId: 8585b42c-3a85-4c61-ab0d-b88cd8e23ce9
     NodeType: Transform
     Position: {x: 300, y: 2840}
     Parameters:
     - Key: translate
       ValueJson: 0,0.175,0.36
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: e8c1a6e9-c5d6-4f51-89a0-34f2c5427adf
+  - NodeId: df05790e-9bf0-4096-be46-e5d64953124e
     NodeType: Box
     Position: {x: 0, y: 3020}
     Parameters:
@@ -417,10 +357,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.06
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 6a748de9-4c0f-4133-a399-d62809799a93
+  - NodeId: cbaf2627-76dc-49d6-b597-5f0595e6e01b
     NodeType: Transform
     Position: {x: 300, y: 3020}
     Parameters:
@@ -430,20 +367,11 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: 15,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 98d565b2-35ca-421e-8b23-f972a1b404f7
+  - NodeId: 49540ec3-7d01-434b-b31c-86884193f2c5
     NodeType: Merge
     Position: {x: 600, y: 2660}
     Parameters: []
-  - NodeId: c8cf3d1a-f423-4445-ab52-7a0a9f3d45da
+  - NodeId: 8c3b630e-cced-4bc6-8d89-565159b4c46b
     NodeType: Box
     Position: {x: 0, y: 3300}
     Parameters:
@@ -456,29 +384,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.08
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: cc9d0127-9f9a-4581-bdc5-75dae696a9aa
+  - NodeId: 9a7de9a1-ebc6-4d92-8fc2-6bd4d895ff36
     NodeType: Transform
     Position: {x: 300, y: 3300}
     Parameters:
     - Key: translate
       ValueJson: 0,0.12,0.22
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 88f053f5-bc65-46d4-96a4-d4d10b1e2bc7
+  - NodeId: dd3da78e-d968-41f6-9a47-ac9622db7f41
     NodeType: Box
     Position: {x: 0, y: 3480}
     Parameters:
@@ -491,29 +404,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.14
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: a9c3d72b-4b17-4b5e-9f2f-b2a856771454
+  - NodeId: 4db5b2fa-edc3-4e26-aab5-a5e39bfea7ad
     NodeType: Transform
     Position: {x: 300, y: 3480}
     Parameters:
     - Key: translate
       ValueJson: 0,0.08,0.15
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: dc089c60-c888-4a02-9950-66f1ce9abf5c
+  - NodeId: be4814ee-55cd-4b78-bf7d-e3042d926d51
     NodeType: Box
     Position: {x: 0, y: 3660}
     Parameters:
@@ -526,29 +424,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.015
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: b44081ab-8b05-4e8e-8a04-fb48e386f663
+  - NodeId: 6c5536d5-1be8-4feb-9c39-65fc9c5a0961
     NodeType: Transform
     Position: {x: 300, y: 3660}
     Parameters:
     - Key: translate
       ValueJson: 0,0.1,0.26
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 71830dbf-ea28-42f4-85f2-c8b9e8700c11
+  - NodeId: 6a4fdcdc-7247-42ae-9b46-1ab67dfeb85b
     NodeType: Box
     Position: {x: 0, y: 3840}
     Parameters:
@@ -561,10 +444,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.015
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 39181aa9-43a8-4b83-b5e9-8920d5740566
+  - NodeId: c36e857b-746f-401e-9559-6aa7ac8993c6
     NodeType: Transform
     Position: {x: 300, y: 3840}
     Parameters:
@@ -574,20 +454,11 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: 15,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: cc2ed166-dfcd-468c-a428-526cc1d43071
+  - NodeId: eee06fbc-faa7-4ece-8f93-2b1390f24008
     NodeType: Merge
-    Position: {x: 600, y: 3569.6}
+    Position: {x: 600, y: 3570}
     Parameters: []
-  - NodeId: 65451e6f-c5b3-4ca8-9a5b-5535c0f0d57a
+  - NodeId: 86a20a66-7805-4de1-93a5-a6cb1027da06
     NodeType: Box
     Position: {x: 0, y: 4100}
     Parameters:
@@ -600,10 +471,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.015
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: ceb18366-f13e-40db-abd8-4694f488d2d9
+  - NodeId: ab19a1f2-0cbe-45dc-8a3e-4d510050d01b
     NodeType: Transform
     Position: {x: 300, y: 4100}
     Parameters:
@@ -613,16 +481,7 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -10,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: a78f7c55-3899-45ee-b648-fd2c4337d978
+  - NodeId: 3b30d2b0-7d49-4a10-b8eb-813f73fbf46d
     NodeType: Box
     Position: {x: 0, y: 4280}
     Parameters:
@@ -635,29 +494,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.008
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 45d742e3-42f1-49cb-a70c-d4fb141bf2e3
+  - NodeId: 6b6e4ec3-f6d6-4e34-9a71-cdb275b8a8d5
     NodeType: Transform
     Position: {x: 300, y: 4280}
     Parameters:
     - Key: translate
       ValueJson: 0,0.12,0.155
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 24ece289-f3ca-4028-9cfe-688fcb2ba885
+  - NodeId: a91e7570-f4b7-47c4-93db-849658934a66
     NodeType: Tube
     Position: {x: 0, y: 4460}
     Parameters:
@@ -670,39 +514,24 @@ MonoBehaviour:
     - Key: height
       ValueJson: 0.16
       ValueType: float
-    - Key: rows
-      ValueJson: 1
-      ValueType: int
     - Key: columns
       ValueJson: 8
       ValueType: int
     - Key: endCaps
-      ValueJson: True
+      ValueJson: true
       ValueType: bool
-  - NodeId: 820fc6b2-ca9c-45f9-a5a8-a93c15ab1d21
+  - NodeId: afabb25b-0c0c-4dc3-9372-61482b8d00a0
     NodeType: Transform
     Position: {x: 300, y: 4460}
     Parameters:
     - Key: translate
       ValueJson: 0,0.17,0.15
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 9e219710-6ce0-4597-b26e-31493938f8b7
+  - NodeId: 6b1f4f3a-7968-46da-9c11-5861d61f996e
     NodeType: Merge
     Position: {x: 600, y: 4280}
     Parameters: []
-  - NodeId: cf069de7-4929-4268-8230-f27ee35c2271
+  - NodeId: 0e839b8b-f6bf-4fee-b744-99211c31bddd
     NodeType: Box
     Position: {x: 0, y: 4700}
     Parameters:
@@ -715,10 +544,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.1
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 3bb1f511-00df-45f5-9180-33bbd389a7ee
+  - NodeId: 8c6eb0ba-4825-453a-880f-ddec29c74567
     NodeType: Transform
     Position: {x: 300, y: 4700}
     Parameters:
@@ -728,16 +554,7 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -18,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 1562e0c2-451b-4c7f-a57d-bb386ee394b9
+  - NodeId: f57f328f-dce1-4909-931b-c0e24ffb38cb
     NodeType: Box
     Position: {x: 0, y: 4880}
     Parameters:
@@ -750,10 +567,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.02
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 7aae169c-78c5-4db7-adcd-a1ee38c7d495
+  - NodeId: 7260f0eb-4594-468d-a22f-4fd7f9a4d69e
     NodeType: Transform
     Position: {x: 300, y: 4880}
     Parameters:
@@ -763,16 +577,7 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -15,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 87936cbe-b6f8-488f-8bef-67f3da79380b
+  - NodeId: 56633a23-dc5d-4a4a-914c-e233fa8e78fd
     NodeType: Box
     Position: {x: 0, y: 5060}
     Parameters:
@@ -785,10 +590,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.02
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 222daf04-4041-4e20-88c1-35f6c7d6dde5
+  - NodeId: 653878e5-b77d-4bea-894c-3e87747f8c62
     NodeType: Transform
     Position: {x: 300, y: 5060}
     Parameters:
@@ -798,16 +600,7 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -20,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 0e994641-1ff3-47cd-a2fe-3b5c1a3b59ce
+  - NodeId: 434001d3-c85a-430e-beee-17d25c0a2215
     NodeType: Box
     Position: {x: 0, y: 5240}
     Parameters:
@@ -820,10 +613,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.08
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 2abac420-0c6c-4bae-bd11-10add6f6bf59
+  - NodeId: d7f377c1-302b-436b-b60e-67a2bd802f4f
     NodeType: Transform
     Position: {x: 300, y: 5240}
     Parameters:
@@ -833,16 +623,7 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -18,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 8c049aca-cd0c-4fc8-b18a-608aa0816cf7
+  - NodeId: 0a687958-be79-4e05-95b0-4ca143154baf
     NodeType: Box
     Position: {x: 0, y: 5420}
     Parameters:
@@ -855,10 +636,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.08
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 712a9abb-db2e-42b7-8bc2-13ba6e11d3c2
+  - NodeId: c9a881d7-b150-4dc1-94bb-774fa6003c74
     NodeType: Transform
     Position: {x: 300, y: 5420}
     Parameters:
@@ -868,16 +646,7 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -18,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 7b7c9265-bd4c-4f9e-8336-ebbf00f7be21
+  - NodeId: 6ca98ca1-9d04-416a-851c-f28dd1f5accb
     NodeType: Box
     Position: {x: 0, y: 5600}
     Parameters:
@@ -890,10 +659,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.11
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 2ae05725-8749-4937-a4d7-d848a83c1e35
+  - NodeId: 3988b351-2603-45a4-a43f-de5f5aebad22
     NodeType: Transform
     Position: {x: 300, y: 5600}
     Parameters:
@@ -903,20 +669,11 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -18,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 895dbb00-09be-4b73-8b1d-afdf0814af28
+  - NodeId: 37a3a93c-2626-485a-94c4-ce184c045048
     NodeType: Merge
-    Position: {x: 600, y: 5149.5996}
+    Position: {x: 600, y: 5150}
     Parameters: []
-  - NodeId: 1b1f9681-9bda-442e-93bf-5c3e5198055d
+  - NodeId: 8d92f624-30b9-4286-b409-ad7ba2ca3082
     NodeType: Box
     Position: {x: 0, y: 5900}
     Parameters:
@@ -929,10 +686,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.08
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: b5a5a760-0dd3-4ce4-9661-121987f50840
+  - NodeId: eb499d80-ed3b-4dd4-a596-d41a01298b35
     NodeType: Transform
     Position: {x: 300, y: 5900}
     Parameters:
@@ -942,16 +696,7 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -18,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: c5f46810-094c-48e9-8932-e70623212cb5
+  - NodeId: 89be0ddd-1ff7-47c2-ab24-4f8d815325d0
     NodeType: Box
     Position: {x: 0, y: 6080}
     Parameters:
@@ -964,10 +709,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.1
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 3200c093-98a9-430c-a68f-b2984fda5ba8
+  - NodeId: c5d7dcd5-4186-4c9b-9f93-5865fc3a8bc4
     NodeType: Transform
     Position: {x: 300, y: 6080}
     Parameters:
@@ -977,16 +719,7 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -18,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 16fe924a-8cdd-4ae2-9e65-73f58d6dd23e
+  - NodeId: 50cc0914-e2e5-4e2c-8a37-31925396b1ab
     NodeType: Box
     Position: {x: 0, y: 6260}
     Parameters:
@@ -999,10 +732,7 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.015
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 54a3b0d8-734d-4480-89d5-bfeb4ae470ed
+  - NodeId: 3a3ec8e8-1bf0-4978-b316-511f10d2e9b1
     NodeType: Transform
     Position: {x: 300, y: 6260}
     Parameters:
@@ -1012,20 +742,11 @@ MonoBehaviour:
     - Key: rotate
       ValueJson: -18,0,0
       ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 5727c39a-f6de-4d44-8ba8-12e77e7d9d75
+  - NodeId: c1e89c91-e12d-40e4-8e80-9da3389038dc
     NodeType: Merge
     Position: {x: 600, y: 6080}
     Parameters: []
-  - NodeId: 9e5e55d0-a1e9-4b34-9771-cb2d1363890f
+  - NodeId: 84daee3b-6ba0-4329-b1a1-48dbc5155651
     NodeType: Box
     Position: {x: 0, y: 6500}
     Parameters:
@@ -1038,29 +759,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.04
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 4f3fe74e-2caa-4fc2-8ad6-49ac390f376f
+  - NodeId: 199707bd-8dc4-4c2b-b73d-6b495ed4b683
     NodeType: Transform
     Position: {x: 300, y: 6500}
     Parameters:
     - Key: translate
       ValueJson: -0.09,0.3,0.1
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: cfc12729-be72-415a-b5d6-a1b946f76cba
+  - NodeId: 625418d7-74c5-4349-891d-7a109cdfd682
     NodeType: Box
     Position: {x: 0, y: 6680}
     Parameters:
@@ -1073,29 +779,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.025
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 9802d39b-3afe-454e-8ceb-49f65d5995af
+  - NodeId: 088af289-fa39-4855-a84b-62f771e5d6f5
     NodeType: Transform
     Position: {x: 300, y: 6680}
     Parameters:
     - Key: translate
       ValueJson: -0.095,0.31,0.08
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: c5e4d5bc-a51f-41b0-a920-4c50d5983b30
+  - NodeId: abe3cab2-1774-4a1a-9754-65291cc1b52e
     NodeType: Box
     Position: {x: 0, y: 6860}
     Parameters:
@@ -1108,29 +799,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.03
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 1ac8cc9c-1b1f-4687-a3b6-68ed44a97dd3
+  - NodeId: 4f603eb1-639c-4ba7-8bec-088addc583b4
     NodeType: Transform
     Position: {x: 300, y: 6860}
     Parameters:
     - Key: translate
       ValueJson: -0.09,0.24,0.18
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 8ef16451-057b-439a-9cec-54f330a3cd8c
+  - NodeId: c42a5546-f7de-4bfe-b47b-02bb6d9cea79
     NodeType: Box
     Position: {x: 0, y: 7040}
     Parameters:
@@ -1143,29 +819,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.02
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: ea687c6b-2f9e-4c15-8d24-c3fa65275f0e
+  - NodeId: 9fff8bc7-775a-4f2a-a8b5-b199aa622e92
     NodeType: Transform
     Position: {x: 300, y: 7040}
     Parameters:
     - Key: translate
       ValueJson: -0.085,0.2,0.06
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 371b16c8-4e7b-48ec-b7e9-8cb85dbea11d
+  - NodeId: a68e6848-923f-4534-834a-dc5372cd2568
     NodeType: Tube
     Position: {x: 0, y: 7220}
     Parameters:
@@ -1178,35 +839,20 @@ MonoBehaviour:
     - Key: height
       ValueJson: 0.17
       ValueType: float
-    - Key: rows
-      ValueJson: 1
-      ValueType: int
     - Key: columns
       ValueJson: 8
       ValueType: int
     - Key: endCaps
-      ValueJson: True
+      ValueJson: true
       ValueType: bool
-  - NodeId: 048716c5-715f-487d-aeee-52b3358d6a99
+  - NodeId: 3f29508c-f54b-4679-b84c-53aaf9921a55
     NodeType: Transform
     Position: {x: 300, y: 7220}
     Parameters:
     - Key: translate
       ValueJson: 0,0.22,0.22
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 01a3686a-c5f6-45f2-8133-a434f686ee7a
+  - NodeId: f6514d14-db8b-47c4-89d6-3bedd2e977c9
     NodeType: Tube
     Position: {x: 0, y: 7400}
     Parameters:
@@ -1219,39 +865,24 @@ MonoBehaviour:
     - Key: height
       ValueJson: 0.17
       ValueType: float
-    - Key: rows
-      ValueJson: 1
-      ValueType: int
     - Key: columns
       ValueJson: 8
       ValueType: int
     - Key: endCaps
-      ValueJson: True
+      ValueJson: true
       ValueType: bool
-  - NodeId: 267dd41e-cd5c-4afc-b809-ccb223dad64b
+  - NodeId: ff3d56eb-3341-4bf7-9057-f90e889433dd
     NodeType: Transform
     Position: {x: 300, y: 7400}
     Parameters:
     - Key: translate
       ValueJson: 0,0.22,0.02
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 7d705e78-71b4-49cd-9876-5e80bc6d3c3b
+  - NodeId: f34a8066-af30-433a-85af-4da420888fe0
     NodeType: Merge
-    Position: {x: 600, y: 6949.5996}
+    Position: {x: 600, y: 6950}
     Parameters: []
-  - NodeId: 2c160124-aa0b-4c23-b77e-5a176ca1faa4
+  - NodeId: b8b23355-1d95-45af-ad9c-bb4b1dd2c918
     NodeType: Box
     Position: {x: 0, y: 7700}
     Parameters:
@@ -1264,29 +895,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.4
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: af6476f9-5134-45d3-a789-f509466e32cc
+  - NodeId: c9773430-0283-4df3-90ba-6eeb3d02981d
     NodeType: Transform
     Position: {x: 300, y: 7700}
     Parameters:
     - Key: translate
       ValueJson: -0.08,0.32,0.12
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 7718ddc7-8264-4784-998d-98d901cb343e
+  - NodeId: 7549b553-2a16-42ee-9a52-a7fa68c57b61
     NodeType: Box
     Position: {x: 0, y: 7880}
     Parameters:
@@ -1299,29 +915,14 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.4
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: b59f1174-e187-4c23-8ecc-a0773a67ff4b
+  - NodeId: ed2f5beb-ebfd-48ac-9f48-ce48de1b51c8
     NodeType: Transform
     Position: {x: 300, y: 7880}
     Parameters:
     - Key: translate
       ValueJson: 0.08,0.32,0.12
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 78b9b8c1-c1a1-40c7-9def-a411e3b96659
+  - NodeId: 6f31ab94-6e40-4081-a95e-bc935e7a6832
     NodeType: Box
     Position: {x: 0, y: 8060}
     Parameters:
@@ -1334,47 +935,29 @@ MonoBehaviour:
     - Key: sizeZ
       ValueJson: 0.1
       ValueType: float
-    - Key: center
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 3d2d56ac-3c2a-45d8-955f-42b8db6b1913
+  - NodeId: 598b8658-0e46-4005-8a57-9c29c9c2c941
     NodeType: Transform
     Position: {x: 300, y: 8060}
     Parameters:
     - Key: translate
       ValueJson: -0.083,0.36,0.05
       ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: cec03c83-6ff3-472a-9007-2a94a1f1b98d
+  - NodeId: 4e3c0fec-2d6b-424e-acd2-38ffa3fa858f
     NodeType: Merge
     Position: {x: 600, y: 7880}
     Parameters: []
-  - NodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
+  - NodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
     NodeType: Merge
     Position: {x: 900, y: 3600}
     Parameters: []
-  - NodeId: 1aa2eaf8-e65c-4c2c-b602-4190b00ad377
+  - NodeId: 057c6ddf-7d1a-4eb8-9337-0d9fb5e23545
     NodeType: Fuse
-    Position: {x: 1150.4, y: 3600}
+    Position: {x: 1150, y: 3600}
     Parameters:
     - Key: distance
       ValueJson: 0.001
       ValueType: float
-    - Key: group
-      ValueJson: 
-      ValueType: string
-  - NodeId: 8a5d65eb-edad-4bd4-87af-604323c3d790
+  - NodeId: 9af83942-7551-42f5-9c26-0bae2a44cc6b
     NodeType: Normal
     Position: {x: 1400, y: 3600}
     Parameters:
@@ -1385,25 +968,16 @@ MonoBehaviour:
       ValueJson: 60
       ValueType: float
     - Key: weightByArea
-      ValueJson: True
+      ValueJson: true
       ValueType: bool
-  - NodeId: 86de651c-f650-465e-868e-86393b5055f5
+  - NodeId: c4df1b02-2036-43d0-908e-c2995bb89591
     NodeType: UVProject
-    Position: {x: 1650.4, y: 3600}
+    Position: {x: 1650, y: 3600}
     Parameters:
     - Key: projectionType
       ValueJson: cubic
       ValueType: string
-    - Key: group
-      ValueJson: 
-      ValueType: string
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: offset
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 27d8deb4-5ba6-4d66-8d15-4dd9908951e2
+  - NodeId: a62d0a09-17be-4924-bd7e-787ac863a317
     NodeType: SavePrefab
     Position: {x: 1900, y: 3600}
     Parameters:
@@ -1414,495 +988,522 @@ MonoBehaviour:
       ValueJson: Glock
       ValueType: string
     - Key: addCollider
-      ValueJson: True
+      ValueJson: true
       ValueType: bool
     - Key: convexCollider
-      ValueJson: True
+      ValueJson: true
       ValueType: bool
-    - Key: enabled
-      ValueJson: True
-      ValueType: bool
-  - NodeId: 02a653f9-a1aa-4903-8ba8-a04843adc2c3
-    NodeType: Transform
-    Position: {x: 300, y: 0}
-    Parameters:
-    - Key: translate
-      ValueJson: 0,0.36,0.12
-      ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: ad1a7745-67fa-42fe-afbf-048155944ce9
-    NodeType: Transform
-    Position: {x: 300, y: 890.39996}
-    Parameters:
-    - Key: translate
-      ValueJson: 0,0.46,0.38
-      ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 6db5690a-985d-4131-a4a9-bf32e55e8a9f
-    NodeType: Transform
-    Position: {x: 300, y: 1260}
-    Parameters:
-    - Key: translate
-      ValueJson: -0.025,0.46,-0.15
-      ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 4deff1b4-33e2-4b50-be80-d8b9a610baf3
-    NodeType: Transform
-    Position: {x: 300, y: 360}
-    Parameters:
-    - Key: translate
-      ValueJson: 0,0.35,0.44
-      ValueType: Vector3
-    - Key: rotate
-      ValueJson: 5,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 0c0f1ce3-fd9c-4ca9-8544-94164cd0d5ba
-    NodeType: Transform
-    Position: {x: 300, y: 180}
-    Parameters:
-    - Key: translate
-      ValueJson: 0,0.44,0.12
-      ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 5dbc7e08-85d2-416f-b475-c9865c62541d
-    NodeType: Transform
-    Position: {x: 300, y: 540}
-    Parameters:
-    - Key: translate
-      ValueJson: 0,0.36,-0.18
-      ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: 9f0e338b-e29c-4265-9512-50ac48444ae8
-    NodeType: Transform
-    Position: {x: 300, y: 720}
-    Parameters:
-    - Key: translate
-      ValueJson: 0.04,0.38,0.05
-      ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: a4dcae59-d2fc-4340-a319-45d792ef53c6
-    NodeType: Transform
-    Position: {x: 300, y: 1080}
-    Parameters:
-    - Key: translate
-      ValueJson: 0,0.46,-0.15
-      ValueType: Vector3
-    - Key: rotate
-      ValueJson: 0,0,0
-      ValueType: Vector3
-    - Key: scale
-      ValueJson: 1,1,1
-      ValueType: Vector3
-    - Key: uniformScale
-      ValueJson: 1
-      ValueType: float
-    - Key: pivot
-      ValueJson: 0,0,0
-      ValueType: Vector3
-  - NodeId: d12db336-7460-460a-833e-111e148874f3
-    NodeType: Merge
-    Position: {x: 829.6, y: 564}
-    Parameters: []
   Edges:
-  - OutputNodeId: 8966b9a1-45d3-4599-8114-817ad31944c7
+  - OutputNodeId: b44dff57-cefc-4b87-a69c-39af227d7736
     OutputPort: geometry
-    InputNodeId: 02a653f9-a1aa-4903-8ba8-a04843adc2c3
+    InputNodeId: d4674adc-bf97-4133-9fac-f65c0b3dbbb1
     InputPort: input
-  - OutputNodeId: 7eb49ff0-d381-4909-a983-a21de8a63e9b
+  - OutputNodeId: 4c8af01c-6afe-46c4-b061-6e12babcdcd0
     OutputPort: geometry
-    InputNodeId: 0c0f1ce3-fd9c-4ca9-8544-94164cd0d5ba
+    InputNodeId: 1631b8aa-da0e-4641-92e5-c0b4037d6951
     InputPort: input
-  - OutputNodeId: 0106fce8-9c30-4733-8fe4-8f14526a9448
+  - OutputNodeId: f64ee829-d1cb-4ed5-a0c5-694daf5c82eb
     OutputPort: geometry
-    InputNodeId: 4deff1b4-33e2-4b50-be80-d8b9a610baf3
+    InputNodeId: 6fbd71d4-7eca-46ec-8813-0dae4ac5325c
     InputPort: input
-  - OutputNodeId: 121e78c4-8b2a-4ba2-8d72-b731993641e3
+  - OutputNodeId: ba19deef-526f-4066-bc06-e85042ede6a2
     OutputPort: geometry
-    InputNodeId: 5dbc7e08-85d2-416f-b475-c9865c62541d
+    InputNodeId: f36703a3-4ef2-4c0a-ac61-f6a5daf29ba7
     InputPort: input
-  - OutputNodeId: 051e944d-248e-40cc-9e6c-d405ea24a191
+  - OutputNodeId: 96d9ab60-09ed-482f-a107-009de949b1b8
     OutputPort: geometry
-    InputNodeId: 9f0e338b-e29c-4265-9512-50ac48444ae8
+    InputNodeId: 86698a5e-f733-4614-bdf7-5c6708d2f3b3
     InputPort: input
-  - OutputNodeId: 94f777ea-cd86-48c4-b4d3-e9b6a41ea28f
+  - OutputNodeId: 9f2c2567-8b56-4b7b-998a-7615769ce61c
     OutputPort: geometry
-    InputNodeId: ad1a7745-67fa-42fe-afbf-048155944ce9
+    InputNodeId: a4b2fe79-bcc6-4224-943c-17c7724f6d1b
     InputPort: input
-  - OutputNodeId: 0c2582e4-54be-4699-91fb-f5e3c8e56e19
+  - OutputNodeId: de553df4-0e32-49ae-863c-529ad9e8c4c4
     OutputPort: geometry
-    InputNodeId: a4dcae59-d2fc-4340-a319-45d792ef53c6
+    InputNodeId: d74fd05d-5f34-4705-bc29-44ef000ff6dc
     InputPort: input
-  - OutputNodeId: 6403aa19-fd14-4a01-8a00-aca519d65ec9
+  - OutputNodeId: e8ff01a7-1c10-494f-815b-5e2642cdf995
     OutputPort: geometry
-    InputNodeId: 6db5690a-985d-4131-a4a9-bf32e55e8a9f
+    InputNodeId: e214f434-f091-44a2-89ef-dab2de6ee165
     InputPort: input
-  - OutputNodeId: 3d65ddfc-c468-4261-a2b2-fad32c45b7f7
+  - OutputNodeId: b3ab7e75-2eca-4117-b2e9-1819f8784f13
     OutputPort: geometry
-    InputNodeId: dc6e7321-33b7-480f-bb53-a5a353a28526
+    InputNodeId: b3b7e725-e0bb-456e-9aaa-3e6d7bf5f1f8
     InputPort: input
-  - OutputNodeId: 56c39a23-5875-47f2-ac92-c66b53579e54
+  - OutputNodeId: d4674adc-bf97-4133-9fac-f65c0b3dbbb1
     OutputPort: geometry
-    InputNodeId: 82b0aeea-16f6-4eb2-a139-8352c7a692ba
-    InputPort: input
-  - OutputNodeId: 75322dce-cf0d-4395-9717-5d73d893d9e7
-    OutputPort: geometry
-    InputNodeId: b984fec0-1a41-4c21-83d8-26c832a9e45e
-    InputPort: input
-  - OutputNodeId: cf868aef-6bc6-4c1c-842c-7d0c44beeac1
-    OutputPort: geometry
-    InputNodeId: 820d9b3f-91ee-44c7-a94c-28c903e1d522
-    InputPort: input
-  - OutputNodeId: 157bbb74-04cf-497b-bef0-c55e63f674ae
-    OutputPort: geometry
-    InputNodeId: be153db0-2951-4e45-9d1d-98f7e000d05e
-    InputPort: input
-  - OutputNodeId: b807bc06-9cf0-4310-bea9-f7cc833628eb
-    OutputPort: geometry
-    InputNodeId: ef5b6258-651c-476f-977c-f2b11f183051
-    InputPort: input
-  - OutputNodeId: f7aab092-505c-4853-8957-7dda3cee5abc
-    OutputPort: geometry
-    InputNodeId: ba871310-ff02-4d6b-956e-355a6f58a9a4
-    InputPort: input
-  - OutputNodeId: e8c1a6e9-c5d6-4f51-89a0-34f2c5427adf
-    OutputPort: geometry
-    InputNodeId: 6a748de9-4c0f-4133-a399-d62809799a93
-    InputPort: input
-  - OutputNodeId: c8cf3d1a-f423-4445-ab52-7a0a9f3d45da
-    OutputPort: geometry
-    InputNodeId: cc9d0127-9f9a-4581-bdc5-75dae696a9aa
-    InputPort: input
-  - OutputNodeId: 88f053f5-bc65-46d4-96a4-d4d10b1e2bc7
-    OutputPort: geometry
-    InputNodeId: a9c3d72b-4b17-4b5e-9f2f-b2a856771454
-    InputPort: input
-  - OutputNodeId: dc089c60-c888-4a02-9950-66f1ce9abf5c
-    OutputPort: geometry
-    InputNodeId: b44081ab-8b05-4e8e-8a04-fb48e386f663
-    InputPort: input
-  - OutputNodeId: 71830dbf-ea28-42f4-85f2-c8b9e8700c11
-    OutputPort: geometry
-    InputNodeId: 39181aa9-43a8-4b83-b5e9-8920d5740566
-    InputPort: input
-  - OutputNodeId: 65451e6f-c5b3-4ca8-9a5b-5535c0f0d57a
-    OutputPort: geometry
-    InputNodeId: ceb18366-f13e-40db-abd8-4694f488d2d9
-    InputPort: input
-  - OutputNodeId: a78f7c55-3899-45ee-b648-fd2c4337d978
-    OutputPort: geometry
-    InputNodeId: 45d742e3-42f1-49cb-a70c-d4fb141bf2e3
-    InputPort: input
-  - OutputNodeId: 24ece289-f3ca-4028-9cfe-688fcb2ba885
-    OutputPort: geometry
-    InputNodeId: 820fc6b2-ca9c-45f9-a5a8-a93c15ab1d21
-    InputPort: input
-  - OutputNodeId: cf069de7-4929-4268-8230-f27ee35c2271
-    OutputPort: geometry
-    InputNodeId: 3bb1f511-00df-45f5-9180-33bbd389a7ee
-    InputPort: input
-  - OutputNodeId: 1562e0c2-451b-4c7f-a57d-bb386ee394b9
-    OutputPort: geometry
-    InputNodeId: 7aae169c-78c5-4db7-adcd-a1ee38c7d495
-    InputPort: input
-  - OutputNodeId: 87936cbe-b6f8-488f-8bef-67f3da79380b
-    OutputPort: geometry
-    InputNodeId: 222daf04-4041-4e20-88c1-35f6c7d6dde5
-    InputPort: input
-  - OutputNodeId: 0e994641-1ff3-47cd-a2fe-3b5c1a3b59ce
-    OutputPort: geometry
-    InputNodeId: 2abac420-0c6c-4bae-bd11-10add6f6bf59
-    InputPort: input
-  - OutputNodeId: 8c049aca-cd0c-4fc8-b18a-608aa0816cf7
-    OutputPort: geometry
-    InputNodeId: 712a9abb-db2e-42b7-8bc2-13ba6e11d3c2
-    InputPort: input
-  - OutputNodeId: 7b7c9265-bd4c-4f9e-8336-ebbf00f7be21
-    OutputPort: geometry
-    InputNodeId: 2ae05725-8749-4937-a4d7-d848a83c1e35
-    InputPort: input
-  - OutputNodeId: 1b1f9681-9bda-442e-93bf-5c3e5198055d
-    OutputPort: geometry
-    InputNodeId: b5a5a760-0dd3-4ce4-9661-121987f50840
-    InputPort: input
-  - OutputNodeId: c5f46810-094c-48e9-8932-e70623212cb5
-    OutputPort: geometry
-    InputNodeId: 3200c093-98a9-430c-a68f-b2984fda5ba8
-    InputPort: input
-  - OutputNodeId: 16fe924a-8cdd-4ae2-9e65-73f58d6dd23e
-    OutputPort: geometry
-    InputNodeId: 54a3b0d8-734d-4480-89d5-bfeb4ae470ed
-    InputPort: input
-  - OutputNodeId: 9e5e55d0-a1e9-4b34-9771-cb2d1363890f
-    OutputPort: geometry
-    InputNodeId: 4f3fe74e-2caa-4fc2-8ad6-49ac390f376f
-    InputPort: input
-  - OutputNodeId: cfc12729-be72-415a-b5d6-a1b946f76cba
-    OutputPort: geometry
-    InputNodeId: 9802d39b-3afe-454e-8ceb-49f65d5995af
-    InputPort: input
-  - OutputNodeId: c5e4d5bc-a51f-41b0-a920-4c50d5983b30
-    OutputPort: geometry
-    InputNodeId: 1ac8cc9c-1b1f-4687-a3b6-68ed44a97dd3
-    InputPort: input
-  - OutputNodeId: 8ef16451-057b-439a-9cec-54f330a3cd8c
-    OutputPort: geometry
-    InputNodeId: ea687c6b-2f9e-4c15-8d24-c3fa65275f0e
-    InputPort: input
-  - OutputNodeId: 371b16c8-4e7b-48ec-b7e9-8cb85dbea11d
-    OutputPort: geometry
-    InputNodeId: 048716c5-715f-487d-aeee-52b3358d6a99
-    InputPort: input
-  - OutputNodeId: 01a3686a-c5f6-45f2-8133-a434f686ee7a
-    OutputPort: geometry
-    InputNodeId: 267dd41e-cd5c-4afc-b809-ccb223dad64b
-    InputPort: input
-  - OutputNodeId: 2c160124-aa0b-4c23-b77e-5a176ca1faa4
-    OutputPort: geometry
-    InputNodeId: af6476f9-5134-45d3-a789-f509466e32cc
-    InputPort: input
-  - OutputNodeId: 7718ddc7-8264-4784-998d-98d901cb343e
-    OutputPort: geometry
-    InputNodeId: b59f1174-e187-4c23-8ecc-a0773a67ff4b
-    InputPort: input
-  - OutputNodeId: 78b9b8c1-c1a1-40c7-9def-a411e3b96659
-    OutputPort: geometry
-    InputNodeId: 3d2d56ac-3c2a-45d8-955f-42b8db6b1913
-    InputPort: input
-  - OutputNodeId: e3bcc147-4ba4-4bee-af6e-bc3d960bdb67
-    OutputPort: geometry
-    InputNodeId: 1aa2eaf8-e65c-4c2c-b602-4190b00ad377
-    InputPort: input
-  - OutputNodeId: 1aa2eaf8-e65c-4c2c-b602-4190b00ad377
-    OutputPort: geometry
-    InputNodeId: 8a5d65eb-edad-4bd4-87af-604323c3d790
-    InputPort: input
-  - OutputNodeId: 8a5d65eb-edad-4bd4-87af-604323c3d790
-    OutputPort: geometry
-    InputNodeId: 86de651c-f650-465e-868e-86393b5055f5
-    InputPort: input
-  - OutputNodeId: 86de651c-f650-465e-868e-86393b5055f5
-    OutputPort: geometry
-    InputNodeId: 27d8deb4-5ba6-4d66-8d15-4dd9908951e2
-    InputPort: input
-  - OutputNodeId: 02a653f9-a1aa-4903-8ba8-a04843adc2c3
-    OutputPort: geometry
-    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
     InputPort: input0
-  - OutputNodeId: 0c0f1ce3-fd9c-4ca9-8544-94164cd0d5ba
+  - OutputNodeId: 1631b8aa-da0e-4641-92e5-c0b4037d6951
     OutputPort: geometry
-    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
     InputPort: input1
-  - OutputNodeId: 4deff1b4-33e2-4b50-be80-d8b9a610baf3
+  - OutputNodeId: 6fbd71d4-7eca-46ec-8813-0dae4ac5325c
     OutputPort: geometry
-    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
     InputPort: input2
-  - OutputNodeId: 5dbc7e08-85d2-416f-b475-c9865c62541d
+  - OutputNodeId: f36703a3-4ef2-4c0a-ac61-f6a5daf29ba7
     OutputPort: geometry
-    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
     InputPort: input3
-  - OutputNodeId: 9f0e338b-e29c-4265-9512-50ac48444ae8
+  - OutputNodeId: 86698a5e-f733-4614-bdf7-5c6708d2f3b3
     OutputPort: geometry
-    InputNodeId: d12db336-7460-460a-833e-111e148874f3
+    InputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
     InputPort: input4
+  - OutputNodeId: a4b2fe79-bcc6-4224-943c-17c7724f6d1b
+    OutputPort: geometry
+    InputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
+    InputPort: input5
+  - OutputNodeId: d74fd05d-5f34-4705-bc29-44ef000ff6dc
+    OutputPort: geometry
+    InputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
+    InputPort: input6
+  - OutputNodeId: e214f434-f091-44a2-89ef-dab2de6ee165
+    OutputPort: geometry
+    InputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
+    InputPort: input7
+  - OutputNodeId: b3b7e725-e0bb-456e-9aaa-3e6d7bf5f1f8
+    OutputPort: geometry
+    InputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
+    InputPort: input8
+  - OutputNodeId: eafb7192-b0f3-408c-be18-3920bbe91adf
+    OutputPort: geometry
+    InputNodeId: 263ac65a-f1ea-4fbc-89e9-58b9ed930177
+    InputPort: input
+  - OutputNodeId: 9d08b0bf-f627-4d29-bc6c-22d996e9b9fe
+    OutputPort: geometry
+    InputNodeId: 103e6a84-359e-44f1-9cf4-5990afb4a0e9
+    InputPort: input
+  - OutputNodeId: 263ac65a-f1ea-4fbc-89e9-58b9ed930177
+    OutputPort: geometry
+    InputNodeId: 4c1dbd0d-a19f-4e83-9eff-6aa56a22a14d
+    InputPort: input0
+  - OutputNodeId: 103e6a84-359e-44f1-9cf4-5990afb4a0e9
+    OutputPort: geometry
+    InputNodeId: 4c1dbd0d-a19f-4e83-9eff-6aa56a22a14d
+    InputPort: input1
+  - OutputNodeId: fab5ac95-db26-45ef-9a2b-bc51496e0f51
+    OutputPort: geometry
+    InputNodeId: f1bc5108-3c27-45c0-b323-7553771e9389
+    InputPort: input
+  - OutputNodeId: af1329f5-6349-4821-bc19-d9627ee8ff62
+    OutputPort: geometry
+    InputNodeId: 5e79c21b-ff7f-41ea-86d4-862b38479571
+    InputPort: input
+  - OutputNodeId: b0b7850a-cdbb-49fa-91ad-5f143840532a
+    OutputPort: geometry
+    InputNodeId: 60cb23ac-fa2a-471d-bfa2-30bcd22b39d9
+    InputPort: input
+  - OutputNodeId: 2d8c4cda-b57e-42a2-9e63-f22c38f99f52
+    OutputPort: geometry
+    InputNodeId: 8585b42c-3a85-4c61-ab0d-b88cd8e23ce9
+    InputPort: input
+  - OutputNodeId: df05790e-9bf0-4096-be46-e5d64953124e
+    OutputPort: geometry
+    InputNodeId: cbaf2627-76dc-49d6-b597-5f0595e6e01b
+    InputPort: input
+  - OutputNodeId: f1bc5108-3c27-45c0-b323-7553771e9389
+    OutputPort: geometry
+    InputNodeId: 49540ec3-7d01-434b-b31c-86884193f2c5
+    InputPort: input0
+  - OutputNodeId: 5e79c21b-ff7f-41ea-86d4-862b38479571
+    OutputPort: geometry
+    InputNodeId: 49540ec3-7d01-434b-b31c-86884193f2c5
+    InputPort: input1
+  - OutputNodeId: 60cb23ac-fa2a-471d-bfa2-30bcd22b39d9
+    OutputPort: geometry
+    InputNodeId: 49540ec3-7d01-434b-b31c-86884193f2c5
+    InputPort: input2
+  - OutputNodeId: 8585b42c-3a85-4c61-ab0d-b88cd8e23ce9
+    OutputPort: geometry
+    InputNodeId: 49540ec3-7d01-434b-b31c-86884193f2c5
+    InputPort: input3
+  - OutputNodeId: cbaf2627-76dc-49d6-b597-5f0595e6e01b
+    OutputPort: geometry
+    InputNodeId: 49540ec3-7d01-434b-b31c-86884193f2c5
+    InputPort: input4
+  - OutputNodeId: 8c3b630e-cced-4bc6-8d89-565159b4c46b
+    OutputPort: geometry
+    InputNodeId: 9a7de9a1-ebc6-4d92-8fc2-6bd4d895ff36
+    InputPort: input
+  - OutputNodeId: dd3da78e-d968-41f6-9a47-ac9622db7f41
+    OutputPort: geometry
+    InputNodeId: 4db5b2fa-edc3-4e26-aab5-a5e39bfea7ad
+    InputPort: input
+  - OutputNodeId: be4814ee-55cd-4b78-bf7d-e3042d926d51
+    OutputPort: geometry
+    InputNodeId: 6c5536d5-1be8-4feb-9c39-65fc9c5a0961
+    InputPort: input
+  - OutputNodeId: 6a4fdcdc-7247-42ae-9b46-1ab67dfeb85b
+    OutputPort: geometry
+    InputNodeId: c36e857b-746f-401e-9559-6aa7ac8993c6
+    InputPort: input
+  - OutputNodeId: 9a7de9a1-ebc6-4d92-8fc2-6bd4d895ff36
+    OutputPort: geometry
+    InputNodeId: eee06fbc-faa7-4ece-8f93-2b1390f24008
+    InputPort: input0
+  - OutputNodeId: 4db5b2fa-edc3-4e26-aab5-a5e39bfea7ad
+    OutputPort: geometry
+    InputNodeId: eee06fbc-faa7-4ece-8f93-2b1390f24008
+    InputPort: input1
+  - OutputNodeId: 6c5536d5-1be8-4feb-9c39-65fc9c5a0961
+    OutputPort: geometry
+    InputNodeId: eee06fbc-faa7-4ece-8f93-2b1390f24008
+    InputPort: input2
+  - OutputNodeId: c36e857b-746f-401e-9559-6aa7ac8993c6
+    OutputPort: geometry
+    InputNodeId: eee06fbc-faa7-4ece-8f93-2b1390f24008
+    InputPort: input3
+  - OutputNodeId: 86a20a66-7805-4de1-93a5-a6cb1027da06
+    OutputPort: geometry
+    InputNodeId: ab19a1f2-0cbe-45dc-8a3e-4d510050d01b
+    InputPort: input
+  - OutputNodeId: 3b30d2b0-7d49-4a10-b8eb-813f73fbf46d
+    OutputPort: geometry
+    InputNodeId: 6b6e4ec3-f6d6-4e34-9a71-cdb275b8a8d5
+    InputPort: input
+  - OutputNodeId: a91e7570-f4b7-47c4-93db-849658934a66
+    OutputPort: geometry
+    InputNodeId: afabb25b-0c0c-4dc3-9372-61482b8d00a0
+    InputPort: input
+  - OutputNodeId: ab19a1f2-0cbe-45dc-8a3e-4d510050d01b
+    OutputPort: geometry
+    InputNodeId: 6b1f4f3a-7968-46da-9c11-5861d61f996e
+    InputPort: input0
+  - OutputNodeId: 6b6e4ec3-f6d6-4e34-9a71-cdb275b8a8d5
+    OutputPort: geometry
+    InputNodeId: 6b1f4f3a-7968-46da-9c11-5861d61f996e
+    InputPort: input1
+  - OutputNodeId: afabb25b-0c0c-4dc3-9372-61482b8d00a0
+    OutputPort: geometry
+    InputNodeId: 6b1f4f3a-7968-46da-9c11-5861d61f996e
+    InputPort: input2
+  - OutputNodeId: 0e839b8b-f6bf-4fee-b744-99211c31bddd
+    OutputPort: geometry
+    InputNodeId: 8c6eb0ba-4825-453a-880f-ddec29c74567
+    InputPort: input
+  - OutputNodeId: f57f328f-dce1-4909-931b-c0e24ffb38cb
+    OutputPort: geometry
+    InputNodeId: 7260f0eb-4594-468d-a22f-4fd7f9a4d69e
+    InputPort: input
+  - OutputNodeId: 56633a23-dc5d-4a4a-914c-e233fa8e78fd
+    OutputPort: geometry
+    InputNodeId: 653878e5-b77d-4bea-894c-3e87747f8c62
+    InputPort: input
+  - OutputNodeId: 434001d3-c85a-430e-beee-17d25c0a2215
+    OutputPort: geometry
+    InputNodeId: d7f377c1-302b-436b-b60e-67a2bd802f4f
+    InputPort: input
+  - OutputNodeId: 0a687958-be79-4e05-95b0-4ca143154baf
+    OutputPort: geometry
+    InputNodeId: c9a881d7-b150-4dc1-94bb-774fa6003c74
+    InputPort: input
+  - OutputNodeId: 6ca98ca1-9d04-416a-851c-f28dd1f5accb
+    OutputPort: geometry
+    InputNodeId: 3988b351-2603-45a4-a43f-de5f5aebad22
+    InputPort: input
+  - OutputNodeId: 8c6eb0ba-4825-453a-880f-ddec29c74567
+    OutputPort: geometry
+    InputNodeId: 37a3a93c-2626-485a-94c4-ce184c045048
+    InputPort: input0
+  - OutputNodeId: 7260f0eb-4594-468d-a22f-4fd7f9a4d69e
+    OutputPort: geometry
+    InputNodeId: 37a3a93c-2626-485a-94c4-ce184c045048
+    InputPort: input1
+  - OutputNodeId: 653878e5-b77d-4bea-894c-3e87747f8c62
+    OutputPort: geometry
+    InputNodeId: 37a3a93c-2626-485a-94c4-ce184c045048
+    InputPort: input2
+  - OutputNodeId: d7f377c1-302b-436b-b60e-67a2bd802f4f
+    OutputPort: geometry
+    InputNodeId: 37a3a93c-2626-485a-94c4-ce184c045048
+    InputPort: input3
+  - OutputNodeId: c9a881d7-b150-4dc1-94bb-774fa6003c74
+    OutputPort: geometry
+    InputNodeId: 37a3a93c-2626-485a-94c4-ce184c045048
+    InputPort: input4
+  - OutputNodeId: 3988b351-2603-45a4-a43f-de5f5aebad22
+    OutputPort: geometry
+    InputNodeId: 37a3a93c-2626-485a-94c4-ce184c045048
+    InputPort: input5
+  - OutputNodeId: 8d92f624-30b9-4286-b409-ad7ba2ca3082
+    OutputPort: geometry
+    InputNodeId: eb499d80-ed3b-4dd4-a596-d41a01298b35
+    InputPort: input
+  - OutputNodeId: 89be0ddd-1ff7-47c2-ab24-4f8d815325d0
+    OutputPort: geometry
+    InputNodeId: c5d7dcd5-4186-4c9b-9f93-5865fc3a8bc4
+    InputPort: input
+  - OutputNodeId: 50cc0914-e2e5-4e2c-8a37-31925396b1ab
+    OutputPort: geometry
+    InputNodeId: 3a3ec8e8-1bf0-4978-b316-511f10d2e9b1
+    InputPort: input
+  - OutputNodeId: eb499d80-ed3b-4dd4-a596-d41a01298b35
+    OutputPort: geometry
+    InputNodeId: c1e89c91-e12d-40e4-8e80-9da3389038dc
+    InputPort: input0
+  - OutputNodeId: c5d7dcd5-4186-4c9b-9f93-5865fc3a8bc4
+    OutputPort: geometry
+    InputNodeId: c1e89c91-e12d-40e4-8e80-9da3389038dc
+    InputPort: input1
+  - OutputNodeId: 3a3ec8e8-1bf0-4978-b316-511f10d2e9b1
+    OutputPort: geometry
+    InputNodeId: c1e89c91-e12d-40e4-8e80-9da3389038dc
+    InputPort: input2
+  - OutputNodeId: 84daee3b-6ba0-4329-b1a1-48dbc5155651
+    OutputPort: geometry
+    InputNodeId: 199707bd-8dc4-4c2b-b73d-6b495ed4b683
+    InputPort: input
+  - OutputNodeId: 625418d7-74c5-4349-891d-7a109cdfd682
+    OutputPort: geometry
+    InputNodeId: 088af289-fa39-4855-a84b-62f771e5d6f5
+    InputPort: input
+  - OutputNodeId: abe3cab2-1774-4a1a-9754-65291cc1b52e
+    OutputPort: geometry
+    InputNodeId: 4f603eb1-639c-4ba7-8bec-088addc583b4
+    InputPort: input
+  - OutputNodeId: c42a5546-f7de-4bfe-b47b-02bb6d9cea79
+    OutputPort: geometry
+    InputNodeId: 9fff8bc7-775a-4f2a-a8b5-b199aa622e92
+    InputPort: input
+  - OutputNodeId: a68e6848-923f-4534-834a-dc5372cd2568
+    OutputPort: geometry
+    InputNodeId: 3f29508c-f54b-4679-b84c-53aaf9921a55
+    InputPort: input
+  - OutputNodeId: f6514d14-db8b-47c4-89d6-3bedd2e977c9
+    OutputPort: geometry
+    InputNodeId: ff3d56eb-3341-4bf7-9057-f90e889433dd
+    InputPort: input
+  - OutputNodeId: 199707bd-8dc4-4c2b-b73d-6b495ed4b683
+    OutputPort: geometry
+    InputNodeId: f34a8066-af30-433a-85af-4da420888fe0
+    InputPort: input0
+  - OutputNodeId: 088af289-fa39-4855-a84b-62f771e5d6f5
+    OutputPort: geometry
+    InputNodeId: f34a8066-af30-433a-85af-4da420888fe0
+    InputPort: input1
+  - OutputNodeId: 4f603eb1-639c-4ba7-8bec-088addc583b4
+    OutputPort: geometry
+    InputNodeId: f34a8066-af30-433a-85af-4da420888fe0
+    InputPort: input2
+  - OutputNodeId: 9fff8bc7-775a-4f2a-a8b5-b199aa622e92
+    OutputPort: geometry
+    InputNodeId: f34a8066-af30-433a-85af-4da420888fe0
+    InputPort: input3
+  - OutputNodeId: 3f29508c-f54b-4679-b84c-53aaf9921a55
+    OutputPort: geometry
+    InputNodeId: f34a8066-af30-433a-85af-4da420888fe0
+    InputPort: input4
+  - OutputNodeId: ff3d56eb-3341-4bf7-9057-f90e889433dd
+    OutputPort: geometry
+    InputNodeId: f34a8066-af30-433a-85af-4da420888fe0
+    InputPort: input5
+  - OutputNodeId: b8b23355-1d95-45af-ad9c-bb4b1dd2c918
+    OutputPort: geometry
+    InputNodeId: c9773430-0283-4df3-90ba-6eeb3d02981d
+    InputPort: input
+  - OutputNodeId: 7549b553-2a16-42ee-9a52-a7fa68c57b61
+    OutputPort: geometry
+    InputNodeId: ed2f5beb-ebfd-48ac-9f48-ce48de1b51c8
+    InputPort: input
+  - OutputNodeId: 6f31ab94-6e40-4081-a95e-bc935e7a6832
+    OutputPort: geometry
+    InputNodeId: 598b8658-0e46-4005-8a57-9c29c9c2c941
+    InputPort: input
+  - OutputNodeId: c9773430-0283-4df3-90ba-6eeb3d02981d
+    OutputPort: geometry
+    InputNodeId: 4e3c0fec-2d6b-424e-acd2-38ffa3fa858f
+    InputPort: input0
+  - OutputNodeId: ed2f5beb-ebfd-48ac-9f48-ce48de1b51c8
+    OutputPort: geometry
+    InputNodeId: 4e3c0fec-2d6b-424e-acd2-38ffa3fa858f
+    InputPort: input1
+  - OutputNodeId: 598b8658-0e46-4005-8a57-9c29c9c2c941
+    OutputPort: geometry
+    InputNodeId: 4e3c0fec-2d6b-424e-acd2-38ffa3fa858f
+    InputPort: input2
+  - OutputNodeId: db2521ee-05a7-4597-ac0f-6c8ab0e6e2ff
+    OutputPort: geometry
+    InputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    InputPort: input0
+  - OutputNodeId: 4c1dbd0d-a19f-4e83-9eff-6aa56a22a14d
+    OutputPort: geometry
+    InputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    InputPort: input1
+  - OutputNodeId: 49540ec3-7d01-434b-b31c-86884193f2c5
+    OutputPort: geometry
+    InputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    InputPort: input2
+  - OutputNodeId: eee06fbc-faa7-4ece-8f93-2b1390f24008
+    OutputPort: geometry
+    InputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    InputPort: input3
+  - OutputNodeId: 6b1f4f3a-7968-46da-9c11-5861d61f996e
+    OutputPort: geometry
+    InputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    InputPort: input4
+  - OutputNodeId: 37a3a93c-2626-485a-94c4-ce184c045048
+    OutputPort: geometry
+    InputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    InputPort: input5
+  - OutputNodeId: c1e89c91-e12d-40e4-8e80-9da3389038dc
+    OutputPort: geometry
+    InputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    InputPort: input6
+  - OutputNodeId: f34a8066-af30-433a-85af-4da420888fe0
+    OutputPort: geometry
+    InputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    InputPort: input7
+  - OutputNodeId: 4e3c0fec-2d6b-424e-acd2-38ffa3fa858f
+    OutputPort: geometry
+    InputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    InputPort: input8
+  - OutputNodeId: 40b1eeab-e85c-44d1-b246-6b51b1406b13
+    OutputPort: geometry
+    InputNodeId: 057c6ddf-7d1a-4eb8-9337-0d9fb5e23545
+    InputPort: input
+  - OutputNodeId: 057c6ddf-7d1a-4eb8-9337-0d9fb5e23545
+    OutputPort: geometry
+    InputNodeId: 9af83942-7551-42f5-9c26-0bae2a44cc6b
+    InputPort: input
+  - OutputNodeId: 9af83942-7551-42f5-9c26-0bae2a44cc6b
+    OutputPort: geometry
+    InputNodeId: c4df1b02-2036-43d0-908e-c2995bb89591
+    InputPort: input
+  - OutputNodeId: c4df1b02-2036-43d0-908e-c2995bb89591
+    OutputPort: geometry
+    InputNodeId: a62d0a09-17be-4924-bd7e-787ac863a317
+    InputPort: input
   Groups:
-  - GroupId: c815f515-957c-4016-b419-4cbc09b3381a
+  - GroupId: 3b1209ed-dd57-4ca9-a72a-dbfa450fe28c
     Title: "Slide (\u5957\u7B52)"
     NodeIds:
-    - 8966b9a1-45d3-4599-8114-817ad31944c7
-    - 02a653f9-a1aa-4903-8ba8-a04843adc2c3
-    - 7eb49ff0-d381-4909-a983-a21de8a63e9b
-    - 0c0f1ce3-fd9c-4ca9-8544-94164cd0d5ba
-    - 0106fce8-9c30-4733-8fe4-8f14526a9448
-    - 4deff1b4-33e2-4b50-be80-d8b9a610baf3
-    - 121e78c4-8b2a-4ba2-8d72-b731993641e3
-    - 5dbc7e08-85d2-416f-b475-c9865c62541d
-    - 051e944d-248e-40cc-9e6c-d405ea24a191
-    - 9f0e338b-e29c-4265-9512-50ac48444ae8
-    - 94f777ea-cd86-48c4-b4d3-e9b6a41ea28f
-    - ad1a7745-67fa-42fe-afbf-048155944ce9
-    - 0c2582e4-54be-4699-91fb-f5e3c8e56e19
-    - a4dcae59-d2fc-4340-a319-45d792ef53c6
-    - 6403aa19-fd14-4a01-8a00-aca519d65ec9
-    - 6db5690a-985d-4131-a4a9-bf32e55e8a9f
-    - 3d65ddfc-c468-4261-a2b2-fad32c45b7f7
-    - dc6e7321-33b7-480f-bb53-a5a353a28526
-    Position: {x: -25.599976, y: -62.399994}
-    Size: {x: 508, y: 1746.3999}
-  - GroupId: e0a92a0d-16ed-435f-b780-aaadeb3c6121
+    - b44dff57-cefc-4b87-a69c-39af227d7736
+    - d4674adc-bf97-4133-9fac-f65c0b3dbbb1
+    - 4c8af01c-6afe-46c4-b061-6e12babcdcd0
+    - 1631b8aa-da0e-4641-92e5-c0b4037d6951
+    - f64ee829-d1cb-4ed5-a0c5-694daf5c82eb
+    - 6fbd71d4-7eca-46ec-8813-0dae4ac5325c
+    - ba19deef-526f-4066-bc06-e85042ede6a2
+    - f36703a3-4ef2-4c0a-ac61-f6a5daf29ba7
+    - 96d9ab60-09ed-482f-a107-009de949b1b8
+    - 86698a5e-f733-4614-bdf7-5c6708d2f3b3
+    - 9f2c2567-8b56-4b7b-998a-7615769ce61c
+    - a4b2fe79-bcc6-4224-943c-17c7724f6d1b
+    - de553df4-0e32-49ae-863c-529ad9e8c4c4
+    - d74fd05d-5f34-4705-bc29-44ef000ff6dc
+    - e8ff01a7-1c10-494f-815b-5e2642cdf995
+    - e214f434-f091-44a2-89ef-dab2de6ee165
+    - b3ab7e75-2eca-4117-b2e9-1819f8784f13
+    - b3b7e725-e0bb-456e-9aaa-3e6d7bf5f1f8
+    Position: {x: -20, y: -40}
+    Size: {x: 700, y: 1700}
+  - GroupId: ec998ec9-3a9d-40e2-8674-ca77b1680275
     Title: "Barrel (\u67AA\u7BA1)"
     NodeIds:
-    - 56c39a23-5875-47f2-ac92-c66b53579e54
-    - 82b0aeea-16f6-4eb2-a139-8352c7a692ba
-    - 75322dce-cf0d-4395-9717-5d73d893d9e7
-    - b984fec0-1a41-4c21-83d8-26c832a9e45e
-    Position: {x: -25.6, y: 1737.6}
-    Size: {x: 508, y: 486.3999}
-  - GroupId: 0246e570-7e94-4de3-bf6b-a269cb7e6c8f
+    - eafb7192-b0f3-408c-be18-3920bbe91adf
+    - 263ac65a-f1ea-4fbc-89e9-58b9ed930177
+    - 9d08b0bf-f627-4d29-bc6c-22d996e9b9fe
+    - 103e6a84-359e-44f1-9cf4-5990afb4a0e9
+    Position: {x: -20, y: 1760}
+    Size: {x: 700, y: 420}
+  - GroupId: 275d63ad-c765-4726-8b57-3c12444602af
     Title: "Frame (\u673A\u5323)"
     NodeIds:
-    - cf868aef-6bc6-4c1c-842c-7d0c44beeac1
-    - 820d9b3f-91ee-44c7-a94c-28c903e1d522
-    - 157bbb74-04cf-497b-bef0-c55e63f674ae
-    - be153db0-2951-4e45-9d1d-98f7e000d05e
-    - b807bc06-9cf0-4310-bea9-f7cc833628eb
-    - ef5b6258-651c-476f-977c-f2b11f183051
-    - f7aab092-505c-4853-8957-7dda3cee5abc
-    - ba871310-ff02-4d6b-956e-355a6f58a9a4
-    - e8c1a6e9-c5d6-4f51-89a0-34f2c5427adf
-    - 6a748de9-4c0f-4133-a399-d62809799a93
-    Position: {x: -25.6, y: 2237.6}
-    Size: {x: 508, y: 1026.3999}
-  - GroupId: acba2408-7a2e-447f-982d-f64d80d4e1ab
+    - fab5ac95-db26-45ef-9a2b-bc51496e0f51
+    - f1bc5108-3c27-45c0-b323-7553771e9389
+    - af1329f5-6349-4821-bc19-d9627ee8ff62
+    - 5e79c21b-ff7f-41ea-86d4-862b38479571
+    - b0b7850a-cdbb-49fa-91ad-5f143840532a
+    - 60cb23ac-fa2a-471d-bfa2-30bcd22b39d9
+    - 2d8c4cda-b57e-42a2-9e63-f22c38f99f52
+    - 8585b42c-3a85-4c61-ab0d-b88cd8e23ce9
+    - df05790e-9bf0-4096-be46-e5d64953124e
+    - cbaf2627-76dc-49d6-b597-5f0595e6e01b
+    Position: {x: -20, y: 2260}
+    Size: {x: 700, y: 960}
+  - GroupId: b17105d8-6880-429d-a11e-1afe09f62c0b
     Title: "Trigger Guard (\u6273\u673A\u62A4\u5708)"
     NodeIds:
-    - c8cf3d1a-f423-4445-ab52-7a0a9f3d45da
-    - cc9d0127-9f9a-4581-bdc5-75dae696a9aa
-    - 88f053f5-bc65-46d4-96a4-d4d10b1e2bc7
-    - a9c3d72b-4b17-4b5e-9f2f-b2a856771454
-    - dc089c60-c888-4a02-9950-66f1ce9abf5c
-    - b44081ab-8b05-4e8e-8a04-fb48e386f663
-    - 71830dbf-ea28-42f4-85f2-c8b9e8700c11
-    - 39181aa9-43a8-4b83-b5e9-8920d5740566
-    Position: {x: -25.6, y: 3236.8}
-    Size: {x: 508, y: 847.2002}
-  - GroupId: 096e1137-36b4-43fa-be6f-08921e3d1ab2
+    - 8c3b630e-cced-4bc6-8d89-565159b4c46b
+    - 9a7de9a1-ebc6-4d92-8fc2-6bd4d895ff36
+    - dd3da78e-d968-41f6-9a47-ac9622db7f41
+    - 4db5b2fa-edc3-4e26-aab5-a5e39bfea7ad
+    - be4814ee-55cd-4b78-bf7d-e3042d926d51
+    - 6c5536d5-1be8-4feb-9c39-65fc9c5a0961
+    - 6a4fdcdc-7247-42ae-9b46-1ab67dfeb85b
+    - c36e857b-746f-401e-9559-6aa7ac8993c6
+    Position: {x: -20, y: 3260}
+    Size: {x: 700, y: 780}
+  - GroupId: 38dd3eeb-2847-4b14-b935-3be6e07ed175
     Title: "Trigger (\u6273\u673A)"
     NodeIds:
-    - 65451e6f-c5b3-4ca8-9a5b-5535c0f0d57a
-    - ceb18366-f13e-40db-abd8-4694f488d2d9
-    - a78f7c55-3899-45ee-b648-fd2c4337d978
-    - 45d742e3-42f1-49cb-a70c-d4fb141bf2e3
-    Position: {x: -25.6, y: 4037.5999}
-    Size: {x: 508, y: 486.40015}
-  - GroupId: 64f84dac-ee72-465f-956b-2af225139d70
+    - 86a20a66-7805-4de1-93a5-a6cb1027da06
+    - ab19a1f2-0cbe-45dc-8a3e-4d510050d01b
+    - 3b30d2b0-7d49-4a10-b8eb-813f73fbf46d
+    - 6b6e4ec3-f6d6-4e34-9a71-cdb275b8a8d5
+    - a91e7570-f4b7-47c4-93db-849658934a66
+    - afabb25b-0c0c-4dc3-9372-61482b8d00a0
+    Position: {x: -20, y: 4060}
+    Size: {x: 700, y: 780}
+  - GroupId: a062e5db-028c-4a69-b02f-22d8ec62ae66
     Title: "Grip (\u63E1\u628A)"
     NodeIds:
-    - cf069de7-4929-4268-8230-f27ee35c2271
-    - 3bb1f511-00df-45f5-9180-33bbd389a7ee
-    - 1562e0c2-451b-4c7f-a57d-bb386ee394b9
-    - 7aae169c-78c5-4db7-adcd-a1ee38c7d495
-    - 87936cbe-b6f8-488f-8bef-67f3da79380b
-    - 222daf04-4041-4e20-88c1-35f6c7d6dde5
-    - 0e994641-1ff3-47cd-a2fe-3b5c1a3b59ce
-    - 2abac420-0c6c-4bae-bd11-10add6f6bf59
-    - 8c049aca-cd0c-4fc8-b18a-608aa0816cf7
-    - 712a9abb-db2e-42b7-8bc2-13ba6e11d3c2
-    - 7b7c9265-bd4c-4f9e-8336-ebbf00f7be21
-    - 2ae05725-8749-4937-a4d7-d848a83c1e35
-    Position: {x: -25.6, y: 4637.6}
-    Size: {x: 508, y: 1206.4004}
-  - GroupId: 0b354b6f-c5f5-40e1-9842-ec6ba697b763
+    - 0e839b8b-f6bf-4fee-b744-99211c31bddd
+    - 8c6eb0ba-4825-453a-880f-ddec29c74567
+    - f57f328f-dce1-4909-931b-c0e24ffb38cb
+    - 7260f0eb-4594-468d-a22f-4fd7f9a4d69e
+    - 56633a23-dc5d-4a4a-914c-e233fa8e78fd
+    - 653878e5-b77d-4bea-894c-3e87747f8c62
+    - 434001d3-c85a-430e-beee-17d25c0a2215
+    - d7f377c1-302b-436b-b60e-67a2bd802f4f
+    - 0a687958-be79-4e05-95b0-4ca143154baf
+    - c9a881d7-b150-4dc1-94bb-774fa6003c74
+    - 6ca98ca1-9d04-416a-851c-f28dd1f5accb
+    - 3988b351-2603-45a4-a43f-de5f5aebad22
+    Position: {x: -20, y: 4660}
+    Size: {x: 700, y: 1140}
+  - GroupId: 8d93e3de-2df1-486d-8886-c93db711c6fc
     Title: "Magazine (\u5F39\u5323)"
     NodeIds:
-    - 1b1f9681-9bda-442e-93bf-5c3e5198055d
-    - b5a5a760-0dd3-4ce4-9661-121987f50840
-    - c5f46810-094c-48e9-8932-e70623212cb5
-    - 3200c093-98a9-430c-a68f-b2984fda5ba8
-    - 16fe924a-8cdd-4ae2-9e65-73f58d6dd23e
-    - 54a3b0d8-734d-4480-89d5-bfeb4ae470ed
-    Position: {x: -25.6, y: 5837.6}
-    Size: {x: 508, y: 666.4004}
-  - GroupId: bbb5a857-9d4c-453e-a686-c0a7c96c2faa
+    - 8d92f624-30b9-4286-b409-ad7ba2ca3082
+    - eb499d80-ed3b-4dd4-a596-d41a01298b35
+    - 89be0ddd-1ff7-47c2-ab24-4f8d815325d0
+    - c5d7dcd5-4186-4c9b-9f93-5865fc3a8bc4
+    - 50cc0914-e2e5-4e2c-8a37-31925396b1ab
+    - 3a3ec8e8-1bf0-4978-b316-511f10d2e9b1
+    Position: {x: -20, y: 5860}
+    Size: {x: 700, y: 600}
+  - GroupId: 6ab1731f-3bd5-410d-9921-2f1d6b0c76cd
     Title: "Controls (\u64CD\u63A7\u90E8\u4EF6)"
     NodeIds:
-    - 9e5e55d0-a1e9-4b34-9771-cb2d1363890f
-    - 4f3fe74e-2caa-4fc2-8ad6-49ac390f376f
-    - cfc12729-be72-415a-b5d6-a1b946f76cba
-    - 9802d39b-3afe-454e-8ceb-49f65d5995af
-    - c5e4d5bc-a51f-41b0-a920-4c50d5983b30
-    - 1ac8cc9c-1b1f-4687-a3b6-68ed44a97dd3
-    - 8ef16451-057b-439a-9cec-54f330a3cd8c
-    - ea687c6b-2f9e-4c15-8d24-c3fa65275f0e
-    Position: {x: -25.6, y: 6437.6}
-    Size: {x: 508, y: 846.4004}
-  - GroupId: f84d0da5-2954-4059-b739-b978c92e6949
+    - 84daee3b-6ba0-4329-b1a1-48dbc5155651
+    - 199707bd-8dc4-4c2b-b73d-6b495ed4b683
+    - 625418d7-74c5-4349-891d-7a109cdfd682
+    - 088af289-fa39-4855-a84b-62f771e5d6f5
+    - abe3cab2-1774-4a1a-9754-65291cc1b52e
+    - 4f603eb1-639c-4ba7-8bec-088addc583b4
+    - c42a5546-f7de-4bfe-b47b-02bb6d9cea79
+    - 9fff8bc7-775a-4f2a-a8b5-b199aa622e92
+    - a68e6848-923f-4534-834a-dc5372cd2568
+    - 3f29508c-f54b-4679-b84c-53aaf9921a55
+    - f6514d14-db8b-47c4-89d6-3bedd2e977c9
+    - ff3d56eb-3341-4bf7-9057-f90e889433dd
+    Position: {x: -20, y: 6460}
+    Size: {x: 700, y: 1320}
+  - GroupId: b0b98b0a-17c6-4d6e-b99c-14a44469dcaf
     Title: "Slide Details (\u5957\u7B52\u7EC6\u8282)"
     NodeIds:
-    - 2c160124-aa0b-4c23-b77e-5a176ca1faa4
-    - af6476f9-5134-45d3-a789-f509466e32cc
-    - 7718ddc7-8264-4784-998d-98d901cb343e
-    - b59f1174-e187-4c23-8ecc-a0773a67ff4b
-    - 78b9b8c1-c1a1-40c7-9def-a411e3b96659
-    - 3d2d56ac-3c2a-45d8-955f-42b8db6b1913
-    Position: {x: -25.6, y: 7636.8}
-    Size: {x: 508, y: 667.2002}
+    - b8b23355-1d95-45af-ad9c-bb4b1dd2c918
+    - c9773430-0283-4df3-90ba-6eeb3d02981d
+    - 7549b553-2a16-42ee-9a52-a7fa68c57b61
+    - ed2f5beb-ebfd-48ac-9f48-ce48de1b51c8
+    - 6f31ab94-6e40-4081-a95e-bc935e7a6832
+    - 598b8658-0e46-4005-8a57-9c29c9c2c941
+    Position: {x: -20, y: 7660}
+    Size: {x: 700, y: 600}
   StickyNotes:
-  - NoteId: cdef77d8-fdc0-4795-9c54-817f9846540a
+  - NoteId: c7608c58-c89c-4e3a-8f93-dc0724c8d102
     Title: Procedural Glock
     Content: "Glock \u624B\u67AA\u7A0B\u5E8F\u5316\u767D\u6A21\n\n35 \u4E2A\u57FA\u7840\u591A\u9762\u4F53
       (Box+Tube)\n9 \u4E2A\u90E8\u4EF6\u7EC4\n\n\u7ED3\u6784\uFF1A\n- Slide (\u5957\u7B52)
@@ -1912,6 +1513,6 @@ MonoBehaviour:
       \u83DC\u5355 PCG Toolkit > Examples > Create Glock Graph\n2. \u5728 Node Editor
       \u4E2D\u6253\u5F00\u751F\u6210\u7684 asset\n3. \u6267\u884C\u56FE\u751F\u6210
       Prefab"
-    Position: {x: -349.6, y: -100}
+    Position: {x: -350, y: -100}
     Size: {x: 300, y: 500}
   ExposedParameters: []

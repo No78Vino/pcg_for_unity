@@ -73,11 +73,26 @@ namespace PCGToolkit.Graph
             var mesh = PCGCacheManager.GetOrCreateMesh(cacheKey, geo);
             _injectedMeshes.Add(mesh);
 
+            // 尝试从 @material Prim 属性获取材质路径
+            Material sceneMat = null;
+            var materialAttr = geo.PrimAttribs.GetAttribute("material");
+            if (materialAttr != null && materialAttr.Values.Count > 0)
+            {
+                var matPath = materialAttr.Values[0] as string;
+                if (!string.IsNullOrEmpty(matPath))
+                {
+                    sceneMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                }
+            }
+
+            // 回退到 PCG 官方 PBR 材质
+            if (sceneMat == null)
+                sceneMat = PCGDefaultMaterials.GetDefaultMaterial();
+
             var go = new GameObject(label);
             go.hideFlags = HideFlags.DontSave;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial =
-                AssetDatabase.GetBuiltinExtraResource<Material>("Default-Material.mat");
+            go.AddComponent<MeshRenderer>().sharedMaterial = sceneMat;
 
             _injectedObjects.Add(go);
             Selection.activeGameObject = go;

@@ -34,6 +34,10 @@ namespace PCGToolkit.Graph
         // 参数控件映射（用于双向同步）
         private Dictionary<string, VisualElement> _paramWidgets = new();
         
+        // 防抖：每次输入重置计时器，500ms 后才同步值
+        private Dictionary<string, IVisualElementScheduledItem> _debounceTimers = new();
+        private const int DEBOUNCE_DELAY_MS = 500;
+        
         [MenuItem("PCG Toolkit/Node Inspector")]
         public static PCGNodeInspectorWindow Open()
         {
@@ -50,6 +54,7 @@ namespace PCGToolkit.Graph
 
         private void OnEnable()
         {
+            CancelAllDebounceTimers();
             rootVisualElement.Clear();
             BuildUI();
             ShowEmpty();
@@ -458,6 +463,7 @@ namespace PCGToolkit.Graph
 
         private void RebuildForNode(PCGNodeVisual nodeVisual)
         {
+            CancelAllDebounceTimers();
             var pcgNode = nodeVisual.PCGNode;
             
             // Header
@@ -883,7 +889,7 @@ namespace PCGToolkit.Graph
                             if (schema.Min != float.MinValue && v < schema.Min) v = schema.Min;
                             if (schema.Max != float.MaxValue && v > schema.Max) v = schema.Max;
                             if (v != evt.newValue) field.SetValueWithoutNotify(v);
-                            SyncValueToNode(nodeVisual, schema.Name, v);
+                            DebounceSyncValue(nodeVisual, schema.Name, v);
                         });
                         return field;
                     }
@@ -920,7 +926,7 @@ namespace PCGToolkit.Graph
                             if (schema.Min != float.MinValue && v < (int)schema.Min) v = (int)schema.Min;
                             if (schema.Max != float.MaxValue && v > (int)schema.Max) v = (int)schema.Max;
                             if (v != evt.newValue) field.SetValueWithoutNotify(v);
-                            SyncValueToNode(nodeVisual, schema.Name, v);
+                            DebounceSyncValue(nodeVisual, schema.Name, v);
                         });
                         return field;
                     }
@@ -952,7 +958,7 @@ namespace PCGToolkit.Graph
                     };
                     field.RegisterValueChangedCallback(evt =>
                     {
-                        SyncValueToNode(nodeVisual, schema.Name, evt.newValue);
+                        DebounceSyncValue(nodeVisual, schema.Name, evt.newValue);
                     });
                     return field;
                 }
@@ -967,7 +973,7 @@ namespace PCGToolkit.Graph
                     };
                     field.RegisterValueChangedCallback(evt =>
                     {
-                        SyncValueToNode(nodeVisual, schema.Name, evt.newValue);
+                        DebounceSyncValue(nodeVisual, schema.Name, evt.newValue);
                     });
                     return field;
                 }
@@ -1015,6 +1021,36 @@ namespace PCGToolkit.Graph
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 防抖包装：延迟 500ms 后同步值到节点，连续输入会重置计时器
+        /// </summary>
+        private void DebounceSyncValue(PCGNodeVisual nodeVisual, string paramName, object value)
+        {
+            if (_debounceTimers.TryGetValue(paramName, out var existing))
+                existing.Pause();
+
+            IVisualElementScheduledItem handle = null;
+            handle = rootVisualElement.schedule.Execute(() =>
+            {
+                // 防止节点切换后旧闭包写入错误节点
+                if (_currentNode != nodeVisual) return;
+                SyncValueToNode(nodeVisual, paramName, value);
+                _debounceTimers.Remove(paramName);
+            }).StartingIn(DEBOUNCE_DELAY_MS);
+
+            _debounceTimers[paramName] = handle;
+        }
+
+        /// <summary>
+        /// 取消所有待执行的防抖计时器（节点切换或窗口重载时调用）
+        /// </summary>
+        private void CancelAllDebounceTimers()
+        {
+            foreach (var timer in _debounceTimers.Values)
+                timer.Pause();
+            _debounceTimers.Clear();
         }
 
         /// <summary>
